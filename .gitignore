@@ -1,0 +1,21 @@
+# Secrets — never commit real credentials
+.env.local
+.env*.local
+
+# Dependencies (populated once Claude Code scaffolds Next.js)
+/node_modules
+
+# Next.js build output
+/.next/
+/out/
+
+# Vercel
+.vercel
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
