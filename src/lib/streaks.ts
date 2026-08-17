@@ -1,7 +1,15 @@
 export type StreakRow = { streak_date: string; walked: boolean; posted: boolean };
 
-function toDateKey(d: Date) {
-  return d.toISOString().slice(0, 10);
+// Local calendar date, not UTC. toISOString() converts to UTC first, which
+// shifts the date by a day for any positive UTC offset around local
+// midnight, if streak_date is saved via one date function and compared
+// via another that disagrees on "today," a just-logged day silently
+// fails to match and the streak reads as 0.
+function toDateKey(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function todayDateKey() {
@@ -15,7 +23,6 @@ export function computeStreak(rows: StreakRow[], field: "walked" | "posted"): nu
   const byDate = new Map(rows.map((r) => [r.streak_date, r[field]]));
   let streak = 0;
   const cursor = new Date();
-  cursor.setHours(0, 0, 0, 0);
 
   while (byDate.get(toDateKey(cursor)) === true) {
     streak += 1;
