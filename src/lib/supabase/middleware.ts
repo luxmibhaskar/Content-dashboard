@@ -32,8 +32,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isLoginPath = request.nextUrl.pathname.startsWith("/login");
+  // Cron routes authenticate themselves with a bearer secret (see
+  // /api/cron/backup), not a browser session, callers like Vercel Cron
+  // have no session cookie to redirect through. Scoped to just /api/cron/
+  // so other API routes still default to requiring a session.
+  const isCronPath = request.nextUrl.pathname.startsWith("/api/cron/");
 
-  if (!user && !isLoginPath) {
+  if (!user && !isLoginPath && !isCronPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

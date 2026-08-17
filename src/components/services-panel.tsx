@@ -1,7 +1,9 @@
 import { CollapsibleSection } from "@/components/collapsible-section";
+import { BackupStatus } from "@/components/backup-status";
 import { SERVICES } from "@/lib/services";
+import type { BrandBackupStatus } from "@/lib/backup-status";
 
-export function ServicesPanel() {
+export function ServicesPanel({ backupStatuses }: { backupStatuses: BrandBackupStatus[] }) {
   return (
     <CollapsibleSection title="System & Services" defaultOpen={false}>
       <p className="text-xs text-muted-foreground">
@@ -31,6 +33,15 @@ export function ServicesPanel() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="border-t border-border pt-3">
+        <p className="text-xs font-medium text-muted-foreground">
+          Backup (Google Sheets, structured index)
+        </p>
+        <div className="mt-2">
+          <BackupStatus statuses={backupStatuses} />
+        </div>
       </div>
     </CollapsibleSection>
   );

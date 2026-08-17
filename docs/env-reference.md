@@ -47,7 +47,18 @@ really is coming from that service account. Comes from the JSON file
 downloaded during setup, always used together with the email above, one
 doesn't work without the other.
 
-**GOOGLE_SHEETS_BACKUP_ID**
-Tells the app exactly which Google Sheet to write backup data into,
-pulled directly from that Sheet's own URL. Without this, the app would
-have the right permissions but no idea which specific sheet to use.
+**GOOGLE_SHEETS_BACKUP_ID_LBSTRANSFORMATION** /
+**GOOGLE_SHEETS_BACKUP_ID_LBSWORKS**
+Tell the app exactly which Google Sheet to write each brand's backup
+into, one workbook per brand per builder-brief.md Section 17.1, each
+pulled directly from that Sheet's own URL. Without these, the app
+would have the right permissions but no idea which specific sheet to
+use for which brand.
+
+## Backup automation
+
+**CRON_SECRET**
+A shared password that proves a request to `/api/cron/backup` really
+came from Vercel's scheduled Cron job, not some random visitor hitting
+the URL. Any string works, generated once and reused, set the same
+value here and in the Vercel project's env vars after deploying.
