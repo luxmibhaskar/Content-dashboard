@@ -377,7 +377,11 @@ export default async function TopicPage({
               Manual for now, this auto-generates from research once Phase 2&apos;s
               research automation lands.
             </p>
-            <CompletenessChecklist name="completeness_checklist" initialItems={checklistItems} />
+            <CompletenessChecklist
+              key={JSON.stringify(checklistItems)}
+              name="completeness_checklist"
+              initialItems={checklistItems}
+            />
           </div>
         </CollapsibleSection>
 
