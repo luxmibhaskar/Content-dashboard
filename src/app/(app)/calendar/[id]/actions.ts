@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 function str(formData: FormData, key: string) {
@@ -112,6 +113,11 @@ export async function updateContentItem(id: string, formData: FormData) {
     throw new Error(error.message);
   }
 
-  revalidatePath(`/calendar/${id}`);
   revalidatePath("/calendar");
+  // A plain revalidatePath() on this same route was not reliably enough to
+  // avoid the client router briefly showing pre-save data right after
+  // submit (fields appeared to "revert" until a manual refresh, even
+  // though the write itself had already landed). redirect() forces a
+  // genuine fresh navigation instead of a soft revalidation.
+  redirect(`/calendar/${id}`);
 }
