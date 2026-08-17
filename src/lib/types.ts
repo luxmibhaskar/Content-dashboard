@@ -103,7 +103,20 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   energy_tag: string | null;
   full_script: string | null;
   voice_memo_transcript: string | null;
+
+  platform_publishing: PlatformPublishing | null;
 };
+
+export const PLATFORMS = ["YouTube", "Instagram", "TikTok", "Threads", "Facebook"] as const;
+
+export type PlatformPublishingEntry = {
+  platform_title?: string;
+  platform_description?: string;
+  platform_tags_hashtags?: string;
+  platform_angle_line?: string;
+};
+
+export type PlatformPublishing = Record<string, PlatformPublishingEntry>;
 
 export type MainPoint = {
   point_text: string;

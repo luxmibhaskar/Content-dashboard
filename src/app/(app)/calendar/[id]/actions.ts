@@ -74,6 +74,9 @@ export async function updateContentItem(id: string, formData: FormData) {
       energy_tag: str(formData, "energy_tag"),
       full_script: str(formData, "full_script"),
       voice_memo_transcript: str(formData, "voice_memo_transcript"),
+
+      // 10.1.4 Publishing Ready
+      platform_publishing: json(formData, "platform_publishing", {}),
     })
     .eq("id", id);
 

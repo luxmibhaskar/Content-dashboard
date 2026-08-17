@@ -10,6 +10,7 @@ import { CollapsibleSection } from "@/components/collapsible-section";
 import { ExpandCollapseAll } from "@/components/expand-collapse-all";
 import { CompletenessChecklist } from "@/components/completeness-checklist";
 import { MainPointersEditor } from "@/components/main-pointers-editor";
+import { PlatformPublishingEditor } from "@/components/platform-publishing-editor";
 import {
   ENERGY_TAG_PRESETS,
   FORMATS,
@@ -21,6 +22,7 @@ import {
   type ChecklistItem,
   type ContentCalendarDetail,
   type MainPoint,
+  type PlatformPublishing,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
 
@@ -33,7 +35,8 @@ const SELECT_COLUMNS = `
   viewer_problem, promise_outcome, final_title_hook, viewer_keywords_search_phrases,
   viewer_description, primary_emotion_pain_point, objections_doubts, desired_action_cta,
   completeness_checklist, format_recommendation,
-  main_pointers, energy_tag, full_script, voice_memo_transcript
+  main_pointers, energy_tag, full_script, voice_memo_transcript,
+  platform_publishing
 `;
 
 export default async function TopicPage({
@@ -90,6 +93,16 @@ export default async function TopicPage({
   const mainPoints: MainPoint[] = item.main_pointers ?? [];
   const hasRecording = Boolean(
     item.energy_tag || item.full_script || item.voice_memo_transcript || mainPoints.length > 0,
+  );
+
+  const platformPublishing: PlatformPublishing = item.platform_publishing ?? {};
+  const hasPublishing = Object.values(platformPublishing).some((entry) =>
+    Boolean(
+      entry.platform_title ||
+        entry.platform_description ||
+        entry.platform_tags_hashtags ||
+        entry.platform_angle_line,
+    ),
   );
 
   return (
@@ -392,6 +405,14 @@ export default async function TopicPage({
               initialItems={checklistItems}
             />
           </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Publishing Ready" defaultOpen={hasPublishing}>
+          <PlatformPublishingEditor
+            key={JSON.stringify(platformPublishing)}
+            name="platform_publishing"
+            initialValue={platformPublishing}
+          />
         </CollapsibleSection>
 
         <CollapsibleSection title="Recording Section" defaultOpen={hasRecording}>
