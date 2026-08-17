@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/ideas", label: "Idea Panel" },
   { href: "/journey", label: "My Journey Log" },
   { href: "/competitors", label: "Competitors" },
+  { href: "/collaborators", label: "Collaborators" },
 ];
 
 export function TopBar({

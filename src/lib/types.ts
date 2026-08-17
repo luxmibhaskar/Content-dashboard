@@ -243,3 +243,23 @@ export type CompetitorBenchmark = {
   why_benchmark: string | null;
   notes: string | null;
 };
+
+// Section 14.3: Collaboration & Outreach Tracker
+export const COLLABORATOR_STATUSES = [
+  "Identified",
+  "Reached Out",
+  "In Talks",
+  "Collaborated",
+  "Not a Fit",
+] as const;
+
+export type Collaborator = {
+  id: string;
+  brand: Brand;
+  name: string;
+  platform: string | null;
+  profile_url: string | null;
+  status: string;
+  notes: string | null;
+  last_contact_date: string | null;
+};
