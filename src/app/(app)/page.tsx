@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, BRAND_LABELS, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
 import { StreakStrip } from "@/components/streak-strip";
+import { ServicesPanel } from "@/components/services-panel";
 
 export default async function TodayPage() {
   const cookieStore = await cookies();
@@ -42,6 +43,12 @@ export default async function TodayPage() {
         The next-up suggestion (the real hero of this screen) is coming once
         Journey Log and the Content Calendar have enough to suggest from.
       </p>
+
+      {/* Section 5.3: collapsed by default, infrastructure stays out of
+          sight until deliberately sought, at the very bottom of Today. */}
+      <div className="mt-12">
+        <ServicesPanel />
+      </div>
     </div>
   );
 }
