@@ -82,6 +82,7 @@ export default async function TopicPage({
     { data: thumbnailVariants },
     { data: competitorBenchmarks },
     { data: competitors },
+    { count: researchSnapshotCount },
   ] = await Promise.all([
     supabase
       .from("content_calendar")
@@ -121,6 +122,10 @@ export default async function TopicPage({
       .eq("content_id", id)
       .order("created_at", { ascending: true }),
     supabase.from("competitors").select("id, name").eq("brand", item.brand).eq("active", true),
+    supabase
+      .from("research_snapshots")
+      .select("id", { count: "exact", head: true })
+      .eq("content_id", id),
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
@@ -199,9 +204,17 @@ export default async function TopicPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
-      <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
-        &larr; Content Calendar
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
+          &larr; Content Calendar
+        </Link>
+        <Link
+          href={`/calendar/${item.id}/research`}
+          className="text-sm text-muted-foreground hover:underline"
+        >
+          Research ({researchSnapshotCount ?? 0}) &rarr;
+        </Link>
+      </div>
 
       {sourceItem && (
         <Link

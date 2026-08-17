@@ -1,8 +1,8 @@
 # Environment Variables Reference
 
-What each of the 7 credentials in `.env.local` actually does. Keep this in
-`docs/` alongside `builder-brief.md` for later reference, none of the real
-values belong in this file, just the explanations.
+What each credential in `.env.local` actually does. Keep this in `docs/`
+alongside `builder-brief.md` for later reference, none of the real values
+belong in this file, just the explanations.
 
 ## Supabase (database)
 
@@ -54,6 +54,17 @@ into, one workbook per brand per builder-brief.md Section 17.1, each
 pulled directly from that Sheet's own URL. Without these, the app
 would have the right permissions but no idea which specific sheet to
 use for which brand.
+
+## YouTube (Research automation)
+
+**YOUTUBE_API_KEY**
+Powers the Research tab's video pull: search for the top 10 videos
+matching a topic's title, their view counts, descriptions, and top
+comments. Free within the standard daily quota. Doesn't grant access to
+real transcripts, captions.download requires OAuth consent from the
+video's own channel owner, not available for other people's videos with
+just an API key, title/description/comments are the actual signal this
+pulls, not a fallback for when a transcript happens to be missing.
 
 ## Backup automation
 

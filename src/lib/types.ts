@@ -155,6 +155,31 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   detailed_viewer_search_phrase_tags: string[] | null;
 };
 
+// Section 10.2.2/10.2.3: Research Snapshots (append-only, latest drives
+// Potential Data, all rows together drive History)
+export type YouTubeVideoSignal = {
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  viewCount: number | null;
+  publishedAt: string;
+  url: string;
+  description: string;
+  topComments: string[];
+  transcriptAvailable: boolean;
+};
+
+export type ResearchSnapshot = {
+  id: string;
+  content_id: string;
+  snapshot_date: string;
+  youtube_data: YouTubeVideoSignal[] | null;
+  google_data: unknown;
+  reddit_data: unknown;
+  quora_data: unknown;
+  summary: string | null;
+};
+
 // Section 10.1.3: Research Output
 export type TextVariant = {
   id: string;
