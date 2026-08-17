@@ -13,6 +13,7 @@ import { MainPointersEditor } from "@/components/main-pointers-editor";
 import { PlatformPublishingEditor } from "@/components/platform-publishing-editor";
 import { CopyButton } from "@/components/copy-button";
 import { ResearchOutputSection } from "@/components/research-output-section";
+import { CompetitorBenchmarksSection } from "@/components/competitor-benchmarks-section";
 import {
   EARNED_THE_CLICK_OPTIONS,
   ENERGY_TAG_PRESETS,
@@ -24,6 +25,7 @@ import {
   TONE_STYLES,
   VIABILITY_STATUSES,
   type ChecklistItem,
+  type CompetitorBenchmark,
   type ContentCalendarDetail,
   type MainPoint,
   type PlatformPublishing,
@@ -78,6 +80,8 @@ export default async function TopicPage({
     { data: titleVariants },
     { data: hookVariants },
     { data: thumbnailVariants },
+    { data: competitorBenchmarks },
+    { data: competitors },
   ] = await Promise.all([
     supabase
       .from("content_calendar")
@@ -111,6 +115,12 @@ export default async function TopicPage({
       .select("id, concept, main_text_on_image, visual_elements, emotion_vibe, rank, source, performance_rating, is_live")
       .eq("content_id", id)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("competitor_benchmarks")
+      .select("id, competitor_id, competitor_name, platform, url, why_benchmark, notes")
+      .eq("content_id", id)
+      .order("created_at", { ascending: true }),
+    supabase.from("competitors").select("id, name").eq("brand", item.brand).eq("active", true),
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
@@ -887,6 +897,14 @@ export default async function TopicPage({
           titleVariants={(titleVariants ?? []) as TextVariant[]}
           hookVariants={(hookVariants ?? []) as TextVariant[]}
           thumbnailVariants={(thumbnailVariants ?? []) as ThumbnailVariant[]}
+        />
+      </div>
+
+      <div className="mt-5">
+        <CompetitorBenchmarksSection
+          contentId={item.id}
+          benchmarks={(competitorBenchmarks ?? []) as CompetitorBenchmark[]}
+          competitors={competitors ?? []}
         />
       </div>
     </div>

@@ -221,3 +221,25 @@ export type MainPoint = {
 };
 
 export const ENERGY_TAG_PRESETS = ["Calm", "Direct", "High Energy"] as const;
+
+// Section 14: Competitors
+export type Competitor = {
+  id: string;
+  brand: Brand;
+  name: string;
+  platform: string | null;
+  profile_url: string | null;
+  notes: string | null;
+  active: boolean;
+};
+
+// Section 10.1.6: Competitor Benchmarks (per content item)
+export type CompetitorBenchmark = {
+  id: string;
+  competitor_id: string | null;
+  competitor_name: string | null;
+  platform: string | null;
+  url: string | null;
+  why_benchmark: string | null;
+  notes: string | null;
+};

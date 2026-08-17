@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/calendar", label: "Content Calendar" },
   { href: "/ideas", label: "Idea Panel" },
   { href: "/journey", label: "My Journey Log" },
+  { href: "/competitors", label: "Competitors" },
 ];
 
 export function TopBar({
