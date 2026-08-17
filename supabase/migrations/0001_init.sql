@@ -1,4 +1,4 @@
--- Body-Mind-Soul Dashboard — initial schema
+-- Body-Mind-Soul Dashboard: initial schema
 -- Builds the full field set for every core table now (builder-brief.md
 -- Section 19, standing rule 1), even fields with no UI until Phase 2/3.
 -- Ref: docs/builder-brief.md Section 3 (data model) and Section 19 (phases).
@@ -6,6 +6,8 @@
 create extension if not exists pgcrypto;
 
 create type brand_type as enum ('lbstransformation', 'lbsworks');
+create type content_format_type as enum ('Reel', 'Short', 'Long Video', 'Post', 'Thread', 'Story', 'Other');
+create type idea_source_type as enum ('Comment', 'DM', 'Mind', 'Competitor', 'Internet');
 
 create or replace function set_updated_at()
 returns trigger as $$
@@ -42,7 +44,7 @@ create trigger trg_journey_log_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- 2. content_calendar (Section 10) — the core working table.
+-- 2. content_calendar (Section 10), the core working table.
 -- Referenced by ideas, variants, benchmarks, reference_videos,
 -- research_snapshots, so it's created early.
 -- ---------------------------------------------------------------------
@@ -83,8 +85,7 @@ create table content_calendar (
   proof_credibility text,
   tone_style text
     check (tone_style in ('Friendly / Big Brother', 'Direct / No-BS', 'Calm / Meditative', 'Energetic / Motivational', 'Story-driven', 'Teaching / Explainer')),
-  idea_source text
-    check (idea_source in ('Comment', 'DM', 'Mind', 'Competitor', 'Internet')),
+  idea_source idea_source_type,
   source_detail text,
 
   -- 10.1.2 Viewer POV (Audience-Facing)
@@ -99,17 +100,17 @@ create table content_calendar (
   completeness_checklist jsonb not null default '[]',
   format_recommendation text,
 
-  -- 10.1.3 Research Output — core/detailed tags live on the item itself;
+  -- 10.1.3 Research Output, core/detailed tags live on the item itself;
   -- ranked Title/Hook/Thumbnail suggestions live in the variants tables.
   core_tags text[] not null default '{}',
   detailed_viewer_search_phrase_tags text[] not null default '{}',
 
-  -- 10.1.4 Publishing Ready (per platform) — keyed by platform name, e.g.
+  -- 10.1.4 Publishing Ready (per platform), keyed by platform name, e.g.
   -- {"YouTube": {"platform_title": "...", "platform_description": "...",
   --   "platform_tags_hashtags": "...", "platform_angle_line": "..."}}
   platform_publishing jsonb not null default '{}',
 
-  -- 10.1.5 Recording Section — Cue Cards
+  -- 10.1.5 Recording Section, Cue Cards
   -- main_pointers: [{"point_text": "...", "landing_line": "...", "runtime_estimate_seconds": 30}]
   main_pointers jsonb not null default '[]',
   energy_tag text,
@@ -119,8 +120,7 @@ create table content_calendar (
   -- 10.1.6 System & Production
   pillar text,
   sub_topic text,
-  format text
-    check (format in ('Reel', 'Short', 'Long Video', 'Post', 'Thread', 'Story', 'Other')),
+  format content_format_type,
   platform text[] not null default '{}',
   publish_date timestamptz,
   sequence_step text,
@@ -132,7 +132,7 @@ create table content_calendar (
   series_playlist text,
   search_demand_trend_signal text,
   -- Legacy field, superseded by competitor_benchmarks below (Section 19,
-  -- standing rule 2) — schema only, no dedicated UI.
+  -- standing rule 2), schema only, no dedicated UI.
   benchmark_comparable_content text[] not null default '{}',
   success_metric_focus text
     check (success_metric_focus in ('Reach', 'Engagement', 'Retention', 'Conversion')),
@@ -145,12 +145,15 @@ create table content_calendar (
 
   -- Performance metrics (Section 6.2 KPIs). Must survive hot/cold
   -- archiving (Section 17.4) since All-time analytics depend on them.
-  views bigint not null default 0,
-  likes bigint not null default 0,
-  comments bigint not null default 0,
-  shares bigint not null default 0,
-  saves bigint not null default 0,
-  conversions bigint not null default 0
+  -- Left nullable, not defaulted to 0, so "never tracked" (null) stays
+  -- distinguishable from "tracked, genuinely zero" for the KPI cards
+  -- that must hide gracefully when a metric isn't tracked (Section 6.2).
+  views bigint,
+  likes bigint,
+  comments bigint,
+  shares bigint,
+  saves bigint,
+  conversions bigint
 );
 
 create trigger trg_content_calendar_updated_at
@@ -172,12 +175,10 @@ create table ideas (
   idea_title text not null,
   pillar text,
   sub_topic text,
-  format text
-    check (format in ('Reel', 'Short', 'Long Video', 'Post', 'Thread', 'Story', 'Other')),
+  format content_format_type,
   brief_description text,
   reference_url text,
-  idea_source text
-    check (idea_source in ('Comment', 'DM', 'Mind', 'Competitor', 'Internet')),
+  idea_source idea_source_type,
   source_detail text,
   status text not null default 'Idea'
     check (status in ('Idea', 'Research', 'Ready to work')),
@@ -211,6 +212,12 @@ create trigger trg_title_variants_updated_at
 
 create index idx_title_variants_content_id on title_variants (content_id);
 
+-- At most one live variant per content item (Section 10.1.3's "Use This"
+-- radio-style exclusivity, the Copy-Ready panel and Hook Library both
+-- assume exactly one).
+create unique index idx_title_variants_one_live_per_content
+  on title_variants (content_id) where is_live;
+
 create table hook_variants (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -230,6 +237,9 @@ create trigger trg_hook_variants_updated_at
   for each row execute function set_updated_at();
 
 create index idx_hook_variants_content_id on hook_variants (content_id);
+
+create unique index idx_hook_variants_one_live_per_content
+  on hook_variants (content_id) where is_live;
 
 create table thumbnail_variants (
   id uuid primary key default gen_random_uuid(),
@@ -255,6 +265,9 @@ create trigger trg_thumbnail_variants_updated_at
 
 create index idx_thumbnail_variants_content_id on thumbnail_variants (content_id);
 
+create unique index idx_thumbnail_variants_one_live_per_content
+  on thumbnail_variants (content_id) where is_live;
+
 -- ---------------------------------------------------------------------
 -- 7. weekly_reviews (Section 12)
 -- ---------------------------------------------------------------------
@@ -271,7 +284,9 @@ create table weekly_reviews (
   retention_drop_patterns text,
   hook_library_insights text,
   earned_click_updates text,
-  next_week_adjustment text
+  next_week_adjustment text,
+
+  unique (brand, week_start_date)
 );
 
 create trigger trg_weekly_reviews_updated_at
@@ -366,7 +381,7 @@ create trigger trg_reference_videos_updated_at
 create index idx_reference_videos_content_id on reference_videos (content_id);
 
 -- ---------------------------------------------------------------------
--- 12. research_snapshots (Section 10.2.3) — append-only, never edited.
+-- 12. research_snapshots (Section 10.2.3), append-only, never edited.
 -- ---------------------------------------------------------------------
 create table research_snapshots (
   id uuid primary key default gen_random_uuid(),
@@ -410,7 +425,7 @@ create trigger trg_daily_streaks_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- 14. service_alternative_checks (Section 5.3) — system-level, NO brand
+-- 14. service_alternative_checks (Section 5.3), system-level, NO brand
 -- column; this is the one documented exception to brand-scoping.
 -- ---------------------------------------------------------------------
 create table service_alternative_checks (
@@ -474,7 +489,7 @@ create trigger trg_collaborators_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- Row Level Security — this is a private, single-user dashboard
+-- Row Level Security, this is a private, single-user dashboard
 -- (Section 1). Every table is locked down to logged-in requests only;
 -- there's no per-row ownership model since there's exactly one user.
 -- ---------------------------------------------------------------------
