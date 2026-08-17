@@ -27,7 +27,17 @@ export async function updateSession(request: NextRequest) {
 
   // Refreshes the auth token if needed. Reading the user here (not just the
   // session) is required for the refresh to actually happen server-side.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isLoginPath = request.nextUrl.pathname.startsWith("/login");
+
+  if (!user && !isLoginPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
