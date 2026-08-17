@@ -6,6 +6,7 @@ import type { Brand } from "@/lib/brand";
 
 const NAV_LINKS = [
   { href: "/", label: "Today" },
+  { href: "/analytics", label: "Analytics Overview" },
   { href: "/calendar", label: "Content Calendar" },
   { href: "/journey", label: "My Journey Log" },
 ];

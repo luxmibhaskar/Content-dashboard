@@ -1,3 +1,5 @@
+import { localDateKey } from "@/lib/date";
+
 export type CalendarRange = "week" | "month" | "custom";
 
 export function computeRange(range: CalendarRange, from?: string, to?: string) {
@@ -14,14 +16,10 @@ export function computeRange(range: CalendarRange, from?: string, to?: string) {
     start.setDate(now.getDate() - diffToMonday);
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
-    return { from: toISODate(start), to: toISODate(end) };
+    return { from: localDateKey(start), to: localDateKey(end) };
   }
 
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { from: toISODate(start), to: toISODate(end) };
-}
-
-function toISODate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return { from: localDateKey(start), to: localDateKey(end) };
 }

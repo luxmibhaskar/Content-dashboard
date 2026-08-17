@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, BRAND_LABELS, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
+import { localDateKey } from "@/lib/date";
 import { StreakStrip } from "@/components/streak-strip";
 import { ServicesPanel } from "@/components/services-panel";
 import { getBackupStatuses } from "@/lib/backup-status";
@@ -19,7 +20,7 @@ export default async function TodayPage() {
     .from("daily_streaks")
     .select("streak_date, walked, posted")
     .eq("brand", brand)
-    .gte("streak_date", since.toISOString().slice(0, 10))
+    .gte("streak_date", localDateKey(since))
     .order("streak_date", { ascending: false });
 
   const rows: StreakRow[] = streakRows ?? [];
