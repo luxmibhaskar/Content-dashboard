@@ -50,7 +50,8 @@ export const SERVICES: ServiceInfo[] = [
     powers: "Research automation",
     tier: "Free (approval required)",
     estCost: "$0",
-    swapAlternatives: "Manual research fallback",
+    swapAlternatives:
+      "SerpApi site:reddit.com search, the actual default path since official approval never came through",
   },
   {
     service: "SERP API (e.g. SerpApi)",

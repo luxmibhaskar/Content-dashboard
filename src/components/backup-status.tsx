@@ -15,7 +15,8 @@ export function BackupStatus({ statuses }: { statuses: BrandBackupStatus[] }) {
         <p key={s.brand} className={cn(s.isFailing ? "text-destructive" : "text-muted-foreground")}>
           {s.label}:{" "}
           {s.lastSyncedAt ? `last synced ${new Date(s.lastSyncedAt).toLocaleString()}` : "never synced"}
-          {s.isFailing && " (hasn't synced successfully in the last 2 attempts)"}
+          {s.isFailing &&
+            ` (${s.failingLayers.join(" and ")} hasn't synced successfully in the last 2 attempts)`}
         </p>
       ))}
       <Button

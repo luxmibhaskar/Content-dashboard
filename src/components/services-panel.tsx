@@ -37,7 +37,7 @@ export function ServicesPanel({ backupStatuses }: { backupStatuses: BrandBackupS
 
       <div className="border-t border-border pt-3">
         <p className="text-xs font-medium text-muted-foreground">
-          Backup (Google Sheets, structured index)
+          Backup (Google Sheets index + Drive full-content archive)
         </p>
         <div className="mt-2">
           <BackupStatus statuses={backupStatuses} />

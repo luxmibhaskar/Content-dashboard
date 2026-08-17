@@ -33,19 +33,21 @@ Billed per use from your prepaid credit balance, not a subscription, and
 capped at whatever's actually loaded onto the account as long as
 auto-reload stays off.
 
-## Google (Sheets backup)
+## Google (Sheets + Drive backup)
 
 **GOOGLE_SERVICE_ACCOUNT_EMAIL**
 The email address of the "robot" identity Google Cloud created. This is
-the exact address the backup Google Sheet was shared with, which is what
-gives the app permission to write to it, same as sharing a sheet with a
-colleague, except this "colleague" is code.
+the exact address the backup Google Sheet and Drive folders were shared
+with, which is what gives the app permission to write to them, same as
+sharing with a colleague, except this "colleague" is code.
 
 **GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY**
 The private credential that proves to Google's servers that a request
 really is coming from that service account. Comes from the JSON file
 downloaded during setup, always used together with the email above, one
-doesn't work without the other.
+doesn't work without the other. Also used for Drive now, the Drive API
+scope was enabled on this same service account rather than needing a
+separate credential.
 
 **GOOGLE_SHEETS_BACKUP_ID_LBSTRANSFORMATION** /
 **GOOGLE_SHEETS_BACKUP_ID_LBSWORKS**
@@ -54,6 +56,31 @@ into, one workbook per brand per builder-brief.md Section 17.1, each
 pulled directly from that Sheet's own URL. Without these, the app
 would have the right permissions but no idea which specific sheet to
 use for which brand.
+
+**GOOGLE_DRIVE_BACKUP_FOLDER_ID_LBSTRANSFORMATION** /
+**GOOGLE_DRIVE_BACKUP_FOLDER_ID_LBSWORKS**
+Tell the app which Drive folder holds each brand's full-content archive
+(builder-brief.md Section 17.2), full scripts, full research pulls,
+longer Journey Log entries, anything too long for a spreadsheet cell,
+plus the living SYSTEM_MANIFEST.md at its root. Create a folder per
+brand in your own Drive and paste its ID here from its URL, no sharing
+needed since Drive writes run as you, not the service account (see
+below).
+
+**GOOGLE_OAUTH_CLIENT_ID** / **GOOGLE_OAUTH_CLIENT_SECRET** /
+**GOOGLE_OAUTH_REFRESH_TOKEN**
+Drive-specific auth, separate from the service account used for Sheets.
+Service accounts have no storage quota of their own, they can edit a
+file a human already shared with them (that's how Sheets works, no new
+file ever gets created there) but can't create new files or folders,
+which the Drive archive needs continuously as topics and snapshots
+accumulate. So Drive writes authenticate as your own Google account via
+OAuth instead. One-time setup: create an OAuth Client ID (Desktop app
+type) in the same Google Cloud project as the service account, put its
+Client ID and Secret here, then run
+`node scripts/get-drive-refresh-token.mjs` and follow the printed
+instructions to get the refresh token. Only needs redoing if the token
+is ever revoked.
 
 ## YouTube (Research automation)
 

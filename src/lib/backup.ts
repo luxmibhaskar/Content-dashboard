@@ -1,5 +1,6 @@
 import { createClient as createServiceClient, type SupabaseClient } from "@supabase/supabase-js";
 import { writeSheetTabs } from "@/lib/google-sheets";
+import { syncDriveArchive, type DriveLinks } from "@/lib/drive-archive";
 import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
 
 type Row = (string | number | boolean | null)[];
@@ -102,11 +103,15 @@ async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
   };
 }
 
-async function buildContentCalendarTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+async function buildContentCalendarTab(
+  supabase: SupabaseClient,
+  brand: Brand,
+  contentLinks: Map<string, string>,
+): Promise<Tab> {
   const { data } = await supabase
     .from("content_calendar")
     .select(
-      "final_title, viewer_problem, promise_outcome, pillar, sub_topic, format, platform, publish_date, production_status, viability_status, retention_drop_note, earned_the_click",
+      "id, final_title, viewer_problem, promise_outcome, pillar, sub_topic, format, platform, publish_date, production_status, viability_status, retention_drop_note, earned_the_click",
     )
     .eq("brand", brand)
     .order("publish_date", { ascending: false });
@@ -124,7 +129,7 @@ async function buildContentCalendarTab(supabase: SupabaseClient, brand: Brand): 
     r.viability_status,
     r.retention_drop_note,
     r.earned_the_click,
-    "", // Full Detail Link: points into the Drive archive, Phase 2 (Section 17.2)
+    contentLinks.get(r.id) ?? "",
   ]);
 
   return {
@@ -226,11 +231,15 @@ async function buildReferenceVideosTab(supabase: SupabaseClient, brand: Brand): 
   };
 }
 
-async function buildResearchSnapshotsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+async function buildResearchSnapshotsTab(
+  supabase: SupabaseClient,
+  brand: Brand,
+  snapshotLinks: Map<string, string>,
+): Promise<Tab> {
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("research_snapshots")
-    .select("content_id, snapshot_date, summary, youtube_data, reddit_data, quora_data")
+    .select("id, content_id, snapshot_date, summary, youtube_data, reddit_data, quora_data")
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((r) => [
@@ -240,7 +249,7 @@ async function buildResearchSnapshotsTab(supabase: SupabaseClient, brand: Brand)
     sourceCount(r.youtube_data),
     sourceCount(r.reddit_data),
     sourceCount(r.quora_data),
-    "", // Full Detail Link: raw pull lives in the Drive archive, Phase 2
+    snapshotLinks.get(r.id) ?? "",
   ]);
 
   return {
@@ -351,17 +360,29 @@ async function buildDailyStreaksTab(supabase: SupabaseClient, brand: Brand): Pro
   };
 }
 
-async function syncBrandOnce(brand: Brand): Promise<{ ok: true } | { ok: false; error: string }> {
+type SyncResult = { ok: true } | { ok: false; error: string };
+
+async function syncDriveOnce(brand: Brand): Promise<SyncResult & { links?: DriveLinks }> {
+  const supabase = supabaseAdmin();
+  try {
+    const links = await syncDriveArchive(supabase, brand);
+    return { ok: true, links };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+async function syncSheetsOnce(brand: Brand, links: DriveLinks): Promise<SyncResult> {
   const supabase = supabaseAdmin();
 
   try {
     const tabs = await Promise.all([
       buildJourneyLogTab(supabase, brand),
       buildIdeasTab(supabase, brand),
-      buildContentCalendarTab(supabase, brand),
+      buildContentCalendarTab(supabase, brand, links.contentLinks),
       buildVariantsTab(supabase, brand),
       buildReferenceVideosTab(supabase, brand),
-      buildResearchSnapshotsTab(supabase, brand),
+      buildResearchSnapshotsTab(supabase, brand, links.snapshotLinks),
       buildWeeklyReviewsTab(supabase, brand),
       buildCompetitorsTab(supabase, brand),
       buildCompetitorBenchmarksTab(supabase, brand),
@@ -375,28 +396,46 @@ async function syncBrandOnce(brand: Brand): Promise<{ ok: true } | { ok: false; 
   }
 }
 
-// Section 17: retry once automatically on failure, log every attempt to
-// backup_log, surface a warning only after two consecutive failures.
+const EMPTY_LINKS: DriveLinks = { contentLinks: new Map(), snapshotLinks: new Map() };
+
+// Section 17: two independent layers, each retried once automatically on
+// failure and logged to backup_log on its own row. Sheets still runs
+// even if Drive fails, just without Full Detail Links for this run,
+// one layer having a bad night shouldn't take the other down with it.
 export async function runBackupSync(brand: Brand) {
   const supabase = supabaseAdmin();
 
-  let result = await syncBrandOnce(brand);
-  let retryCount = 0;
-
-  if (!result.ok) {
-    retryCount = 1;
-    result = await syncBrandOnce(brand);
+  let driveResult = await syncDriveOnce(brand);
+  let driveRetries = 0;
+  if (!driveResult.ok) {
+    driveRetries = 1;
+    driveResult = await syncDriveOnce(brand);
   }
+  await supabase.from("backup_log").insert({
+    brand,
+    layer: "drive",
+    status: driveResult.ok ? "success" : "failure",
+    error_message: driveResult.ok ? null : driveResult.error,
+    retry_count: driveRetries,
+  });
 
+  const links = driveResult.ok && driveResult.links ? driveResult.links : EMPTY_LINKS;
+
+  let sheetsResult = await syncSheetsOnce(brand, links);
+  let sheetsRetries = 0;
+  if (!sheetsResult.ok) {
+    sheetsRetries = 1;
+    sheetsResult = await syncSheetsOnce(brand, links);
+  }
   await supabase.from("backup_log").insert({
     brand,
     layer: "sheets",
-    status: result.ok ? "success" : "failure",
-    error_message: result.ok ? null : result.error,
-    retry_count: retryCount,
+    status: sheetsResult.ok ? "success" : "failure",
+    error_message: sheetsResult.ok ? null : sheetsResult.error,
+    retry_count: sheetsRetries,
   });
 
-  return result;
+  return { drive: driveResult, sheets: sheetsResult };
 }
 
 export async function runBackupSyncAllBrands() {
