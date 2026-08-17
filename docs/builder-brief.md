@@ -233,7 +233,7 @@ Every backend service the dashboard depends on, listed plainly:
 | GitHub | Code storage | Free | $0 | GitLab, Bitbucket |
 | Google Sheets + Drive | Backup (two layers) | Free | $0 | Any spreadsheet + cloud storage combo |
 | YouTube Data API | Research automation | Free (daily quota) | $0 | — (no real substitute for YouTube-specific data) |
-| Reddit API | Research automation | Free (approval required) | $0 | Manual research fallback |
+| Reddit API | Research automation | Free (approval required) | $0 | SerpApi site:reddit.com search, see note below |
 | SERP API (e.g. SerpApi) | Google search behavior research | Free tier, then paid | $0–25+/mo | Any competing SERP API provider |
 | AI provider (starts as Anthropic) | Research synthesis, ranked suggestions | Paid, usage-based | Small, usage-based | Gemini, GPT, any provider (Section 2) |
 
@@ -709,6 +709,8 @@ Nothing here is trimmed or interpreted — this tab is deliberately raw, since i
 #### 10.2.3. History Tab + Refresh Research
 
 **Refresh Research button** — sits at the top of the topic page (near the header). Re‑runs the full research pass (YouTube, Google, Reddit, Quora) and:
+
+**If Reddit API access isn't available** (approval pending, denied, or simply not set up yet), the Reddit leg of this pass should not just silently skip. Fall back to a `site:reddit.com` query through the same SerpApi connection already used for Google search behavior research, this genuinely surfaces real Reddit threads and discussion titles without needing Reddit's own API at all, just without structured comment-level data (upvotes, exact comment threading). Lower-fidelity than the native API, but real, and costs nothing extra to build since SerpApi access already exists from day one of Phase 2. Worth building this as the default Reddit-research path from the start, not as an emergency fallback bolted on later if approval falls through. *(new in v1.3)*
 
 - Inserts a **new row** into `research_snapshots` with `snapshot_date = now()`.
 - Never deletes or edits any prior snapshot row.
