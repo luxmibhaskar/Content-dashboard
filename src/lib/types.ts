@@ -105,7 +105,33 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   voice_memo_transcript: string | null;
 
   platform_publishing: PlatformPublishing | null;
+
+  sequence_step: string | null;
+  sequence_order_custom: number | null;
+  evidence_condition: string | null;
+  script_outline_link: string | null;
+  published_url: string | null;
+  performance_notes: string | null;
+  series_playlist: string | null;
+  search_demand_trend_signal: string | null;
+  success_metric_focus: string | null;
+  follow_up_content_ideas: string[] | null;
+  analytics_review_date: string | null;
+  retention_drop_timestamp: string | null;
+  retention_drop_note: string | null;
+  earned_the_click: string | null;
+  earned_click_note: string | null;
+  derived_from_content_id: string | null;
 };
+
+export const SUCCESS_METRIC_FOCUS_OPTIONS = [
+  "Reach",
+  "Engagement",
+  "Retention",
+  "Conversion",
+] as const;
+
+export const EARNED_THE_CLICK_OPTIONS = ["Yes", "No", "Unsure"] as const;
 
 export const PLATFORMS = ["YouTube", "Instagram", "TikTok", "Threads", "Facebook"] as const;
 

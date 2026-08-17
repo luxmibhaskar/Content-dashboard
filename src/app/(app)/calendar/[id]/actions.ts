@@ -24,6 +24,13 @@ function json(formData: FormData, key: string, fallback: unknown) {
   }
 }
 
+function num(formData: FormData, key: string): number | null {
+  const raw = String(formData.get(key) ?? "");
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export async function updateContentItem(id: string, formData: FormData) {
   const supabase = await createClient();
 
@@ -77,6 +84,27 @@ export async function updateContentItem(id: string, formData: FormData) {
 
       // 10.1.4 Publishing Ready
       platform_publishing: json(formData, "platform_publishing", {}),
+
+      // 10.1.6 System & Production (remainder)
+      sequence_step: str(formData, "sequence_step"),
+      sequence_order_custom: num(formData, "sequence_order_custom"),
+      evidence_condition: str(formData, "evidence_condition"),
+      script_outline_link: str(formData, "script_outline_link"),
+      published_url: str(formData, "published_url"),
+      performance_notes: str(formData, "performance_notes"),
+      series_playlist: str(formData, "series_playlist"),
+      search_demand_trend_signal: str(formData, "search_demand_trend_signal"),
+      success_metric_focus: str(formData, "success_metric_focus"),
+      follow_up_content_ideas: lines(formData, "follow_up_content_ideas"),
+      analytics_review_date: str(formData, "analytics_review_date"),
+      retention_drop_timestamp: str(formData, "retention_drop_timestamp"),
+      retention_drop_note: str(formData, "retention_drop_note"),
+      earned_the_click: str(formData, "earned_the_click"),
+      earned_click_note: str(formData, "earned_click_note"),
+      derived_from_content_id:
+        str(formData, "derived_from_content_id") === id
+          ? null
+          : str(formData, "derived_from_content_id"),
     })
     .eq("id", id);
 

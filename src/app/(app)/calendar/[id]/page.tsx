@@ -12,10 +12,12 @@ import { CompletenessChecklist } from "@/components/completeness-checklist";
 import { MainPointersEditor } from "@/components/main-pointers-editor";
 import { PlatformPublishingEditor } from "@/components/platform-publishing-editor";
 import {
+  EARNED_THE_CLICK_OPTIONS,
   ENERGY_TAG_PRESETS,
   FORMATS,
   IDEA_SOURCES,
   PRODUCTION_STATUSES,
+  SUCCESS_METRIC_FOCUS_OPTIONS,
   TARGET_STAGES,
   TONE_STYLES,
   VIABILITY_STATUSES,
@@ -36,7 +38,12 @@ const SELECT_COLUMNS = `
   viewer_description, primary_emotion_pain_point, objections_doubts, desired_action_cta,
   completeness_checklist, format_recommendation,
   main_pointers, energy_tag, full_script, voice_memo_transcript,
-  platform_publishing
+  platform_publishing,
+  sequence_step, sequence_order_custom, evidence_condition, script_outline_link,
+  published_url, performance_notes, series_playlist, search_demand_trend_signal,
+  success_metric_focus, follow_up_content_ideas, analytics_review_date,
+  retention_drop_timestamp, retention_drop_note, earned_the_click, earned_click_note,
+  derived_from_content_id
 `;
 
 export default async function TopicPage({
@@ -56,6 +63,27 @@ export default async function TopicPage({
   if (!item) {
     notFound();
   }
+
+  const [{ data: siblingItems }, { data: sourceItem }, { data: derivativeItems }] =
+    await Promise.all([
+      supabase
+        .from("content_calendar")
+        .select("id, final_title")
+        .eq("brand", item.brand)
+        .neq("id", item.id)
+        .order("final_title", { ascending: true }),
+      item.derived_from_content_id
+        ? supabase
+            .from("content_calendar")
+            .select("id, final_title")
+            .eq("id", item.derived_from_content_id)
+            .single()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("content_calendar")
+        .select("id, final_title")
+        .eq("derived_from_content_id", item.id),
+    ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
   const publishDateValue = item.publish_date
@@ -105,11 +133,51 @@ export default async function TopicPage({
     ),
   );
 
+  const hasSystemProduction = Boolean(
+    item.sequence_step ||
+      item.sequence_order_custom !== null ||
+      item.evidence_condition ||
+      item.script_outline_link ||
+      item.published_url ||
+      item.performance_notes ||
+      item.series_playlist ||
+      item.search_demand_trend_signal ||
+      item.success_metric_focus ||
+      (item.follow_up_content_ideas && item.follow_up_content_ideas.length > 0) ||
+      item.analytics_review_date ||
+      item.retention_drop_timestamp ||
+      item.retention_drop_note ||
+      item.earned_the_click ||
+      item.earned_click_note,
+  );
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
         &larr; Content Calendar
       </Link>
+
+      {sourceItem && (
+        <Link
+          href={`/calendar/${sourceItem.id}`}
+          className="mt-2 block text-sm text-muted-foreground hover:underline"
+        >
+          Repurposed from: {sourceItem.final_title || "Untitled"}
+        </Link>
+      )}
+      {(derivativeItems?.length ?? 0) > 0 && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Derivatives ({derivativeItems!.length}):{" "}
+          {derivativeItems!.map((d, i) => (
+            <span key={d.id}>
+              {i > 0 && " · "}
+              <Link href={`/calendar/${d.id}`} className="hover:underline">
+                {d.final_title || "Untitled"}
+              </Link>
+            </span>
+          ))}
+        </p>
+      )}
 
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
@@ -466,6 +534,181 @@ export default async function TopicPage({
               placeholder="Word-for-word script, including delivery notes: what to emphasize, what to avoid, pacing cues."
             />
           </CollapsibleSection>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="System & Production" defaultOpen={hasSystemProduction}>
+          <div className="space-y-1.5">
+            <Label htmlFor="derived_from_content_id">Repurposed from (source video)</Label>
+            <select
+              id="derived_from_content_id"
+              name="derived_from_content_id"
+              defaultValue={item.derived_from_content_id ?? ""}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">- Not a repurposed piece -</option>
+              {(siblingItems ?? []).map((sibling) => (
+                <option key={sibling.id} value={sibling.id}>
+                  {sibling.final_title || "Untitled"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="sequence_step">Sequence step</Label>
+              <Input
+                id="sequence_step"
+                name="sequence_step"
+                defaultValue={item.sequence_step ?? ""}
+                placeholder="e.g. V1"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sequence_order_custom">Custom order</Label>
+              <Input
+                id="sequence_order_custom"
+                name="sequence_order_custom"
+                type="number"
+                defaultValue={item.sequence_order_custom ?? ""}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="evidence_condition">Evidence condition (optional)</Label>
+            <Input
+              id="evidence_condition"
+              name="evidence_condition"
+              defaultValue={item.evidence_condition ?? ""}
+              placeholder="e.g. 3-week Pinterest window"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="script_outline_link">Script outline link (external doc)</Label>
+              <Input
+                id="script_outline_link"
+                name="script_outline_link"
+                defaultValue={item.script_outline_link ?? ""}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="published_url">Published URL</Label>
+              <Input id="published_url" name="published_url" defaultValue={item.published_url ?? ""} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="performance_notes">Performance notes</Label>
+            <Textarea
+              id="performance_notes"
+              name="performance_notes"
+              defaultValue={item.performance_notes ?? ""}
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="series_playlist">Series / playlist</Label>
+              <Input id="series_playlist" name="series_playlist" defaultValue={item.series_playlist ?? ""} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="search_demand_trend_signal">Search demand / trend signal</Label>
+              <Input
+                id="search_demand_trend_signal"
+                name="search_demand_trend_signal"
+                defaultValue={item.search_demand_trend_signal ?? ""}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="success_metric_focus">Success metric focus</Label>
+              <select
+                id="success_metric_focus"
+                name="success_metric_focus"
+                defaultValue={item.success_metric_focus ?? ""}
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">-</option>
+                {SUCCESS_METRIC_FOCUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="analytics_review_date">Analytics review date</Label>
+              <Input
+                id="analytics_review_date"
+                name="analytics_review_date"
+                type="date"
+                defaultValue={item.analytics_review_date ?? ""}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="follow_up_content_ideas">Follow-up content ideas (one per line)</Label>
+            <Textarea
+              id="follow_up_content_ideas"
+              name="follow_up_content_ideas"
+              defaultValue={(item.follow_up_content_ideas ?? []).join("\n")}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="retention_drop_timestamp">Retention drop timestamp</Label>
+              <Input
+                id="retention_drop_timestamp"
+                name="retention_drop_timestamp"
+                defaultValue={item.retention_drop_timestamp ?? ""}
+                placeholder="e.g. 2:15"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="retention_drop_note">Retention drop note</Label>
+              <Input
+                id="retention_drop_note"
+                name="retention_drop_note"
+                defaultValue={item.retention_drop_note ?? ""}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="earned_the_click">Did I earn the click?</Label>
+              <select
+                id="earned_the_click"
+                name="earned_the_click"
+                defaultValue={item.earned_the_click ?? ""}
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">-</option>
+                {EARNED_THE_CLICK_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="earned_click_note">Earned click note (optional)</Label>
+              <Input
+                id="earned_click_note"
+                name="earned_click_note"
+                defaultValue={item.earned_click_note ?? ""}
+              />
+            </div>
+          </div>
         </CollapsibleSection>
 
         <div className="flex items-center justify-between pt-2">
