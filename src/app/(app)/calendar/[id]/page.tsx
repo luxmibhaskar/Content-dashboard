@@ -56,6 +56,33 @@ export default async function TopicPage({
     : "";
   const checklistItems: ChecklistItem[] = item.completeness_checklist ?? [];
 
+  const hasCreatorInput = Boolean(
+    item.raw_idea_title ||
+      item.raw_keywords_topics ||
+      item.brief_intent ||
+      item.content_angle_hook_direction ||
+      item.reference_inspiration ||
+      item.target_stage_viewer_journey ||
+      item.my_angle_unique_pov ||
+      item.proof_credibility ||
+      item.tone_style ||
+      item.idea_source ||
+      item.source_detail,
+  );
+
+  const hasViewerPov = Boolean(
+    item.viewer_problem ||
+      item.promise_outcome ||
+      item.final_title_hook ||
+      item.viewer_keywords_search_phrases ||
+      item.viewer_description ||
+      item.primary_emotion_pain_point ||
+      (item.objections_doubts && item.objections_doubts.length > 0) ||
+      item.desired_action_cta ||
+      item.format_recommendation ||
+      checklistItems.length > 0,
+  );
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
@@ -170,7 +197,7 @@ export default async function TopicPage({
           <ExpandCollapseAll />
         </div>
 
-        <CollapsibleSection title="Creator Input">
+        <CollapsibleSection title="Creator Input" defaultOpen={hasCreatorInput}>
           <div className="space-y-1.5">
             <Label htmlFor="raw_idea_title">Raw idea title</Label>
             <Input id="raw_idea_title" name="raw_idea_title" defaultValue={item.raw_idea_title ?? ""} />
@@ -281,7 +308,7 @@ export default async function TopicPage({
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Viewer POV">
+        <CollapsibleSection title="Viewer POV" defaultOpen={hasViewerPov}>
           <div className="space-y-1.5">
             <Label htmlFor="viewer_problem">Viewer problem</Label>
             <Input id="viewer_problem" name="viewer_problem" defaultValue={item.viewer_problem ?? ""} />
