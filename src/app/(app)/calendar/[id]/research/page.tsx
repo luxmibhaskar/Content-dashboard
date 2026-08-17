@@ -49,10 +49,13 @@ export default async function ResearchPage({
         </form>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Only YouTube is wired up so far (top 10 videos, view counts, description, top
-        comments, no real transcripts, see note below). Google, Reddit, and Quora stay
-        empty until those API keys exist. Refreshing never edits or deletes a prior pull,
-        it appends a new dated snapshot.
+        Pulls YouTube (top 10 videos, view counts, description, top comments, no real
+        transcripts, see note below), Google (autocomplete + People Also Ask + related
+        searches), Reddit, and Quora. Reddit has no approved official API access, so it
+        runs through the same site-scoped search as Quora rather than a dedicated
+        integration. Refreshing never edits or deletes a prior pull, it appends a new
+        dated snapshot. Each refresh uses about 4 SerpApi searches, worth keeping in mind
+        against your plan's monthly allowance.
       </p>
 
       {rows.length === 0 ? (
@@ -143,6 +146,119 @@ export default async function ResearchPage({
                 {(selected.youtube_data ?? []).length === 0 && (
                   <p className="text-sm text-muted-foreground">No YouTube results in this pull.</p>
                 )}
+              </div>
+
+              <div className="mt-8">
+                <h3 className="text-sm font-medium text-muted-foreground">Google</h3>
+                {selected.google_data ? (
+                  <div className="mt-2 space-y-4">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Autocomplete</p>
+                      {selected.google_data.autocomplete.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {selected.google_data.autocomplete.map((s, i) => (
+                            <span
+                              key={i}
+                              className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground">No suggestions found.</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">People Also Ask</p>
+                      {selected.google_data.peopleAlsoAsk.length > 0 ? (
+                        <div className="mt-1 space-y-2">
+                          {selected.google_data.peopleAlsoAsk.map((q, i) => (
+                            <div key={i} className="rounded-lg border border-border p-2.5">
+                              <p className="text-sm">{q.question}</p>
+                              {q.snippet && (
+                                <p className="mt-0.5 text-xs text-muted-foreground">{q.snippet}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground">No questions found.</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Related searches</p>
+                      {selected.google_data.relatedSearches.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {selected.google_data.relatedSearches.map((s, i) => (
+                            <span
+                              key={i}
+                              className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground">No related searches found.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">No Google results in this pull.</p>
+                )}
+              </div>
+
+              <div className="mt-8">
+                <h3 className="text-sm font-medium text-muted-foreground">Reddit</h3>
+                <p className="mt-0.5 text-xs text-amber-600">
+                  Via site-scoped search, not a dedicated Reddit API integration (no
+                  approved official API access).
+                </p>
+                <div className="mt-2 space-y-2">
+                  {(selected.reddit_data ?? []).map((r, i) => (
+                    <div key={i} className="rounded-lg border border-border p-2.5">
+                      <a
+                        href={r.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium hover:underline"
+                      >
+                        {r.title}
+                      </a>
+                      {r.snippet && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{r.snippet}</p>
+                      )}
+                    </div>
+                  ))}
+                  {(selected.reddit_data ?? []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No Reddit results in this pull.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <h3 className="text-sm font-medium text-muted-foreground">Quora</h3>
+                <div className="mt-2 space-y-2">
+                  {(selected.quora_data ?? []).map((q, i) => (
+                    <div key={i} className="rounded-lg border border-border p-2.5">
+                      <a
+                        href={q.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium hover:underline"
+                      >
+                        {q.title}
+                      </a>
+                      {q.snippet && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{q.snippet}</p>
+                      )}
+                    </div>
+                  ))}
+                  {(selected.quora_data ?? []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No Quora results in this pull.</p>
+                  )}
+                </div>
               </div>
             </div>
           )}

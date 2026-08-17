@@ -66,6 +66,19 @@ video's own channel owner, not available for other people's videos with
 just an API key, title/description/comments are the actual signal this
 pulls, not a fallback for when a transcript happens to be missing.
 
+## SerpApi (Research automation)
+
+**SERPAPI_KEY**
+Powers the Research tab's Google, Reddit, and Quora pulls. Google search
+behavior (autocomplete, People Also Ask, related searches) uses SerpApi
+directly. Reddit and Quora both run through site-scoped Google searches
+on this same key (`site:reddit.com`, `site:quora.com`) rather than
+dedicated integrations, neither has a workable official public API,
+Reddit's official API access was not approved after two attempts, and
+this is the documented fallback for exactly that case. Each Refresh
+Research click uses about 4 SerpApi searches, worth watching against
+your plan's monthly allowance.
+
 ## Backup automation
 
 **CRON_SECRET**

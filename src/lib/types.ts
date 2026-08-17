@@ -169,14 +169,22 @@ export type YouTubeVideoSignal = {
   transcriptAvailable: boolean;
 };
 
+export type GoogleSearchSignal = {
+  autocomplete: string[];
+  peopleAlsoAsk: { question: string; snippet: string | null; link: string | null }[];
+  relatedSearches: string[];
+};
+
+export type WebSearchResult = { title: string; link: string; snippet: string | null };
+
 export type ResearchSnapshot = {
   id: string;
   content_id: string;
   snapshot_date: string;
   youtube_data: YouTubeVideoSignal[] | null;
-  google_data: unknown;
-  reddit_data: unknown;
-  quora_data: unknown;
+  google_data: GoogleSearchSignal | null;
+  reddit_data: WebSearchResult[] | null;
+  quora_data: WebSearchResult[] | null;
   summary: string | null;
 };
 

@@ -3,11 +3,16 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { searchYouTubeSignals } from "@/lib/youtube";
+import { searchGoogleSignals, searchRedditSignals, searchQuoraSignals } from "@/lib/serpapi";
+import type { GoogleSearchSignal, WebSearchResult, YouTubeVideoSignal } from "@/lib/types";
 
 // Section 10.2.3: Refresh Research always inserts a new research_snapshots
 // row, it never edits or deletes a prior one, that's what makes History
-// possible. Only the YouTube piece is wired up, Google/Reddit/Quora stay
-// null until those API keys exist (Section 2.5's prerequisites).
+// possible. Each source is pulled independently and never blocks the
+// others, one API having a bad day (rate limit, outage) shouldn't lose
+// the sources that worked. Reddit has no approved official API access
+// (Section 16), so it runs through the same site-scoped SerpApi search
+// the brief already documents for Quora, not a dedicated integration.
 export async function refreshResearch(contentId: string) {
   const supabase = await createClient();
 
@@ -27,19 +32,57 @@ export async function refreshResearch(contentId: string) {
     );
   }
 
-  const youtubeData = await searchYouTubeSignals(query);
-  const summary =
-    youtubeData.length > 0
-      ? `Pulled ${youtubeData.length} YouTube video${youtubeData.length === 1 ? "" : "s"} for "${query}". Google, Reddit, and Quora aren't wired up yet.`
-      : `No YouTube results found for "${query}".`;
+  const pulled: string[] = [];
+  const failed: string[] = [];
+
+  let youtubeData: YouTubeVideoSignal[] = [];
+  try {
+    youtubeData = await searchYouTubeSignals(query);
+    pulled.push(`${youtubeData.length} YouTube video${youtubeData.length === 1 ? "" : "s"}`);
+  } catch (err) {
+    failed.push(`YouTube (${err instanceof Error ? err.message : "failed"})`);
+  }
+
+  let googleData: GoogleSearchSignal | null = null;
+  try {
+    googleData = await searchGoogleSignals(query);
+    pulled.push(
+      `${googleData.autocomplete.length} Google autocomplete + ${googleData.peopleAlsoAsk.length} People Also Ask`,
+    );
+  } catch (err) {
+    failed.push(`Google (${err instanceof Error ? err.message : "failed"})`);
+  }
+
+  let redditData: WebSearchResult[] = [];
+  try {
+    redditData = await searchRedditSignals(query);
+    pulled.push(`${redditData.length} Reddit thread${redditData.length === 1 ? "" : "s"}`);
+  } catch (err) {
+    failed.push(`Reddit (${err instanceof Error ? err.message : "failed"})`);
+  }
+
+  let quoraData: WebSearchResult[] = [];
+  try {
+    quoraData = await searchQuoraSignals(query);
+    pulled.push(`${quoraData.length} Quora page${quoraData.length === 1 ? "" : "s"}`);
+  } catch (err) {
+    failed.push(`Quora (${err instanceof Error ? err.message : "failed"})`);
+  }
+
+  const summary = [
+    `Pulled for "${query}": ${pulled.length > 0 ? pulled.join(", ") : "nothing"}.`,
+    failed.length > 0 ? `Failed: ${failed.join(", ")}.` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const { error } = await supabase.from("research_snapshots").insert({
     content_id: contentId,
     brand: item.brand,
     youtube_data: youtubeData,
-    google_data: null,
-    reddit_data: null,
-    quora_data: null,
+    google_data: googleData,
+    reddit_data: redditData,
+    quora_data: quoraData,
     summary,
   });
 
