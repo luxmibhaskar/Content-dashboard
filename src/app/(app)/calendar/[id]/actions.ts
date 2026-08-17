@@ -3,6 +3,27 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+function str(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "") || null;
+}
+
+function lines(formData: FormData, key: string): string[] {
+  return String(formData.get(key) ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function json(formData: FormData, key: string, fallback: unknown) {
+  const raw = String(formData.get(key) ?? "");
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function updateContentItem(id: string, formData: FormData) {
   const supabase = await createClient();
 
@@ -11,15 +32,42 @@ export async function updateContentItem(id: string, formData: FormData) {
   const { error } = await supabase
     .from("content_calendar")
     .update({
-      final_title: String(formData.get("final_title") ?? "") || null,
+      // Header
+      final_title: str(formData, "final_title"),
       production_status: String(formData.get("production_status")),
       viability_status: String(formData.get("viability_status")),
-      viability_reason_note:
-        String(formData.get("viability_reason_note") ?? "") || null,
-      pillar: String(formData.get("pillar") ?? "") || null,
-      sub_topic: String(formData.get("sub_topic") ?? "") || null,
-      format: String(formData.get("format") ?? "") || null,
+      viability_reason_note: str(formData, "viability_reason_note"),
+
+      // 10.1.6 System & Production (core fields only, this chunk)
+      pillar: str(formData, "pillar"),
+      sub_topic: str(formData, "sub_topic"),
+      format: str(formData, "format"),
       publish_date: publishDateRaw ? new Date(publishDateRaw).toISOString() : null,
+
+      // 10.1.1 Creator Input
+      raw_idea_title: str(formData, "raw_idea_title"),
+      raw_keywords_topics: str(formData, "raw_keywords_topics"),
+      brief_intent: str(formData, "brief_intent"),
+      content_angle_hook_direction: str(formData, "content_angle_hook_direction"),
+      reference_inspiration: str(formData, "reference_inspiration"),
+      target_stage_viewer_journey: str(formData, "target_stage_viewer_journey"),
+      my_angle_unique_pov: str(formData, "my_angle_unique_pov"),
+      proof_credibility: str(formData, "proof_credibility"),
+      tone_style: str(formData, "tone_style"),
+      idea_source: str(formData, "idea_source"),
+      source_detail: str(formData, "source_detail"),
+
+      // 10.1.2 Viewer POV
+      viewer_problem: str(formData, "viewer_problem"),
+      promise_outcome: str(formData, "promise_outcome"),
+      final_title_hook: str(formData, "final_title_hook"),
+      viewer_keywords_search_phrases: str(formData, "viewer_keywords_search_phrases"),
+      viewer_description: str(formData, "viewer_description"),
+      primary_emotion_pain_point: str(formData, "primary_emotion_pain_point"),
+      objections_doubts: lines(formData, "objections_doubts"),
+      desired_action_cta: str(formData, "desired_action_cta"),
+      completeness_checklist: json(formData, "completeness_checklist", []),
+      format_recommendation: str(formData, "format_recommendation"),
     })
     .eq("id", id);
 

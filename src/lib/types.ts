@@ -56,3 +56,46 @@ export const FORMATS = [
   "Story",
   "Other",
 ] as const;
+
+export const TARGET_STAGES = ["Awareness", "Consideration", "Decision"] as const;
+
+export const TONE_STYLES = [
+  "Friendly / Big Brother",
+  "Direct / No-BS",
+  "Calm / Meditative",
+  "Energetic / Motivational",
+  "Story-driven",
+  "Teaching / Explainer",
+] as const;
+
+export const IDEA_SOURCES = ["Comment", "DM", "Mind", "Competitor", "Internet"] as const;
+
+export type ChecklistItem = { label: string; checked: boolean };
+
+// Full row shape for the topic page (10.1.1 + 10.1.2 fields added this
+// chunk). The trimmed ContentCalendarItem above stays as-is for the list
+// view, which only ever selects that smaller column set.
+export type ContentCalendarDetail = ContentCalendarItem & {
+  raw_idea_title: string | null;
+  raw_keywords_topics: string | null;
+  brief_intent: string | null;
+  content_angle_hook_direction: string | null;
+  reference_inspiration: string | null;
+  target_stage_viewer_journey: string | null;
+  my_angle_unique_pov: string | null;
+  proof_credibility: string | null;
+  tone_style: string | null;
+  idea_source: string | null;
+  source_detail: string | null;
+
+  viewer_problem: string | null;
+  promise_outcome: string | null;
+  final_title_hook: string | null;
+  viewer_keywords_search_phrases: string | null;
+  viewer_description: string | null;
+  primary_emotion_pain_point: string | null;
+  objections_doubts: string[] | null;
+  desired_action_cta: string | null;
+  completeness_checklist: ChecklistItem[] | null;
+  format_recommendation: string | null;
+};

@@ -4,9 +4,33 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { ProductionStatusTracker } from "@/components/production-status-tracker";
-import { FORMATS, PRODUCTION_STATUSES, VIABILITY_STATUSES } from "@/lib/types";
+import { CollapsibleSection } from "@/components/collapsible-section";
+import { ExpandCollapseAll } from "@/components/expand-collapse-all";
+import { CompletenessChecklist } from "@/components/completeness-checklist";
+import {
+  FORMATS,
+  IDEA_SOURCES,
+  PRODUCTION_STATUSES,
+  TARGET_STAGES,
+  TONE_STYLES,
+  VIABILITY_STATUSES,
+  type ChecklistItem,
+  type ContentCalendarDetail,
+} from "@/lib/types";
 import { updateContentItem } from "./actions";
+
+const SELECT_COLUMNS = `
+  id, brand, final_title, production_status, viability_status, viability_reason_note,
+  pillar, sub_topic, format, publish_date, is_archived,
+  raw_idea_title, raw_keywords_topics, brief_intent, content_angle_hook_direction,
+  reference_inspiration, target_stage_viewer_journey, my_angle_unique_pov,
+  proof_credibility, tone_style, idea_source, source_detail,
+  viewer_problem, promise_outcome, final_title_hook, viewer_keywords_search_phrases,
+  viewer_description, primary_emotion_pain_point, objections_doubts, desired_action_cta,
+  completeness_checklist, format_recommendation
+`;
 
 export default async function TopicPage({
   params,
@@ -18,11 +42,9 @@ export default async function TopicPage({
 
   const { data: item } = await supabase
     .from("content_calendar")
-    .select(
-      "id, brand, final_title, production_status, viability_status, viability_reason_note, pillar, sub_topic, format, publish_date, is_archived",
-    )
+    .select(SELECT_COLUMNS)
     .eq("id", id)
-    .single();
+    .single<ContentCalendarDetail>();
 
   if (!item) {
     notFound();
@@ -32,6 +54,7 @@ export default async function TopicPage({
   const publishDateValue = item.publish_date
     ? new Date(item.publish_date).toISOString().slice(0, 16)
     : "";
+  const checklistItems: ChecklistItem[] = item.completeness_checklist ?? [];
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -141,6 +164,195 @@ export default async function TopicPage({
             />
           </div>
         </div>
+
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <h2 className="text-sm font-medium text-muted-foreground">More detail</h2>
+          <ExpandCollapseAll />
+        </div>
+
+        <CollapsibleSection title="Creator Input">
+          <div className="space-y-1.5">
+            <Label htmlFor="raw_idea_title">Raw idea title</Label>
+            <Input id="raw_idea_title" name="raw_idea_title" defaultValue={item.raw_idea_title ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="raw_keywords_topics">Raw keywords / topics</Label>
+            <Input
+              id="raw_keywords_topics"
+              name="raw_keywords_topics"
+              defaultValue={item.raw_keywords_topics ?? ""}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="brief_intent">Brief intent</Label>
+            <Textarea id="brief_intent" name="brief_intent" defaultValue={item.brief_intent ?? ""} rows={3} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="content_angle_hook_direction">Content angle / hook direction</Label>
+            <Textarea
+              id="content_angle_hook_direction"
+              name="content_angle_hook_direction"
+              defaultValue={item.content_angle_hook_direction ?? ""}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="reference_inspiration">Reference / inspiration (text + URLs)</Label>
+            <Textarea
+              id="reference_inspiration"
+              name="reference_inspiration"
+              defaultValue={item.reference_inspiration ?? ""}
+              rows={2}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="target_stage_viewer_journey">Target stage (viewer journey)</Label>
+              <select
+                id="target_stage_viewer_journey"
+                name="target_stage_viewer_journey"
+                defaultValue={item.target_stage_viewer_journey ?? ""}
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">-</option>
+                {TARGET_STAGES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tone_style">Tone / style</Label>
+              <select
+                id="tone_style"
+                name="tone_style"
+                defaultValue={item.tone_style ?? ""}
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">-</option>
+                {TONE_STYLES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="my_angle_unique_pov">My angle / unique POV</Label>
+            <Textarea
+              id="my_angle_unique_pov"
+              name="my_angle_unique_pov"
+              defaultValue={item.my_angle_unique_pov ?? ""}
+              rows={3}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="proof_credibility">Proof / credibility</Label>
+            <Textarea
+              id="proof_credibility"
+              name="proof_credibility"
+              defaultValue={item.proof_credibility ?? ""}
+              rows={2}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="idea_source">Idea source</Label>
+              <select
+                id="idea_source"
+                name="idea_source"
+                defaultValue={item.idea_source ?? ""}
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="">-</option>
+                {IDEA_SOURCES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="source_detail">Source detail</Label>
+              <Input id="source_detail" name="source_detail" defaultValue={item.source_detail ?? ""} />
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Viewer POV">
+          <div className="space-y-1.5">
+            <Label htmlFor="viewer_problem">Viewer problem</Label>
+            <Input id="viewer_problem" name="viewer_problem" defaultValue={item.viewer_problem ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="promise_outcome">Promise / outcome</Label>
+            <Input id="promise_outcome" name="promise_outcome" defaultValue={item.promise_outcome ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="final_title_hook">Final title / hook</Label>
+            <Input id="final_title_hook" name="final_title_hook" defaultValue={item.final_title_hook ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="viewer_keywords_search_phrases">Viewer keywords / search phrases</Label>
+            <Textarea
+              id="viewer_keywords_search_phrases"
+              name="viewer_keywords_search_phrases"
+              defaultValue={item.viewer_keywords_search_phrases ?? ""}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="viewer_description">Viewer description</Label>
+            <Textarea
+              id="viewer_description"
+              name="viewer_description"
+              defaultValue={item.viewer_description ?? ""}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="primary_emotion_pain_point">Primary emotion / pain point</Label>
+            <Input
+              id="primary_emotion_pain_point"
+              name="primary_emotion_pain_point"
+              defaultValue={item.primary_emotion_pain_point ?? ""}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="objections_doubts">Objections / doubts (one per line)</Label>
+            <Textarea
+              id="objections_doubts"
+              name="objections_doubts"
+              defaultValue={(item.objections_doubts ?? []).join("\n")}
+              rows={3}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="desired_action_cta">Desired action / CTA</Label>
+            <Input id="desired_action_cta" name="desired_action_cta" defaultValue={item.desired_action_cta ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="format_recommendation">
+              Format recommendation (short vs long, and why)
+            </Label>
+            <Textarea
+              id="format_recommendation"
+              name="format_recommendation"
+              defaultValue={item.format_recommendation ?? ""}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Sub-topic completeness checklist</Label>
+            <p className="text-xs text-muted-foreground">
+              Manual for now, this auto-generates from research once Phase 2&apos;s
+              research automation lands.
+            </p>
+            <CompletenessChecklist name="completeness_checklist" initialItems={checklistItems} />
+          </div>
+        </CollapsibleSection>
 
         <div className="flex items-center justify-between pt-2">
           <ProductionStatusTracker status={item.production_status} />
