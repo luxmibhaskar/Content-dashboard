@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Body-Mind-Soul Dashboard",
+  title: "LBs Content Planning Dashboard",
   description: "Content operations dashboard for LBsTransformation and LBsWorks.",
 };
 

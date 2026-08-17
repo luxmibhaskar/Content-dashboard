@@ -16,7 +16,7 @@ export default async function LoginPage() {
     <div className="flex min-h-svh flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-xl font-semibold">Body-Mind-Soul Dashboard</h1>
+          <h1 className="text-xl font-semibold">LBs Content Planning Dashboard</h1>
           <p className="text-sm text-muted-foreground">Sign in to continue</p>
         </div>
         <LoginForm />
