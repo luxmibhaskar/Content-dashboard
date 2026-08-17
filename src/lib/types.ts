@@ -133,6 +133,23 @@ export const SUCCESS_METRIC_FOCUS_OPTIONS = [
 
 export const EARNED_THE_CLICK_OPTIONS = ["Yes", "No", "Unsure"] as const;
 
+// Section 7: My Journey Log
+export const MOOD_ENERGY_OPTIONS = ["Low", "Medium", "High"] as const;
+
+export type JourneyEntry = {
+  id: string;
+  brand: Brand;
+  entry_date: string;
+  pillar_focus: string[];
+  sub_topic: string[];
+  what_i_did_experienced: string | null;
+  key_lesson_insight: string | null;
+  proof_results: string | null;
+  mood_energy: string | null;
+  tags_keywords: string | null;
+  angle_worthy: boolean;
+};
+
 export const PLATFORMS = ["YouTube", "Instagram", "TikTok", "Threads", "Facebook"] as const;
 
 export type PlatformPublishingEntry = {
