@@ -11,6 +11,8 @@ import { ExpandCollapseAll } from "@/components/expand-collapse-all";
 import { CompletenessChecklist } from "@/components/completeness-checklist";
 import { MainPointersEditor } from "@/components/main-pointers-editor";
 import { PlatformPublishingEditor } from "@/components/platform-publishing-editor";
+import { CopyButton } from "@/components/copy-button";
+import { ResearchOutputSection } from "@/components/research-output-section";
 import {
   EARNED_THE_CLICK_OPTIONS,
   ENERGY_TAG_PRESETS,
@@ -25,6 +27,8 @@ import {
   type ContentCalendarDetail,
   type MainPoint,
   type PlatformPublishing,
+  type TextVariant,
+  type ThumbnailVariant,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
 
@@ -44,7 +48,9 @@ const SELECT_COLUMNS = `
   success_metric_focus, follow_up_content_ideas, analytics_review_date,
   retention_drop_timestamp, retention_drop_note, earned_the_click, earned_click_note,
   derived_from_content_id,
-  views, likes, comments, shares, saves, conversions
+  views, likes, comments, shares, saves, conversions,
+  final_description, plain_keyword_tags, question_style_tags,
+  core_tags, detailed_viewer_search_phrase_tags
 `;
 
 export default async function TopicPage({
@@ -65,26 +71,47 @@ export default async function TopicPage({
     notFound();
   }
 
-  const [{ data: siblingItems }, { data: sourceItem }, { data: derivativeItems }] =
-    await Promise.all([
-      supabase
-        .from("content_calendar")
-        .select("id, final_title")
-        .eq("brand", item.brand)
-        .neq("id", item.id)
-        .order("final_title", { ascending: true }),
-      item.derived_from_content_id
-        ? supabase
-            .from("content_calendar")
-            .select("id, final_title")
-            .eq("id", item.derived_from_content_id)
-            .single()
-        : Promise.resolve({ data: null }),
-      supabase
-        .from("content_calendar")
-        .select("id, final_title")
-        .eq("derived_from_content_id", item.id),
-    ]);
+  const [
+    { data: siblingItems },
+    { data: sourceItem },
+    { data: derivativeItems },
+    { data: titleVariants },
+    { data: hookVariants },
+    { data: thumbnailVariants },
+  ] = await Promise.all([
+    supabase
+      .from("content_calendar")
+      .select("id, final_title")
+      .eq("brand", item.brand)
+      .neq("id", item.id)
+      .order("final_title", { ascending: true }),
+    item.derived_from_content_id
+      ? supabase
+          .from("content_calendar")
+          .select("id, final_title")
+          .eq("id", item.derived_from_content_id)
+          .single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("content_calendar")
+      .select("id, final_title")
+      .eq("derived_from_content_id", item.id),
+    supabase
+      .from("title_variants")
+      .select("id, variant_text, rank, source, performance_rating, is_live")
+      .eq("content_id", id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("hook_variants")
+      .select("id, variant_text, rank, source, performance_rating, is_live")
+      .eq("content_id", id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("thumbnail_variants")
+      .select("id, concept, main_text_on_image, visual_elements, emotion_vibe, rank, source, performance_rating, is_live")
+      .eq("content_id", id)
+      .order("created_at", { ascending: true }),
+  ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
   const publishDateValue = item.publish_date
@@ -155,7 +182,9 @@ export default async function TopicPage({
       item.comments !== null ||
       item.shares !== null ||
       item.saves !== null ||
-      item.conversions !== null,
+      item.conversions !== null ||
+      (item.core_tags && item.core_tags.length > 0) ||
+      (item.detailed_viewer_search_phrase_tags && item.detailed_viewer_search_phrase_tags.length > 0),
   );
 
   return (
@@ -188,13 +217,67 @@ export default async function TopicPage({
 
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
-          <Label htmlFor="final_title">Title</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="final_title">Title</Label>
+            <CopyButton targetId="final_title" />
+          </div>
           <Input
             id="final_title"
             name="final_title"
             defaultValue={item.final_title ?? ""}
             placeholder="Untitled"
           />
+        </div>
+
+        <div className="space-y-4 rounded-lg border border-border p-4">
+          <div>
+            <p className="text-sm font-medium">Copy-Ready</p>
+            <p className="text-xs text-muted-foreground">
+              Auto-populated as research and variants land, editable anytime, one tap to
+              copy into wherever it&apos;s going.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="final_description">Final description</Label>
+              <CopyButton targetId="final_description" />
+            </div>
+            <Textarea
+              id="final_description"
+              name="final_description"
+              defaultValue={item.final_description ?? ""}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="plain_keyword_tags">Plain keyword tags (one per line)</Label>
+              <CopyButton targetId="plain_keyword_tags" transform="commaJoin" />
+            </div>
+            <Textarea
+              id="plain_keyword_tags"
+              name="plain_keyword_tags"
+              defaultValue={(item.plain_keyword_tags ?? []).join("\n")}
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="question_style_tags">
+                Question-style tags (one per line, phrased as real people search)
+              </Label>
+              <CopyButton targetId="question_style_tags" transform="commaJoin" />
+            </div>
+            <Textarea
+              id="question_style_tags"
+              name="question_style_tags"
+              defaultValue={(item.question_style_tags ?? []).join("\n")}
+              rows={2}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -545,6 +628,31 @@ export default async function TopicPage({
 
         <CollapsibleSection title="System & Production" defaultOpen={hasSystemProduction}>
           <div className="space-y-1.5">
+            <Label htmlFor="core_tags">Core tags (one per line, 5-10)</Label>
+            <p className="text-xs text-muted-foreground">
+              From 10.1.3 Research Output. Custom title/hook/thumbnail options live in the
+              Research Output section below the Save button.
+            </p>
+            <Textarea
+              id="core_tags"
+              name="core_tags"
+              defaultValue={(item.core_tags ?? []).join("\n")}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="detailed_viewer_search_phrase_tags">
+              Detailed viewer search-phrase tags (one per line, exact phrasing, 10-20)
+            </Label>
+            <Textarea
+              id="detailed_viewer_search_phrase_tags"
+              name="detailed_viewer_search_phrase_tags"
+              defaultValue={(item.detailed_viewer_search_phrase_tags ?? []).join("\n")}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="derived_from_content_id">Repurposed from (source video)</Label>
             <select
               id="derived_from_content_id"
@@ -770,6 +878,17 @@ export default async function TopicPage({
           <Button type="submit">Save</Button>
         </div>
       </form>
+
+      {/* Outside the main form on purpose: each variant's Use This/Remove
+          is its own tiny form, and HTML doesn't allow nesting forms. */}
+      <div className="mt-5">
+        <ResearchOutputSection
+          contentId={item.id}
+          titleVariants={(titleVariants ?? []) as TextVariant[]}
+          hookVariants={(hookVariants ?? []) as TextVariant[]}
+          thumbnailVariants={(thumbnailVariants ?? []) as ThumbnailVariant[]}
+        />
+      </div>
     </div>
   );
 }

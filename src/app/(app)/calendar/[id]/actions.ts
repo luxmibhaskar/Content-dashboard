@@ -115,6 +115,16 @@ export async function updateContentItem(id: string, formData: FormData) {
       shares: num(formData, "shares"),
       saves: num(formData, "saves"),
       conversions: num(formData, "conversions"),
+
+      // Copy-Ready Panel
+      final_description: str(formData, "final_description"),
+      plain_keyword_tags: lines(formData, "plain_keyword_tags"),
+      question_style_tags: lines(formData, "question_style_tags"),
+
+      // 10.1.3 Research Output tags (variant rows have their own actions
+      // in variant-actions.ts, separate DB tables need separate CRUD)
+      core_tags: lines(formData, "core_tags"),
+      detailed_viewer_search_phrase_tags: lines(formData, "detailed_viewer_search_phrase_tags"),
     })
     .eq("id", id);
 

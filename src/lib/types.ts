@@ -147,6 +147,34 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   shares: number | null;
   saves: number | null;
   conversions: number | null;
+
+  final_description: string | null;
+  plain_keyword_tags: string[] | null;
+  question_style_tags: string[] | null;
+  core_tags: string[] | null;
+  detailed_viewer_search_phrase_tags: string[] | null;
+};
+
+// Section 10.1.3: Research Output
+export type TextVariant = {
+  id: string;
+  variant_text: string;
+  rank: number | null;
+  source: string;
+  performance_rating: number | null;
+  is_live: boolean;
+};
+
+export type ThumbnailVariant = {
+  id: string;
+  concept: string | null;
+  main_text_on_image: string | null;
+  visual_elements: string | null;
+  emotion_vibe: string | null;
+  rank: number | null;
+  source: string;
+  performance_rating: number | null;
+  is_live: boolean;
 };
 
 export const SUCCESS_METRIC_FOCUS_OPTIONS = [
