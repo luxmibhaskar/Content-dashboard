@@ -98,4 +98,17 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   desired_action_cta: string | null;
   completeness_checklist: ChecklistItem[] | null;
   format_recommendation: string | null;
+
+  main_pointers: MainPoint[] | null;
+  energy_tag: string | null;
+  full_script: string | null;
+  voice_memo_transcript: string | null;
 };
+
+export type MainPoint = {
+  point_text: string;
+  landing_line: string | null;
+  runtime_estimate_seconds: number | null;
+};
+
+export const ENERGY_TAG_PRESETS = ["Calm", "Direct", "High Energy"] as const;

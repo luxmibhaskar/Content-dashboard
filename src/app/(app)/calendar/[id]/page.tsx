@@ -9,7 +9,9 @@ import { ProductionStatusTracker } from "@/components/production-status-tracker"
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { ExpandCollapseAll } from "@/components/expand-collapse-all";
 import { CompletenessChecklist } from "@/components/completeness-checklist";
+import { MainPointersEditor } from "@/components/main-pointers-editor";
 import {
+  ENERGY_TAG_PRESETS,
   FORMATS,
   IDEA_SOURCES,
   PRODUCTION_STATUSES,
@@ -18,6 +20,7 @@ import {
   VIABILITY_STATUSES,
   type ChecklistItem,
   type ContentCalendarDetail,
+  type MainPoint,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
 
@@ -29,7 +32,8 @@ const SELECT_COLUMNS = `
   proof_credibility, tone_style, idea_source, source_detail,
   viewer_problem, promise_outcome, final_title_hook, viewer_keywords_search_phrases,
   viewer_description, primary_emotion_pain_point, objections_doubts, desired_action_cta,
-  completeness_checklist, format_recommendation
+  completeness_checklist, format_recommendation,
+  main_pointers, energy_tag, full_script, voice_memo_transcript
 `;
 
 export default async function TopicPage({
@@ -81,6 +85,11 @@ export default async function TopicPage({
       item.desired_action_cta ||
       item.format_recommendation ||
       checklistItems.length > 0,
+  );
+
+  const mainPoints: MainPoint[] = item.main_pointers ?? [];
+  const hasRecording = Boolean(
+    item.energy_tag || item.full_script || item.voice_memo_transcript || mainPoints.length > 0,
   );
 
   return (
@@ -383,6 +392,59 @@ export default async function TopicPage({
               initialItems={checklistItems}
             />
           </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Recording Section" defaultOpen={hasRecording}>
+          <div className="space-y-1.5">
+            <Label htmlFor="voice_memo_transcript">Voice memo transcript</Label>
+            <p className="text-xs text-muted-foreground">
+              Manual for now, paste or type a transcript here. The actual
+              &quot;just talk&quot; record-and-transcribe button is a separate,
+              bigger piece (browser audio capture + speech-to-text) not built
+              yet.
+            </p>
+            <Textarea
+              id="voice_memo_transcript"
+              name="voice_memo_transcript"
+              defaultValue={item.voice_memo_transcript ?? ""}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="energy_tag">Energy tag</Label>
+            <input
+              id="energy_tag"
+              name="energy_tag"
+              list="energy-tag-options"
+              defaultValue={item.energy_tag ?? ""}
+              placeholder="Calm, Direct, High Energy, or your own"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            />
+            <datalist id="energy-tag-options">
+              {ENERGY_TAG_PRESETS.map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
+          </div>
+
+          <CollapsibleSection title="Main Pointers" defaultOpen={mainPoints.length > 0}>
+            <MainPointersEditor
+              key={JSON.stringify(mainPoints)}
+              name="main_pointers"
+              initialPoints={mainPoints}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Full Script" defaultOpen={Boolean(item.full_script)}>
+            <Textarea
+              id="full_script"
+              name="full_script"
+              defaultValue={item.full_script ?? ""}
+              rows={8}
+              placeholder="Word-for-word script, including delivery notes: what to emphasize, what to avoid, pacing cues."
+            />
+          </CollapsibleSection>
         </CollapsibleSection>
 
         <div className="flex items-center justify-between pt-2">

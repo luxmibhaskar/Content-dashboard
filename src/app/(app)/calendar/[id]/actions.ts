@@ -68,6 +68,12 @@ export async function updateContentItem(id: string, formData: FormData) {
       desired_action_cta: str(formData, "desired_action_cta"),
       completeness_checklist: json(formData, "completeness_checklist", []),
       format_recommendation: str(formData, "format_recommendation"),
+
+      // 10.1.5 Recording Section
+      main_pointers: json(formData, "main_pointers", []),
+      energy_tag: str(formData, "energy_tag"),
+      full_script: str(formData, "full_script"),
+      voice_memo_transcript: str(formData, "voice_memo_transcript"),
     })
     .eq("id", id);
 
