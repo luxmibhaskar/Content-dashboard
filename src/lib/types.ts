@@ -122,6 +122,13 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   earned_the_click: string | null;
   earned_click_note: string | null;
   derived_from_content_id: string | null;
+
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  saves: number | null;
+  conversions: number | null;
 };
 
 export const SUCCESS_METRIC_FOCUS_OPTIONS = [

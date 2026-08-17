@@ -43,7 +43,8 @@ const SELECT_COLUMNS = `
   published_url, performance_notes, series_playlist, search_demand_trend_signal,
   success_metric_focus, follow_up_content_ideas, analytics_review_date,
   retention_drop_timestamp, retention_drop_note, earned_the_click, earned_click_note,
-  derived_from_content_id
+  derived_from_content_id,
+  views, likes, comments, shares, saves, conversions
 `;
 
 export default async function TopicPage({
@@ -148,7 +149,13 @@ export default async function TopicPage({
       item.retention_drop_timestamp ||
       item.retention_drop_note ||
       item.earned_the_click ||
-      item.earned_click_note,
+      item.earned_click_note ||
+      item.views !== null ||
+      item.likes !== null ||
+      item.comments !== null ||
+      item.shares !== null ||
+      item.saves !== null ||
+      item.conversions !== null,
   );
 
   return (
@@ -707,6 +714,53 @@ export default async function TopicPage({
                 name="earned_click_note"
                 defaultValue={item.earned_click_note ?? ""}
               />
+            </div>
+          </div>
+
+          <div className="space-y-1.5 border-t border-border pt-4">
+            <Label>Performance metrics</Label>
+            <p className="text-xs text-muted-foreground">
+              Leave a field blank if it&apos;s not tracked yet, that&apos;s different
+              from entering 0, Analytics Overview hides KPIs it has no data for
+              rather than showing a misleading zero.
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="views">Views</Label>
+                <Input id="views" name="views" type="number" min={0} defaultValue={item.views ?? ""} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="likes">Likes</Label>
+                <Input id="likes" name="likes" type="number" min={0} defaultValue={item.likes ?? ""} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="comments">Comments</Label>
+                <Input
+                  id="comments"
+                  name="comments"
+                  type="number"
+                  min={0}
+                  defaultValue={item.comments ?? ""}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="shares">Shares</Label>
+                <Input id="shares" name="shares" type="number" min={0} defaultValue={item.shares ?? ""} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="saves">Saves</Label>
+                <Input id="saves" name="saves" type="number" min={0} defaultValue={item.saves ?? ""} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="conversions">Conversions</Label>
+                <Input
+                  id="conversions"
+                  name="conversions"
+                  type="number"
+                  min={0}
+                  defaultValue={item.conversions ?? ""}
+                />
+              </div>
             </div>
           </div>
         </CollapsibleSection>

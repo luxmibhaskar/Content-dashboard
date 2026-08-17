@@ -106,6 +106,15 @@ export async function updateContentItem(id: string, formData: FormData) {
         str(formData, "derived_from_content_id") === id
           ? null
           : str(formData, "derived_from_content_id"),
+
+      // Performance metrics (Section 6.2 KPIs). Left blank = untracked
+      // (null), not 0, so Analytics can tell the two apart.
+      views: num(formData, "views"),
+      likes: num(formData, "likes"),
+      comments: num(formData, "comments"),
+      shares: num(formData, "shares"),
+      saves: num(formData, "saves"),
+      conversions: num(formData, "conversions"),
     })
     .eq("id", id);
 
