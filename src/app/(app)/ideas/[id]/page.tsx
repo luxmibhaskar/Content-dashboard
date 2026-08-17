@@ -1,0 +1,154 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { FORMATS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
+import { updateIdea, deleteIdea } from "./actions";
+
+export default async function IdeaPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: idea } = await supabase
+    .from("ideas")
+    .select(
+      "id, brand, idea_title, pillar, sub_topic, format, brief_description, reference_url, idea_source, source_detail, status, migrated_to_content_id",
+    )
+    .eq("id", id)
+    .single<Idea>();
+
+  if (!idea) {
+    notFound();
+  }
+
+  const boundUpdate = updateIdea.bind(null, idea.id);
+  const boundDelete = deleteIdea.bind(null, idea.id);
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <Link href="/ideas" className="text-sm text-muted-foreground hover:underline">
+        &larr; Idea Panel
+      </Link>
+
+      {idea.migrated_to_content_id && (
+        <Link
+          href={`/calendar/${idea.migrated_to_content_id}`}
+          className="mt-2 block text-sm text-muted-foreground hover:underline"
+        >
+          Open in Content Calendar &rarr;
+        </Link>
+      )}
+
+      <form action={boundUpdate} className="mt-4 space-y-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="idea_title">Idea title</Label>
+          <Input id="idea_title" name="idea_title" defaultValue={idea.idea_title} required />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="status">Status</Label>
+          <select
+            id="status"
+            name="status"
+            defaultValue={idea.status}
+            className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+          >
+            {IDEA_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Moving to Research or Ready to work creates a full Content Calendar entry the
+            first time, if one doesn&apos;t already exist for this idea.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="pillar">Pillar</Label>
+            <Input id="pillar" name="pillar" defaultValue={idea.pillar ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sub_topic">Sub-topic</Label>
+            <Input id="sub_topic" name="sub_topic" defaultValue={idea.sub_topic ?? ""} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="format">Format</Label>
+            <select
+              id="format"
+              name="format"
+              defaultValue={idea.format ?? ""}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">-</option>
+              {FORMATS.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="idea_source">Idea source</Label>
+            <select
+              id="idea_source"
+              name="idea_source"
+              defaultValue={idea.idea_source ?? ""}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">-</option>
+              {IDEA_SOURCES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="brief_description">Brief description</Label>
+          <Textarea
+            id="brief_description"
+            name="brief_description"
+            defaultValue={idea.brief_description ?? ""}
+            rows={3}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="reference_url">Reference URL</Label>
+            <Input id="reference_url" name="reference_url" defaultValue={idea.reference_url ?? ""} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="source_detail">Source detail</Label>
+            <Input id="source_detail" name="source_detail" defaultValue={idea.source_detail ?? ""} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2">
+          <Button type="submit">Save</Button>
+        </div>
+      </form>
+
+      <form action={boundDelete} className="mt-6">
+        <Button type="submit" variant="destructive" size="sm">
+          Delete idea
+        </Button>
+      </form>
+    </div>
+  );
+}

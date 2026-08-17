@@ -70,6 +70,24 @@ export const TONE_STYLES = [
 
 export const IDEA_SOURCES = ["Comment", "DM", "Mind", "Competitor", "Internet"] as const;
 
+// Section 8: Idea Panel
+export const IDEA_STATUSES = ["Idea", "Research", "Ready to work"] as const;
+
+export type Idea = {
+  id: string;
+  brand: Brand;
+  idea_title: string;
+  pillar: string | null;
+  sub_topic: string | null;
+  format: string | null;
+  brief_description: string | null;
+  reference_url: string | null;
+  idea_source: string | null;
+  source_detail: string | null;
+  status: string;
+  migrated_to_content_id: string | null;
+};
+
 export type ChecklistItem = { label: string; checked: boolean };
 
 // Full row shape for the topic page (10.1.1 + 10.1.2 fields added this

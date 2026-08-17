@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/", label: "Today" },
   { href: "/analytics", label: "Analytics Overview" },
   { href: "/calendar", label: "Content Calendar" },
+  { href: "/ideas", label: "Idea Panel" },
   { href: "/journey", label: "My Journey Log" },
 ];
 
