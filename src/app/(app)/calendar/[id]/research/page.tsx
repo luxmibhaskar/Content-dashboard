@@ -2,9 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ResearchSnapshot } from "@/lib/types";
+import type { ReferenceVideo, ResearchSnapshot } from "@/lib/types";
 import { refreshResearch } from "../research-actions";
 import { retrieveResearchSnapshot } from "@/lib/archive-lifecycle";
+import { ReferenceVideosSection } from "@/components/reference-videos-section";
 
 export default async function ResearchPage({
   params,
@@ -28,6 +29,12 @@ export default async function ResearchPage({
     .select("id, content_id, snapshot_date, youtube_data, google_data, reddit_data, quora_data, summary")
     .eq("content_id", id)
     .order("snapshot_date", { ascending: false });
+
+  const { data: referenceVideos } = await supabase
+    .from("reference_videos")
+    .select("id, content_id, url, hook_note, rehook_note, cta_note, date_added")
+    .eq("content_id", id)
+    .order("date_added", { ascending: false });
 
   const rows = (snapshots ?? []) as ResearchSnapshot[];
   let selected = snapshotParam ? rows.find((r) => r.id === snapshotParam) : rows[0];
@@ -86,6 +93,8 @@ export default async function ResearchPage({
         dated snapshot. Each refresh uses about 4 SerpApi searches, worth keeping in mind
         against your plan's monthly allowance.
       </p>
+
+      <ReferenceVideosSection contentId={id} videos={(referenceVideos ?? []) as ReferenceVideo[]} />
 
       {rows.length === 0 ? (
         <p className="mt-8 text-sm text-muted-foreground">

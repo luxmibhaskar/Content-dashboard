@@ -188,6 +188,17 @@ export type ResearchSnapshot = {
   summary: string | null;
 };
 
+// Section 10.2.1: Reference Videos Tab
+export type ReferenceVideo = {
+  id: string;
+  content_id: string;
+  url: string;
+  hook_note: string | null;
+  rehook_note: string | null;
+  cta_note: string | null;
+  date_added: string;
+};
+
 // Section 17.4: Hot/Cold Archiving. Machine-readable Drive companions to
 // the human-readable .md files, the retrieve path restores from these
 // rather than re-parsing prose Markdown.
