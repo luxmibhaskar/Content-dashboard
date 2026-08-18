@@ -65,11 +65,8 @@ type OrganicSearchResponse = {
   organic_results?: { title?: string; link?: string; snippet?: string }[];
 };
 
-async function searchSite(query: string, site: string): Promise<WebSearchResult[]> {
-  const data = await serpApiRequest<OrganicSearchResponse>({
-    engine: "google",
-    q: `site:${site} ${query}`,
-  });
+async function searchOrganic(query: string): Promise<WebSearchResult[]> {
+  const data = await serpApiRequest<OrganicSearchResponse>({ engine: "google", q: query });
   return (data.organic_results ?? [])
     .filter((r) => r.title && r.link)
     .map((r) => ({
@@ -77,6 +74,17 @@ async function searchSite(query: string, site: string): Promise<WebSearchResult[
       link: r.link as string,
       snippet: r.snippet ?? null,
     }));
+}
+
+async function searchSite(query: string, site: string): Promise<WebSearchResult[]> {
+  return searchOrganic(`site:${site} ${query}`);
+}
+
+// Section 5.3: "Check Alternatives" reuses this same SerpApi connection,
+// a related but separate function from the content-research pipeline
+// above, not that pipeline repurposed as-is.
+export async function searchGeneral(query: string): Promise<WebSearchResult[]> {
+  return searchOrganic(query);
 }
 
 // Reddit's official API access was not approved after two attempts (see
