@@ -60,3 +60,19 @@ export function pillarsFor(brand: Brand): string[] {
 export function subTopicsFor(brand: Brand): string[] {
   return Object.values(PILLAR_STRUCTURE[brand]).flat();
 }
+
+// Section 4.3: "one consistent color per pillar, used everywhere."
+// Currently only the Pillar Tree renders pillar color directly; other
+// views show pillar as plain text, unchanged here to stay in scope.
+export const PILLAR_COLORS: Record<string, string> = {
+  Body: "#c2703d",
+  Mind: "#4f6bd6",
+  Soul: "#8a5fc2",
+  Build: "#3b7a8f",
+  Sell: "#3f9f5f",
+  Scale: "#c99a2e",
+};
+
+export function pillarColor(pillar: string): string {
+  return PILLAR_COLORS[pillar] ?? "#6b7280";
+}

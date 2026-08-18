@@ -7,6 +7,7 @@ import type { Brand } from "@/lib/brand";
 const NAV_LINKS = [
   { href: "/", label: "Today" },
   { href: "/analytics", label: "Analytics Overview" },
+  { href: "/pillar-tree", label: null },
   { href: "/calendar", label: "Content Calendar" },
   { href: "/ideas", label: "Idea Panel" },
   { href: "/hook-library", label: "Hook Library" },
@@ -36,7 +37,7 @@ export function TopBar({
               href={link.href}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
-              {link.label}
+              {link.label ?? (brand === "lbstransformation" ? "Pillar Tree" : "Sequence View")}
             </Link>
           ))}
         </nav>
