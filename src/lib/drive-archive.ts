@@ -1,16 +1,24 @@
 import fs from "fs";
 import path from "path";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getDriveClient, findOrCreateFolder, upsertMarkdownFile } from "@/lib/google-drive";
+import { getDriveClient, findOrCreateFolder, upsertMarkdownFile, upsertJsonFile } from "@/lib/google-drive";
 import {
   buildContentCalendarMarkdown,
   buildResearchSnapshotMarkdown,
   buildJourneyMonthMarkdown,
 } from "@/lib/markdown-archive";
 import type { Brand } from "@/lib/brand";
-import type { ContentCalendarDetail, ResearchSnapshot, JourneyEntry } from "@/lib/types";
+import type {
+  ContentCalendarDetail,
+  ResearchSnapshot,
+  JourneyEntry,
+  ContentArchiveCompanion,
+  ResearchArchiveCompanion,
+  NonLiveVariant,
+  NonLiveThumbnailVariant,
+} from "@/lib/types";
 
-function rootFolderIdFor(brand: Brand): string {
+export function rootFolderIdFor(brand: Brand): string {
   const key =
     brand === "lbstransformation"
       ? "GOOGLE_DRIVE_BACKUP_FOLDER_ID_LBSTRANSFORMATION"
@@ -20,7 +28,7 @@ function rootFolderIdFor(brand: Brand): string {
   return id;
 }
 
-function sanitizeName(name: string): string {
+export function sanitizeName(name: string): string {
   const cleaned = name.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
   return (cleaned || "Untitled").slice(0, 150);
 }
@@ -72,14 +80,90 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
   );
   const filenames = buildContentFilenames(contentRows);
 
+  // Section 17.4: only non-live variant rows and reference_videos' note
+  // fields ever get cleared from Supabase, so those are the only pieces
+  // the retrieve companion needs, live variants and everything else on
+  // content_calendar never leaves Supabase in the first place.
+  const [{ data: titleVariants }, { data: hookVariants }, { data: thumbnailVariants }, { data: refVideos }] =
+    await Promise.all([
+      supabase
+        .from("title_variants")
+        .select("content_id, variant_text, rank, source, performance_rating")
+        .eq("brand", brand)
+        .eq("is_live", false),
+      supabase
+        .from("hook_variants")
+        .select("content_id, variant_text, rank, source, performance_rating")
+        .eq("brand", brand)
+        .eq("is_live", false),
+      supabase
+        .from("thumbnail_variants")
+        .select("content_id, concept, main_text_on_image, visual_elements, emotion_vibe, rank, source, performance_rating")
+        .eq("brand", brand)
+        .eq("is_live", false),
+      supabase.from("reference_videos").select("id, content_id, hook_note, rehook_note, cta_note").eq("brand", brand),
+    ]);
+
+  function groupByContent<T extends { content_id: string }>(rows: T[] | null): Map<string, T[]> {
+    const map = new Map<string, T[]>();
+    for (const row of rows ?? []) {
+      const bucket = map.get(row.content_id) ?? [];
+      bucket.push(row);
+      map.set(row.content_id, bucket);
+    }
+    return map;
+  }
+  const titleByContent = groupByContent(titleVariants as (NonLiveVariant & { content_id: string })[]);
+  const hookByContent = groupByContent(hookVariants as (NonLiveVariant & { content_id: string })[]);
+  const thumbnailByContent = groupByContent(
+    thumbnailVariants as (NonLiveThumbnailVariant & { content_id: string })[],
+  );
+  const refVideosByContent = groupByContent(
+    refVideos as { content_id: string; id: string; hook_note: string | null; rehook_note: string | null; cta_note: string | null }[],
+  );
+
   for (const row of contentRows) {
+    const filename = filenames.get(row.id)!;
     const { webViewLink } = await upsertMarkdownFile(
       drive,
       contentFolderId,
-      filenames.get(row.id)!,
+      filename,
       buildContentCalendarMarkdown(row),
     );
     contentLinks.set(row.id, webViewLink);
+
+    const companion: ContentArchiveCompanion = {
+      full_script: row.full_script,
+      main_pointers: row.main_pointers ?? [],
+      title_variants: (titleByContent.get(row.id) ?? []).map((v) => ({
+        variant_text: v.variant_text,
+        rank: v.rank,
+        source: v.source,
+        performance_rating: v.performance_rating,
+      })),
+      hook_variants: (hookByContent.get(row.id) ?? []).map((v) => ({
+        variant_text: v.variant_text,
+        rank: v.rank,
+        source: v.source,
+        performance_rating: v.performance_rating,
+      })),
+      thumbnail_variants: (thumbnailByContent.get(row.id) ?? []).map((v) => ({
+        concept: v.concept,
+        main_text_on_image: v.main_text_on_image,
+        visual_elements: v.visual_elements,
+        emotion_vibe: v.emotion_vibe,
+        rank: v.rank,
+        source: v.source,
+        performance_rating: v.performance_rating,
+      })),
+      reference_videos: (refVideosByContent.get(row.id) ?? []).map((r) => ({
+        id: r.id,
+        hook_note: r.hook_note,
+        rehook_note: r.rehook_note,
+        cta_note: r.cta_note,
+      })),
+    };
+    await upsertJsonFile(drive, contentFolderId, `${row.id}.json`, companion);
   }
 
   const { data: snapshots } = await supabase
@@ -105,6 +189,14 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
       buildResearchSnapshotMarkdown(snap, title),
     );
     snapshotLinks.set(snap.id, webViewLink);
+
+    const researchCompanion: ResearchArchiveCompanion = {
+      youtube_data: snap.youtube_data,
+      google_data: snap.google_data,
+      reddit_data: snap.reddit_data,
+      quora_data: snap.quora_data,
+    };
+    await upsertJsonFile(drive, topicFolderId, `${snap.id}.json`, researchCompanion);
   }
 
   const { data: journeyEntries } = await supabase

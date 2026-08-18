@@ -17,6 +17,14 @@ export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
               <span className="truncate text-sm font-medium">
                 {item.final_title || "Untitled"}
               </span>
+              {item.is_archived && (
+                <span
+                  className="shrink-0 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                  title="Archived: full detail lives in Drive, opening it retrieves it back automatically"
+                >
+                  Archived
+                </span>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-3">
               {(item.pillar || item.sub_topic) && (

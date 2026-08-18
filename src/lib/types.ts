@@ -188,6 +188,42 @@ export type ResearchSnapshot = {
   summary: string | null;
 };
 
+// Section 17.4: Hot/Cold Archiving. Machine-readable Drive companions to
+// the human-readable .md files, the retrieve path restores from these
+// rather than re-parsing prose Markdown.
+export type ContentArchiveCompanion = {
+  full_script: string | null;
+  main_pointers: MainPoint[];
+  title_variants: NonLiveVariant[];
+  hook_variants: NonLiveVariant[];
+  thumbnail_variants: NonLiveThumbnailVariant[];
+  reference_videos: { id: string; hook_note: string | null; rehook_note: string | null; cta_note: string | null }[];
+};
+
+export type NonLiveVariant = {
+  variant_text: string;
+  rank: number | null;
+  source: string;
+  performance_rating: number | null;
+};
+
+export type NonLiveThumbnailVariant = {
+  concept: string | null;
+  main_text_on_image: string | null;
+  visual_elements: string | null;
+  emotion_vibe: string | null;
+  rank: number | null;
+  source: string;
+  performance_rating: number | null;
+};
+
+export type ResearchArchiveCompanion = {
+  youtube_data: YouTubeVideoSignal[] | null;
+  google_data: GoogleSearchSignal | null;
+  reddit_data: WebSearchResult[] | null;
+  quora_data: WebSearchResult[] | null;
+};
+
 // Section 10.1.3: Research Output
 export type TextVariant = {
   id: string;

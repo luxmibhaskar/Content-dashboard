@@ -1,6 +1,7 @@
 import { createClient as createServiceClient, type SupabaseClient } from "@supabase/supabase-js";
 import { writeSheetTabs } from "@/lib/google-sheets";
 import { syncDriveArchive, type DriveLinks } from "@/lib/drive-archive";
+import { archiveIdleContent } from "@/lib/archive-lifecycle";
 import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
 
 type Row = (string | number | boolean | null)[];
@@ -435,7 +436,22 @@ export async function runBackupSync(brand: Brand) {
     retry_count: sheetsRetries,
   });
 
-  return { drive: driveResult, sheets: sheetsResult };
+  // Section 17.4: trims Supabase last, after Sheets has already synced
+  // tonight's real (pre-archive) data. Doing this earlier would make
+  // freshly-archived research snapshots show 0 sources in the Sheets
+  // index tonight, even though nothing was actually lost, just
+  // relocated, only trims once tonight's Drive sync actually succeeded,
+  // so anything cleared here is guaranteed already duplicated fresh.
+  let archiveResult: { archivedIds: string[]; errors: string[] } = { archivedIds: [], errors: [] };
+  if (driveResult.ok) {
+    try {
+      archiveResult = await archiveIdleContent(supabase, brand);
+    } catch (err) {
+      archiveResult = { archivedIds: [], errors: [err instanceof Error ? err.message : String(err)] };
+    }
+  }
+
+  return { drive: driveResult, sheets: sheetsResult, archive: archiveResult };
 }
 
 export async function runBackupSyncAllBrands() {

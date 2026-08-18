@@ -98,3 +98,78 @@ export async function upsertMarkdownFile(
   });
   return { id: created.id!, webViewLink: created.webViewLink ?? "" };
 }
+
+// Machine-readable companion to the human-readable .md files, one per
+// content item and one per research snapshot (Section 17.4's retrieve
+// path reads these back, re-parsing our own prose Markdown would be
+// fragile and risks silently losing data on restore).
+export async function upsertJsonFile(
+  drive: drive_v3.Drive,
+  parentId: string,
+  name: string,
+  data: unknown,
+): Promise<{ id: string }> {
+  const escaped = name.replace(/'/g, "\\'");
+  const { data: existingFiles } = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and trashed = false`,
+    fields: "files(id, name)",
+    spaces: "drive",
+  });
+
+  const media = { mimeType: "application/json", body: Readable.from([JSON.stringify(data)]) };
+  const existing = existingFiles.files?.[0]?.id;
+
+  if (existing) {
+    const { data: updated } = await drive.files.update({ fileId: existing, media, fields: "id" });
+    return { id: updated.id! };
+  }
+
+  const { data: created } = await drive.files.create({
+    requestBody: { name, parents: [parentId], mimeType: "application/json" },
+    media,
+    fields: "id",
+  });
+  return { id: created.id! };
+}
+
+// Section 17.4 retrieve path: find a companion file by name within a
+// folder and read its content back. Returns null if it's missing
+// (nothing to retrieve, not an error worth throwing over).
+export async function readTextFile(
+  drive: drive_v3.Drive,
+  parentId: string,
+  name: string,
+): Promise<string | null> {
+  const escaped = name.replace(/'/g, "\\'");
+  const { data } = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and trashed = false`,
+    fields: "files(id, name)",
+    spaces: "drive",
+  });
+
+  const fileId = data.files?.[0]?.id;
+  if (!fileId) return null;
+
+  const { data: content } = await drive.files.get(
+    { fileId, alt: "media" },
+    { responseType: "text" },
+  );
+  return content as string;
+}
+
+// Same lookup rules as findOrCreateFolder, but returns null instead of
+// creating one, used on the retrieve path where a missing folder just
+// means "nothing was ever archived here."
+export async function findFolder(
+  drive: drive_v3.Drive,
+  parentId: string,
+  name: string,
+): Promise<string | null> {
+  const escaped = name.replace(/'/g, "\\'");
+  const { data } = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: "files(id, name)",
+    spaces: "drive",
+  });
+  return data.files?.[0]?.id ?? null;
+}

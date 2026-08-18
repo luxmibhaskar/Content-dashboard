@@ -33,6 +33,7 @@ import {
   type ThumbnailVariant,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
+import { retrieveContentDetail } from "@/lib/archive-lifecycle";
 
 const SELECT_COLUMNS = `
   id, brand, final_title, production_status, viability_status, viability_reason_note,
@@ -63,14 +64,29 @@ export default async function TopicPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: item } = await supabase
+  const { data: initialItem } = await supabase
     .from("content_calendar")
     .select(SELECT_COLUMNS)
     .eq("id", id)
     .single<ContentCalendarDetail>();
 
-  if (!item) {
+  if (!initialItem) {
     notFound();
+  }
+
+  // Section 17.4: opening an archived item retrieves its full detail
+  // back from Drive before the page renders, rather than showing
+  // permanently-emptied fields for something that's actually still
+  // safe and complete, just relocated.
+  let item = initialItem;
+  if (item.is_archived) {
+    await retrieveContentDetail(supabase, id, item.brand);
+    const { data: refreshed } = await supabase
+      .from("content_calendar")
+      .select(SELECT_COLUMNS)
+      .eq("id", id)
+      .single<ContentCalendarDetail>();
+    if (refreshed) item = refreshed;
   }
 
   const [

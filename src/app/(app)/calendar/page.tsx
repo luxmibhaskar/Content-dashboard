@@ -33,14 +33,12 @@ export default async function CalendarPage({
       .from("content_calendar")
       .select(SELECT_COLUMNS)
       .eq("brand", brand)
-      .eq("is_archived", false)
       .is("publish_date", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("content_calendar")
       .select(SELECT_COLUMNS)
       .eq("brand", brand)
-      .eq("is_archived", false)
       .gte("publish_date", from)
       .lte("publish_date", `${to}T23:59:59`)
       .order("publish_date", { ascending: true }),

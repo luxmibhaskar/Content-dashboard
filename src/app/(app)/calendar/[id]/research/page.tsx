@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ResearchSnapshot } from "@/lib/types";
 import { refreshResearch } from "../research-actions";
+import { retrieveResearchSnapshot } from "@/lib/archive-lifecycle";
 
 export default async function ResearchPage({
   params,
@@ -18,7 +19,7 @@ export default async function ResearchPage({
 
   const { data: item } = await supabase
     .from("content_calendar")
-    .select("id, final_title")
+    .select("id, brand, final_title, is_archived")
     .eq("id", id)
     .single();
 
@@ -29,8 +30,36 @@ export default async function ResearchPage({
     .order("snapshot_date", { ascending: false });
 
   const rows = (snapshots ?? []) as ResearchSnapshot[];
-  const selected = snapshotParam ? rows.find((r) => r.id === snapshotParam) : rows[0];
+  let selected = snapshotParam ? rows.find((r) => r.id === snapshotParam) : rows[0];
   const isLatest = selected ? selected.id === rows[0]?.id : true;
+
+  // Section 17.4, lazy per-snapshot: only the one snapshot actually
+  // being viewed gets restored from Drive, not every historical pull
+  // for this topic just because the page was opened. Gated on the
+  // snapshot's own fields, not the parent item's is_archived flag,
+  // that flag already flips back to false as soon as the content page
+  // itself is opened, before any of its snapshots get retrieved.
+  // youtube/reddit/quora_data are never null except after archiving
+  // (a normal pull always leaves them at least []), so null there is
+  // an unambiguous signal; google_data can also be null after a
+  // same-day fetch failure, retrying in that case is a harmless no-op
+  // since the companion would faithfully restore null right back.
+  if (
+    item &&
+    selected &&
+    (selected.youtube_data === null ||
+      selected.google_data === null ||
+      selected.reddit_data === null ||
+      selected.quora_data === null)
+  ) {
+    await retrieveResearchSnapshot(supabase, selected.id, item.final_title || "Untitled", item.brand);
+    const { data: refreshed } = await supabase
+      .from("research_snapshots")
+      .select("id, content_id, snapshot_date, youtube_data, google_data, reddit_data, quora_data, summary")
+      .eq("id", selected.id)
+      .single<ResearchSnapshot>();
+    if (refreshed) selected = refreshed;
+  }
 
   const boundRefresh = refreshResearch.bind(null, id);
 
