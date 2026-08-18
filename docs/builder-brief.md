@@ -404,6 +404,8 @@ Idea Panel is **not** where deep research lives; that's in Content Calendar.
 
 ## 9. Personal Angle Bank
 
+**⚠ Superseded, see `docs/topic-page-redesign.md`.** No longer a separate nav destination or section, merged into Journey Log as a toggle. The underlying `angle_worthy` field and filter logic below are still accurate, only the "separate page" framing is outdated.
+
 A browsable collection of your best lived‑experience angles.
 
 ### 9.1. Implementation (Simplest)
@@ -436,6 +438,8 @@ For v1, free text plus a "Related Journey Entries" relation is enough.
 
 This is the core working area.
 
+**⚠ Superseded, see `docs/topic-page-redesign.md`.** Section 10.1's five/six-section topic page structure below, and the 6-stage status tracker referenced in 10.0, are both outdated. The topic page is now two tabs (Research & Copy, Scripts), and production status is now a 4-stage taxonomy (Ready to Record / Scripted → Recorded → Editing → Published / Scheduled), decided directly with Claude Code and documented in the redesign file, not here. Sections 10.0's list view and sorting logic below are still accurate.
+
 ### 10.0. List View (Main Calendar Screen)
 
 - **View type:** **Date‑based calendar**.
@@ -443,7 +447,7 @@ This is the core working area.
 - Layout: infinite‑scrolling timeline (not a fixed grid).
 - Each entry in the list shows four things, kept deliberately minimal:
   1. The Title (one line, truncated if long).
-  2. The mini Production Status Tracker (dots or small steps: Idea → Scripting → Filming → Editing → Scheduled → Published).
+  2. The mini Production Status Tracker — **now 4 stages, see `docs/topic-page-redesign.md` and the taxonomy note there, not the 6-stage list this originally said.**
   3. The Pillar / Sub‑topic tag, sitting next to the status.
   4. **A small Viability Status dot** — green (Ready), amber (Waiting for Evidence / Needs More Time), grey (On Hold). *(new in v1.3)* This was a genuine gap: viability status previously only showed on the full topic page, meaning you'd have to open several items just to find one that's actually workable right now. The dot fixes that at a glance, no need to open anything.
 - **Today's entry gets a subtle visual accent** (a 2px accent border and a small "Today" label) in the Week view, so the one day that's always more relevant than the rest of the list doesn't blend in with everything else. *(new in v1.3)*
@@ -787,6 +791,8 @@ Missed weeks: just resume next Sunday, never combine two weeks into one session.
 ***
 
 ## 13. Quick Capture
+
+**⚠ Superseded, see `docs/topic-page-redesign.md`.** No longer a separate page. Replaced by a quick-entry box directly on the Today page, saving straight into Journey Log. The migration-into-Ideas/Reference-Videos/Competitor-Benchmarks concept below no longer applies, the new version saves directly to Journey Log with no destination picker.
 
 Always‑available inbox, separate from active topic research, for spontaneous viral finds **including competitor content**.
 

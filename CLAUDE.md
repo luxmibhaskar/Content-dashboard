@@ -8,8 +8,19 @@ complexity needed beyond a single login.
 ## Full spec
 
 The complete feature specification, data model, and build phases live in
-`/docs/builder-brief.md`. Read it in full before starting any new feature,
-don't work from this file alone, it's a summary, not the source of truth.
+`/docs/builder-brief.md`. Three additional docs refine and partially
+supersede it, always check these first for anything they cover:
+
+- `/docs/brand-tokens.md` — authoritative colors, typography, spacing,
+  and motion for both brands.
+- `/docs/topic-page-redesign.md` — authoritative topic page structure and
+  production status taxonomy, supersedes builder-brief.md Sections 9, 10.1,
+  and 13 (marked with ⚠ notes at each affected section).
+
+Where any of these three conflict with builder-brief.md, the newer, more
+specific file wins, builder-brief.md remains correct for everything not
+explicitly marked superseded. Read all relevant docs in full before
+starting any new feature, don't work from summaries alone.
 
 ## Tech stack
 
@@ -58,13 +69,3 @@ Build in small, verifiable chunks, one feature at a time, not all of
 Phase 1 in a single pass. After each chunk, say exactly what URL to open
 and what to click to verify it works, assume no code review from me
 directly. Commit after each working chunk with a clear message.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
