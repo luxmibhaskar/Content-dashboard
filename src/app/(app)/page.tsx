@@ -4,11 +4,24 @@ import { BRAND_COOKIE, BRAND_LABELS, DEFAULT_BRAND, isBrand } from "@/lib/brand"
 import Link from "next/link";
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
 import { localDateKey, currentReviewWeek } from "@/lib/date";
+import { PILLAR_STRUCTURE } from "@/lib/pillars";
 import { StreakStrip } from "@/components/streak-strip";
 import { GoalProgressStrip } from "@/components/goal-progress-strip";
+import { PillarTree, type TreeTopic } from "@/components/pillar-tree";
 import { ServicesPanel } from "@/components/services-panel";
 import { getBackupStatuses } from "@/lib/backup-status";
 import type { Goal } from "@/lib/types";
+
+function devScoreOf(row: {
+  my_angle_unique_pov: string | null;
+  raw_idea_title: string | null;
+  production_status: string;
+}) {
+  let score = 0;
+  if (row.raw_idea_title) score += 0.5;
+  if (row.my_angle_unique_pov) score += 0.5;
+  return Math.min(1, score);
+}
 
 export default async function TodayPage() {
   const cookieStore = await cookies();
@@ -62,8 +75,32 @@ export default async function TodayPage() {
     weeklyReviewDone = Boolean(existingReview);
   }
 
+  // Section 15.1: the Pillar Tree, first thing visible on Today, above
+  // the streak strip and next-up card, not a separate nav destination.
+  const { data: treeRows } = await supabase
+    .from("content_calendar")
+    .select("id, final_title, sub_topic, is_locked, unlock_condition, my_angle_unique_pov, raw_idea_title, production_status")
+    .eq("brand", brand)
+    .not("sub_topic", "is", null);
+
+  const topicsByBranch: Record<string, TreeTopic[]> = {};
+  for (const r of treeRows ?? []) {
+    if (!r.sub_topic) continue;
+    const list = topicsByBranch[r.sub_topic] ?? [];
+    list.push({
+      id: r.id,
+      final_title: r.final_title,
+      is_locked: r.is_locked,
+      unlock_condition: r.unlock_condition,
+      devScore: devScoreOf(r),
+    });
+    topicsByBranch[r.sub_topic] = list;
+  }
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="w-full px-4 py-10">
+      <PillarTree structure={PILLAR_STRUCTURE[brand]} topicsByBranch={topicsByBranch} />
+
       {/* Section 5.0: small, quiet strip above the (future) next-up hero,
           not itself the focal point of this screen. */}
       <StreakStrip

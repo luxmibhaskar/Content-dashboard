@@ -30,7 +30,7 @@ export default async function CollaboratorPage({
   const boundDelete = deleteCollaborator.bind(null, collaborator.id);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <Link href="/collaborators" className="text-sm text-muted-foreground hover:underline">
         &larr; Collaboration &amp; Outreach
       </Link>

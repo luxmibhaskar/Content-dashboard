@@ -32,7 +32,7 @@ export default async function IdeaPage({
   const boundDelete = deleteIdea.bind(null, idea.id);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <Link href="/ideas" className="text-sm text-muted-foreground hover:underline">
         &larr; Idea Panel
       </Link>

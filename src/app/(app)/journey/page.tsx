@@ -47,7 +47,7 @@ export default async function JourneyLogPage({
   const { data: entries } = await query;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">My Journey Log</h1>
         <form action={createJourneyEntry}>

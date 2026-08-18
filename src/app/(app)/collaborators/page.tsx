@@ -38,7 +38,7 @@ export default async function CollaboratorsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <h1 className="text-2xl font-semibold">Collaboration &amp; Outreach</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Borrowed-audience growth through collaboration, mirrors Competitors but for

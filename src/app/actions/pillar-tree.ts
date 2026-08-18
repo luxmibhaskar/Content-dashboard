@@ -31,6 +31,7 @@ export async function createTopicUnderBranch(pillar: string, subTopic: string) {
 // Section 15.1: "Some unlock automatically via streak/tracker data,
 // others manually" - manual unlock lives here, on the tree itself,
 // since that's where locked topics are actually seen and worked with.
+// The tree now lives at the top of Today, not its own route.
 export async function updateLockState(contentId: string, formData: FormData) {
   const isLocked = formData.get("is_locked") === "on";
   const unlockCondition = String(formData.get("unlock_condition") ?? "") || null;
@@ -41,5 +42,5 @@ export async function updateLockState(contentId: string, formData: FormData) {
     .update({ is_locked: isLocked, unlock_condition: unlockCondition })
     .eq("id", contentId);
   if (error) throw new Error(error.message);
-  revalidatePath("/pillar-tree");
+  revalidatePath("/");
 }

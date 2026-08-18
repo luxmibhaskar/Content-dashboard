@@ -25,7 +25,7 @@ export default async function AngleBankPage() {
   const rows = (entries ?? []) as JourneyEntry[];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <h1 className="text-2xl font-semibold">Personal Angle Bank</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Your best lived-experience angles, pulled from My Journey Log entries marked

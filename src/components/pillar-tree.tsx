@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { pillarColor } from "@/lib/pillars";
-import { createTopicUnderBranch, updateLockState } from "@/app/(app)/pillar-tree/actions";
+import { createTopicUnderBranch, updateLockState } from "@/app/actions/pillar-tree";
 
 export type TreeTopic = {
   id: string;

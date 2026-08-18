@@ -71,7 +71,7 @@ export default async function ResearchPage({
   const boundRefresh = refreshResearch.bind(null, id);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
+    <div className="w-full px-4 py-10">
       <Link href={`/calendar/${id}`} className="text-sm text-muted-foreground hover:underline">
         &larr; {item?.final_title || "Content item"}
       </Link>
