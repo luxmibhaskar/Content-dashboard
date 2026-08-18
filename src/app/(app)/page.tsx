@@ -99,8 +99,6 @@ export default async function TodayPage() {
 
   return (
     <div className="w-full px-4 py-10">
-      <PillarTree structure={PILLAR_STRUCTURE[brand]} topicsByBranch={topicsByBranch} />
-
       {/* Section 5.0: small, quiet strip above the (future) next-up hero,
           not itself the focal point of this screen. */}
       <StreakStrip
@@ -129,7 +127,11 @@ export default async function TodayPage() {
         </p>
       )}
 
-      <h1 className="mt-6 text-2xl font-semibold">Today &middot; {BRAND_LABELS[brand]}</h1>
+      <div className="mt-8">
+        <PillarTree structure={PILLAR_STRUCTURE[brand]} topicsByBranch={topicsByBranch} />
+      </div>
+
+      <h1 className="mt-8 text-2xl font-semibold">Today &middot; {BRAND_LABELS[brand]}</h1>
 
       {isSunday &&
         (weeklyReviewDone ? (

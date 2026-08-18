@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { pillarColor } from "@/lib/pillars";
 import { createTopicUnderBranch, updateLockState } from "@/app/actions/pillar-tree";
 
@@ -305,11 +306,12 @@ export function PillarTree({
               key={pillar}
               type="button"
               onClick={() => setMobilePillar(pillar)}
-              className={
+              className={cn(
+                "rounded-md px-2.5 py-1 text-xs transition-all duration-150 ease-out active:scale-95",
                 mobilePillar === pillar
-                  ? "rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground"
-                  : "rounded-md px-2.5 py-1 text-xs text-muted-foreground"
-              }
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
             >
               {pillar}
             </button>
@@ -323,6 +325,43 @@ export function PillarTree({
             onSelectBranch={(sub) => select(mobilePillar, sub)}
           />
         </div>
+      </div>
+
+      {/* Always-visible reference list of every branch name per pillar,
+          alongside (not instead of) the tap-a-branch preview above -
+          the tree's hover/tap affordance stays the primary way in, this
+          is just a plain index for scanning or jumping straight to a
+          sub-topic without hunting for its branch on the tree. */}
+      <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-3 border-t border-border pt-6">
+        {pillars.map((pillar) => (
+          <div key={pillar} className="text-center">
+            <p className="text-xs font-medium" style={{ color: pillarColor(pillar) }}>
+              {pillar}
+            </p>
+            <div className="mt-1.5 flex max-w-56 flex-wrap justify-center gap-1.5">
+              {structure[pillar].map((sub) => {
+                const count = topicsByBranch[sub]?.length ?? 0;
+                const isSelected = selected?.subTopic === sub;
+                return (
+                  <button
+                    key={sub}
+                    type="button"
+                    onClick={() => select(pillar, sub)}
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-xs transition-all duration-150 ease-out active:scale-95",
+                      isSelected
+                        ? "border-transparent bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    {sub}
+                    {count > 0 && <span className="ml-1 opacity-70">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {selected ? (
