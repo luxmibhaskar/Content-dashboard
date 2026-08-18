@@ -171,9 +171,9 @@ export function ResearchOutputSection({
   return (
     <CollapsibleSection title="Research Output" defaultOpen={hasVariants}>
       <p className="text-xs text-muted-foreground">
-        Research-based suggestions land here automatically once Phase 2&apos;s research
-        automation exists. For now, add your own Custom options and mark one &quot;Use
-        This&quot; per type, that&apos;s what feeds the Copy-Ready panel and the Hook Library.
+        Research-based suggestions land here automatically from Run Research. Add your own
+        Custom options alongside them and mark one &quot;Use This&quot; per type, that&apos;s
+        what feeds the Copy-Ready panel and the Hook Library.
       </p>
       <TextVariantList
         contentId={contentId}

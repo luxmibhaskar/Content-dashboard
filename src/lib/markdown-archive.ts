@@ -82,14 +82,23 @@ export function buildContentCalendarMarkdown(row: ContentCalendarDetail): string
   );
 
   if (row.platform_publishing && Object.keys(row.platform_publishing).length > 0) {
-    const blocks = Object.entries(row.platform_publishing).map(([platform, entry]) => {
-      const fields = [
-        field("Title", entry.platform_title),
-        field("Description", entry.platform_description),
-        field("Tags / hashtags", entry.platform_tags_hashtags),
-        field("Angle line", entry.platform_angle_line),
+    const modeFields = (mode?: { title?: string; description?: string; short_keywords?: string; question_keywords?: string; angle_line?: string }) =>
+      [
+        field("Title", mode?.title ?? null),
+        field("Description", mode?.description ?? null),
+        field("Short keywords", mode?.short_keywords ?? null),
+        field("Question keywords", mode?.question_keywords ?? null),
+        field("Angle line", mode?.angle_line ?? null),
       ].filter((l): l is string => Boolean(l));
-      return [`### ${platform}`, ...fields].join("\n");
+
+    const blocks = Object.entries(row.platform_publishing).map(([platform, entry]) => {
+      const viewerFields = modeFields(entry.viewer_pov);
+      const normalFields = modeFields(entry.normal_pov);
+      const sections = [
+        viewerFields.length > 0 ? ["**Viewer POV**", ...viewerFields].join("\n") : null,
+        normalFields.length > 0 ? ["**Normal POV**", ...normalFields].join("\n") : null,
+      ].filter((s): s is string => Boolean(s));
+      return [`### ${platform}`, ...sections].join("\n\n");
     });
     parts.push(`## Publishing Ready\n\n${blocks.join("\n\n")}`);
   }

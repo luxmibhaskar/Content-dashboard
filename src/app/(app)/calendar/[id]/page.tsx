@@ -9,14 +9,12 @@ import { ProductionStatusTracker } from "@/components/production-status-tracker"
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { ExpandCollapseAll } from "@/components/expand-collapse-all";
 import { CompletenessChecklist } from "@/components/completeness-checklist";
-import { MainPointersEditor } from "@/components/main-pointers-editor";
-import { PlatformPublishingEditor } from "@/components/platform-publishing-editor";
+import { PublishingAndRecordingTabs } from "@/components/publishing-recording-tabs";
 import { CopyButton } from "@/components/copy-button";
 import { ResearchOutputSection } from "@/components/research-output-section";
 import { CompetitorBenchmarksSection } from "@/components/competitor-benchmarks-section";
 import {
   EARNED_THE_CLICK_OPTIONS,
-  ENERGY_TAG_PRESETS,
   FORMATS,
   IDEA_SOURCES,
   PRODUCTION_STATUSES,
@@ -33,6 +31,7 @@ import {
   type ThumbnailVariant,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
+import { refreshResearch } from "./research-actions";
 import { retrieveContentDetail } from "@/lib/archive-lifecycle";
 
 const SELECT_COLUMNS = `
@@ -150,21 +149,12 @@ export default async function TopicPage({
     : "";
   const checklistItems: ChecklistItem[] = item.completeness_checklist ?? [];
 
-  const hasCreatorInput = Boolean(
-    item.raw_idea_title ||
-      item.raw_keywords_topics ||
-      item.brief_intent ||
-      item.content_angle_hook_direction ||
-      item.reference_inspiration ||
-      item.target_stage_viewer_journey ||
-      item.my_angle_unique_pov ||
-      item.proof_credibility ||
-      item.tone_style ||
-      item.idea_source ||
-      item.source_detail,
-  );
+  // Section 10.1.1: Creator Input opens by default unconditionally now,
+  // it's the first thing being filled in on a new item, not gated behind
+  // "does it already have content" like every other section.
+  const canRunResearch = Boolean(item.raw_idea_title && item.brief_intent);
 
-  const hasViewerPov = Boolean(
+  const hasAudienceStrategy = Boolean(
     item.viewer_problem ||
       item.promise_outcome ||
       item.final_title_hook ||
@@ -178,19 +168,7 @@ export default async function TopicPage({
   );
 
   const mainPoints: MainPoint[] = item.main_pointers ?? [];
-  const hasRecording = Boolean(
-    item.energy_tag || item.full_script || item.voice_memo_transcript || mainPoints.length > 0,
-  );
-
   const platformPublishing: PlatformPublishing = item.platform_publishing ?? {};
-  const hasPublishing = Object.values(platformPublishing).some((entry) =>
-    Boolean(
-      entry.platform_title ||
-        entry.platform_description ||
-        entry.platform_tags_hashtags ||
-        entry.platform_angle_line,
-    ),
-  );
 
   const hasSystemProduction = Boolean(
     item.sequence_step ||
@@ -253,6 +231,28 @@ export default async function TopicPage({
           ))}
         </p>
       )}
+
+      {/* Section 10.2.3, moved: one prominent action right at the top of
+          the page instead of only living on the /research subpage, no
+          separate manual step to go find it. Pulls YouTube/Google/
+          Reddit/Quora, then generates ranked title/hook/thumbnail
+          suggestions and a script sized to whatever format the research
+          and title actually support. */}
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border p-4">
+        <div>
+          <p className="text-sm font-medium">Run Research</p>
+          <p className="text-xs text-muted-foreground">
+            {canRunResearch
+              ? "Pulls YouTube, Google, Reddit, and Quora, then generates ranked title/hook/thumbnail suggestions and a script."
+              : "Add a Title and Brief intent in Creator Input below first."}
+          </p>
+        </div>
+        <form action={refreshResearch.bind(null, item.id)}>
+          <Button type="submit" disabled={!canRunResearch}>
+            Run Research
+          </Button>
+        </form>
+      </div>
 
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
@@ -416,7 +416,7 @@ export default async function TopicPage({
           <ExpandCollapseAll />
         </div>
 
-        <CollapsibleSection title="Creator Input" defaultOpen={hasCreatorInput}>
+        <CollapsibleSection title="Creator Input" defaultOpen>
           <div className="space-y-1.5">
             <Label htmlFor="raw_idea_title">Raw idea title</Label>
             <Input id="raw_idea_title" name="raw_idea_title" defaultValue={item.raw_idea_title ?? ""} />
@@ -527,7 +527,12 @@ export default async function TopicPage({
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Viewer POV" defaultOpen={hasViewerPov}>
+        {/* Renamed from "Viewer POV" - that name now belongs to the new
+            algorithm/platform-optimized publishing tab below, this
+            section (audience strategy fields, the Research Panel,
+            Completeness Checklist, Time-Debt Indicator) is unchanged
+            otherwise. */}
+        <CollapsibleSection title="Audience Strategy" defaultOpen={hasAudienceStrategy}>
           <div className="space-y-1.5">
             <Label htmlFor="viewer_problem">Viewer problem</Label>
             <Input id="viewer_problem" name="viewer_problem" defaultValue={item.viewer_problem ?? ""} />
@@ -604,66 +609,24 @@ export default async function TopicPage({
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Publishing Ready" defaultOpen={hasPublishing}>
-          <PlatformPublishingEditor
-            key={JSON.stringify(platformPublishing)}
-            name="platform_publishing"
-            initialValue={platformPublishing}
+        {/* Section 10.1.4/10.1.5: Viewer POV, Normal POV, and Recording
+            Section as a horizontal row of tabs rather than stacked
+            collapsible sections, per explicit request. The rest of this
+            page's collapse behavior is unchanged. */}
+        <div className="rounded-lg border border-border p-4">
+          <PublishingAndRecordingTabs
+            key={`${JSON.stringify(platformPublishing)}-${JSON.stringify(mainPoints)}`}
+            platformPublishingName="platform_publishing"
+            initialPlatformPublishing={platformPublishing}
+            mainPointersName="main_pointers"
+            initialMainPoints={mainPoints}
+            item={{
+              energy_tag: item.energy_tag,
+              full_script: item.full_script,
+              voice_memo_transcript: item.voice_memo_transcript,
+            }}
           />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Recording Section" defaultOpen={hasRecording}>
-          <div className="space-y-1.5">
-            <Label htmlFor="voice_memo_transcript">Voice memo transcript</Label>
-            <p className="text-xs text-muted-foreground">
-              Manual for now, paste or type a transcript here. The actual
-              &quot;just talk&quot; record-and-transcribe button is a separate,
-              bigger piece (browser audio capture + speech-to-text) not built
-              yet.
-            </p>
-            <Textarea
-              id="voice_memo_transcript"
-              name="voice_memo_transcript"
-              defaultValue={item.voice_memo_transcript ?? ""}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="energy_tag">Energy tag</Label>
-            <input
-              id="energy_tag"
-              name="energy_tag"
-              list="energy-tag-options"
-              defaultValue={item.energy_tag ?? ""}
-              placeholder="Calm, Direct, High Energy, or your own"
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-            />
-            <datalist id="energy-tag-options">
-              {ENERGY_TAG_PRESETS.map((tag) => (
-                <option key={tag} value={tag} />
-              ))}
-            </datalist>
-          </div>
-
-          <CollapsibleSection title="Main Pointers" defaultOpen={mainPoints.length > 0}>
-            <MainPointersEditor
-              key={JSON.stringify(mainPoints)}
-              name="main_pointers"
-              initialPoints={mainPoints}
-            />
-          </CollapsibleSection>
-
-          <CollapsibleSection title="Full Script" defaultOpen={Boolean(item.full_script)}>
-            <Textarea
-              id="full_script"
-              name="full_script"
-              defaultValue={item.full_script ?? ""}
-              rows={8}
-              placeholder="Word-for-word script, including delivery notes: what to emphasize, what to avoid, pacing cues."
-            />
-          </CollapsibleSection>
-        </CollapsibleSection>
+        </div>
 
         <CollapsibleSection title="System & Production" defaultOpen={hasSystemProduction}>
           <div className="space-y-1.5">

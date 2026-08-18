@@ -188,6 +188,28 @@ export type ResearchSnapshot = {
   summary: string | null;
 };
 
+// Section 10.1.3/10.1.5: AI synthesis run as part of Run Research. Hooks
+// are built specifically from outlier videos (Section on hook
+// generation: significantly overperforming what's typical for the
+// topic, not derived from the average of all pulled results) when any
+// exist in this pull; scripts are generated only for whichever format
+// the research/title actually supports, never both by default.
+export type ResearchSynthesisResult = {
+  titles: string[];
+  hooks: { text: string; basedOnOutlier: boolean }[];
+  thumbnails: {
+    concept: string;
+    main_text_on_image: string;
+    visual_elements: string;
+    emotion_vibe: string;
+  }[];
+  formatFit: "short" | "long" | "both";
+  formatReason: string;
+  fullScript: string | null;
+  mainPointers: { point_text: string; landing_line: string | null }[] | null;
+  confidenceNote: string | null;
+};
+
 // Section 10.2.1: Reference Videos Tab
 export type ReferenceVideo = {
   id: string;
@@ -285,11 +307,23 @@ export type JourneyEntry = {
 
 export const PLATFORMS = ["YouTube", "Instagram", "TikTok", "Threads", "Facebook"] as const;
 
+// Section 10.1.4, restructured: two parallel modes per platform rather
+// than one set of fields. Viewer POV is the algorithm/platform-optimized
+// version (SEO title, description, short + question-style keywords,
+// tuned to that platform's current discovery patterns); Normal POV is
+// the plain, direct version of the same fields with no algorithm
+// framing. Both are meant to be fully ready-to-paste on their own.
+export type PlatformModeEntry = {
+  title?: string;
+  description?: string;
+  short_keywords?: string;
+  question_keywords?: string;
+  angle_line?: string;
+};
+
 export type PlatformPublishingEntry = {
-  platform_title?: string;
-  platform_description?: string;
-  platform_tags_hashtags?: string;
-  platform_angle_line?: string;
+  viewer_pov: PlatformModeEntry;
+  normal_pov: PlatformModeEntry;
 };
 
 export type PlatformPublishing = Record<string, PlatformPublishingEntry>;
