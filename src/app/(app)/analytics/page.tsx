@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
+import { localDateKey } from "@/lib/date";
 import {
   ANALYTICS_RANGES,
   computeAnalyticsRange,
@@ -13,13 +14,30 @@ import {
   computePerformanceByPillar,
   computePerformanceOverTime,
   computePillarBalance,
+  computeTopSubTopics,
+  computeOutputVolumeOverTime,
+  computeFunnel,
+  computeTopPerformingContent,
+  computeResearchVsCustomPerformance,
+  computeRetentionDropPatterns,
+  computeIdeaSourcePerformance,
+  computeRepurposingPerformance,
+  computeBestTimeToPost,
   type ContentMetricsRow,
+  type ExtendedMetricsRow,
 } from "@/lib/analytics";
-import { computeStreak, type StreakRow } from "@/lib/streaks";
+import { computeStreak, computeStreakHeatmap, type StreakRow } from "@/lib/streaks";
 import { KpiCard } from "@/components/kpi-card";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import { PerformanceOverTimeChart } from "@/components/charts/performance-over-time-chart";
 import { PerformanceByPillarChart } from "@/components/charts/performance-by-pillar-chart";
 import { PillarBalanceChart } from "@/components/charts/pillar-balance-chart";
+import { NamedMetricBarChart } from "@/components/charts/named-metric-bar-chart";
+import { OutputVolumeChart } from "@/components/charts/output-volume-chart";
+import { ReachFunnelChart } from "@/components/charts/reach-funnel-chart";
+import { TopPerformingList } from "@/components/charts/top-performing-list";
+import { BestTimeToPostChart } from "@/components/charts/best-time-to-post-chart";
+import { StreakHeatmap } from "@/components/charts/streak-heatmap";
 import { cn } from "@/lib/utils";
 
 export default async function AnalyticsPage({
@@ -39,7 +57,9 @@ export default async function AnalyticsPage({
 
   let contentQuery = supabase
     .from("content_calendar")
-    .select("pillar, publish_date, production_status, views, likes, comments, shares, saves, conversions")
+    .select(
+      "id, final_title, pillar, sub_topic, format, publish_date, production_status, idea_source, derived_from_content_id, retention_drop_timestamp, retention_drop_note, views, likes, comments, shares, saves, conversions",
+    )
     .eq("brand", brand)
     .eq("is_archived", false);
 
@@ -47,12 +67,21 @@ export default async function AnalyticsPage({
     contentQuery = contentQuery.gte("publish_date", from).lte("publish_date", `${to}T23:59:59`);
   }
 
-  const [{ data: contentRows }, { data: streakRows }] = await Promise.all([
+  const streakSince = new Date();
+  streakSince.setDate(streakSince.getDate() - 16 * 7);
+
+  const [{ data: contentRows }, { data: streakRows }, { data: liveTitleRows }] = await Promise.all([
     contentQuery,
-    supabase.from("daily_streaks").select("streak_date, walked, posted").eq("brand", brand),
+    supabase
+      .from("daily_streaks")
+      .select("streak_date, walked, posted")
+      .eq("brand", brand)
+      .gte("streak_date", localDateKey(streakSince)),
+    supabase.from("title_variants").select("content_id, source").eq("brand", brand).eq("is_live", true),
   ]);
 
   const rows = (contentRows ?? []) as ContentMetricsRow[];
+  const extendedRows = (contentRows ?? []) as ExtendedMetricsRow[];
   const kpis = computeKpis(rows);
   const overTime = computePerformanceOverTime(rows);
   const byPillar = computePerformanceByPillar(rows);
@@ -61,6 +90,18 @@ export default async function AnalyticsPage({
   const streaks = (streakRows ?? []) as StreakRow[];
   const walkStreak = computeStreak(streaks, "walked");
   const postStreak = computeStreak(streaks, "posted");
+  const streakHeatmap = computeStreakHeatmap(streaks);
+
+  const topSubTopics = computeTopSubTopics(extendedRows);
+  const outputVolume = computeOutputVolumeOverTime(extendedRows);
+  const funnel = computeFunnel(kpis);
+  const topPerforming = computeTopPerformingContent(extendedRows);
+  const liveTitleSourceById = new Map((liveTitleRows ?? []).map((r) => [r.content_id, r.source]));
+  const researchVsCustom = computeResearchVsCustomPerformance(extendedRows, liveTitleSourceById);
+  const retentionDrops = computeRetentionDropPatterns(extendedRows);
+  const ideaSourcePerformance = computeIdeaSourcePerformance(extendedRows);
+  const repurposing = computeRepurposingPerformance(extendedRows);
+  const bestTimeToPost = computeBestTimeToPost(extendedRows);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -134,6 +175,122 @@ export default async function AnalyticsPage({
         Hook Type Performance isn&apos;t built yet, it depends on Phase 2&apos;s Title/Hook/Thumbnail
         variants (the hook actually used has to come from a live variant, not a separate field).
       </p>
+
+      {/* Section 6.4: worth having once there's enough volume, not the
+          first thing to see on this page, collapsed by default. */}
+      <div className="mt-8">
+        <CollapsibleSection title="Secondary Graphs (Month 2+)">
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Top Sub-topics</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <NamedMetricBarChart data={topSubTopics} emptyLabel="No sub-topic data in this range yet." />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Content Output Volume Over Time</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <OutputVolumeChart data={outputVolume.data} pillars={outputVolume.pillars} />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Funnel: Reach &rarr; Engagement &rarr; Conversion</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <ReachFunnelChart data={funnel} />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Top Performing Content</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <TopPerformingList items={topPerforming} />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Research-based vs Custom Performance</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">By each item&apos;s live title variant source.</p>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <NamedMetricBarChart
+                data={researchVsCustom}
+                emptyLabel="No live title variants tracked in this range yet."
+              />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Retention Drop Patterns</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              {retentionDrops.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No retention drop notes logged in this range yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {retentionDrops.map((d) => (
+                    <li key={d.id} className="text-sm">
+                      <Link href={`/calendar/${d.id}`} className="font-medium hover:underline">
+                        {d.final_title}
+                      </Link>
+                      {d.retention_drop_timestamp && (
+                        <span className="text-muted-foreground"> @ {d.retention_drop_timestamp}</span>
+                      )}
+                      <p className="text-muted-foreground">{d.retention_drop_note}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Streak History</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <StreakHeatmap cells={streakHeatmap} />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Idea Source Performance</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <NamedMetricBarChart data={ideaSourcePerformance} emptyLabel="No idea source data in this range yet." />
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Repurposing Performance</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              {repurposing.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nothing in this range yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {repurposing.map((r) => (
+                    <li key={r.id} className="text-sm">
+                      <Link href={`/calendar/${r.id}`} className="font-medium hover:underline">
+                        {r.final_title}
+                      </Link>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        - {r.views.toLocaleString()} views &middot; {r.derivativeCount} derivative
+                        {r.derivativeCount === 1 ? "" : "s"} ({r.derivativeViews.toLocaleString()} views)
+                      </span>
+                      {r.isUntappedLongForm && (
+                        <span className="ml-1.5 text-amber-600">untapped repurposing opportunity</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Best Time to Post</h3>
+            <div className="mt-2 rounded-lg border border-border p-4">
+              <BestTimeToPostChart data={bestTimeToPost} />
+            </div>
+          </section>
+        </CollapsibleSection>
+      </div>
     </div>
   );
 }
