@@ -33,21 +33,22 @@ export function TopBar({
 
   return (
     <header className="border-b border-border">
+      <div className="flex justify-center border-b border-border px-4 py-3">
+        <BrandSwitcher brand={brand} />
+      </div>
+
       <div className="flex items-center justify-between gap-4 px-4 py-3">
-        <div className="flex items-center gap-6">
-          <BrandSwitcher brand={brand} />
-          <nav className="hidden items-center gap-4 md:flex">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <nav className="hidden items-center gap-4 md:flex">
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
         <div className="flex items-center gap-3">
           {userEmail && (
             <span className="hidden text-sm text-muted-foreground md:inline">{userEmail}</span>
