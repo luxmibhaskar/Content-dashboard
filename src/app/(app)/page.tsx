@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, BRAND_LABELS, DEFAULT_BRAND, isBrand } from "@/lib/brand";
+import Link from "next/link";
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
-import { localDateKey } from "@/lib/date";
+import { localDateKey, currentReviewWeek } from "@/lib/date";
 import { StreakStrip } from "@/components/streak-strip";
 import { GoalProgressStrip } from "@/components/goal-progress-strip";
 import { ServicesPanel } from "@/components/services-panel";
@@ -46,6 +47,21 @@ export default async function TodayPage() {
     g.target_metric === "Views" ? { ...g, current_value: totalViews } : g,
   );
 
+  // Section 5.1/12: Weekly Review surfaces automatically in Today on
+  // Sundays, for the week that just concluded (today).
+  const isSunday = new Date().getDay() === 0;
+  const reviewWeek = currentReviewWeek();
+  let weeklyReviewDone = false;
+  if (isSunday) {
+    const { data: existingReview } = await supabase
+      .from("weekly_reviews")
+      .select("id")
+      .eq("brand", brand)
+      .eq("week_start_date", reviewWeek.start)
+      .maybeSingle();
+    weeklyReviewDone = Boolean(existingReview);
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       {/* Section 5.0: small, quiet strip above the (future) next-up hero,
@@ -77,6 +93,25 @@ export default async function TodayPage() {
       )}
 
       <h1 className="mt-6 text-2xl font-semibold">Today &middot; {BRAND_LABELS[brand]}</h1>
+
+      {isSunday &&
+        (weeklyReviewDone ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Weekly Review done for this week. &#10003;
+          </p>
+        ) : (
+          <Link
+            href="/review"
+            className="mt-2 block rounded-lg border border-border p-4 hover:bg-muted/50"
+          >
+            <p className="text-sm font-medium">It&apos;s Sunday - Weekly Review time</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              15-20 minutes: scan the week, check pillar balance, glance at retention notes,
+              scan the Hook Library, update earned-the-click and non-YouTube numbers.
+            </p>
+          </Link>
+        ))}
+
       <p className="mt-2 text-muted-foreground">
         The next-up suggestion (the real hero of this screen) is coming once
         Journey Log and the Content Calendar have enough to suggest from.

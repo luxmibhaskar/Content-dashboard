@@ -20,3 +20,11 @@ export function addDays(d: Date, days: number): Date {
   next.setDate(next.getDate() + days);
   return next;
 }
+
+// Section 12: Weekly Review runs on Sundays, for the Monday-Sunday week
+// that just concluded (today, if today is Sunday).
+export function currentReviewWeek(today: Date = startOfToday()): { start: string; end: string } {
+  const end = addDays(today, -today.getDay());
+  const start = addDays(end, -6);
+  return { start: localDateKey(start), end: localDateKey(end) };
+}

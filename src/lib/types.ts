@@ -365,3 +365,42 @@ export type Goal = {
   target_date: string | null;
   status: string;
 };
+
+// Section 13: Quick Capture
+export const QUICK_CAPTURE_CONTENT_TYPES = ["Competitor", "Inspiration", "Trend", "Other"] as const;
+export const QUICK_CAPTURE_STATUSES = ["Inbox", "Reviewed", "Migrated"] as const;
+
+export type QuickCapture = {
+  id: string;
+  brand: Brand;
+  url: string;
+  pillar: string | null;
+  quick_hook_notes: string | null;
+  quick_rehook_notes: string | null;
+  quick_cta_notes: string | null;
+  content_type: string | null;
+  competitor_name: string | null;
+  status: string;
+};
+
+// Section 12: Weekly Review
+export type WeeklyReview = {
+  id: string;
+  brand: Brand;
+  week_start_date: string;
+  week_end_date: string;
+  posted_as_planned: string | null;
+  pillar_balance_notes: string | null;
+  retention_drop_patterns: string | null;
+  hook_library_insights: string | null;
+  earned_click_updates: string | null;
+  next_week_adjustment: string | null;
+};
+
+// Section 11: Hook Library. Aggregated from whichever variant is
+// is_live on each content item, not a table of its own.
+export type LiveVariantAggregate = {
+  variant_text: string;
+  uses: number;
+  avgPerformanceRating: number | null;
+};

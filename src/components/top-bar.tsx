@@ -9,7 +9,11 @@ const NAV_LINKS = [
   { href: "/analytics", label: "Analytics Overview" },
   { href: "/calendar", label: "Content Calendar" },
   { href: "/ideas", label: "Idea Panel" },
+  { href: "/hook-library", label: "Hook Library" },
+  { href: "/angle-bank", label: "Personal Angle Bank" },
   { href: "/journey", label: "My Journey Log" },
+  { href: "/quick-capture", label: "Quick Capture" },
+  { href: "/review", label: "Review" },
   { href: "/competitors", label: "Competitors" },
   { href: "/collaborators", label: "Collaborators" },
 ];
