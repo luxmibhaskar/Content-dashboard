@@ -15,6 +15,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 function progressPercent(goal: Goal) {
+  if (goal.status === "Achieved") return 100;
   if (!goal.target_value || goal.target_value <= 0) return null;
   const current = goal.current_value ?? 0;
   return Math.min(100, Math.round((current / goal.target_value) * 100));
