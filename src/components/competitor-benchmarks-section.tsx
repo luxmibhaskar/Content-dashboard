@@ -50,12 +50,14 @@ export function CompetitorBenchmarksSection({
               )}
             </div>
             <form action={deleteCompetitorBenchmark.bind(null, contentId, b.id)}>
-              <button
+              <Button
                 type="submit"
-                className="shrink-0 text-xs text-muted-foreground hover:text-destructive"
+                size="xs"
+                variant="ghost"
+                className="shrink-0 text-muted-foreground hover:text-destructive"
               >
                 Remove
-              </button>
+              </Button>
             </form>
           </div>
         ))}

@@ -65,12 +65,14 @@ function TextVariantList({
                 </form>
               )}
               <form action={deleteAction.bind(null, contentId, v.id)}>
-                <button
+                <Button
                   type="submit"
-                  className="text-xs text-muted-foreground hover:text-destructive"
+                  size="xs"
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-destructive"
                 >
                   Remove
-                </button>
+                </Button>
               </form>
             </div>
           </div>

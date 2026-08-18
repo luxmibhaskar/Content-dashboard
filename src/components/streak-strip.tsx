@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
 import { logTodayStreak } from "@/app/actions/streaks";
 
 export function StreakStrip({
@@ -48,9 +49,9 @@ export function StreakStrip({
             <input type="checkbox" name="posted" defaultChecked={todayPosted} className="size-3.5" />
             Posted today?
           </label>
-          <button type="submit" disabled={isPending} className="text-primary hover:underline">
+          <Button type="submit" size="xs" variant="link" disabled={isPending} className="px-0">
             Save
-          </button>
+          </Button>
         </form>
       )}
     </div>

@@ -39,14 +39,16 @@ function GoalCard({ goal }: { goal: Goal }) {
           defaultValue={goal.goal_text}
           className="h-7 text-xs font-medium text-foreground"
         />
-        <button
+        <Button
           type="button"
-          disabled={isPending}
+          size="xs"
+          variant="ghost"
+          loading={isPending}
           onClick={() => startTransition(() => boundDelete())}
           className="shrink-0 text-muted-foreground hover:text-destructive"
         >
           Delete
-        </button>
+        </Button>
       </div>
 
       {pct !== null && (

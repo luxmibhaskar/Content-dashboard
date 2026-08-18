@@ -1,11 +1,15 @@
+"use client"
+
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
+import { useFormStatus } from "react-dom"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-150 ease-out outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 hover:brightness-105 active:not-aria-[haspopup]:translate-y-px active:not-aria-[haspopup]:scale-[0.98] active:duration-75 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -41,16 +45,30 @@ const buttonVariants = cva(
   }
 )
 
+// Section: button feel. Two sources of "this button is doing async work":
+// a real <form action={fn}> submission (native or client-transition-wrapped,
+// both trip React's form-action pending tracking, so useFormStatus catches
+// either) picked up automatically for type="submit", or an explicit `loading`
+// prop for onClick-driven async work (e.g. a useTransition call with no
+// enclosing form, like Sync Now). Either way renders the same spinner and
+// disables the button, no per-call-site spinner markup needed.
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  loading,
+  disabled,
+  type,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    loading?: boolean
   }) {
+  const { pending } = useFormStatus()
+  const isLoading = !asChild && (loading ?? (type === "submit" && pending))
   const Comp = asChild ? Slot.Root : "button"
 
   return (
@@ -58,9 +76,21 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      data-loading={isLoading || undefined}
+      type={asChild ? undefined : type}
+      disabled={asChild ? undefined : disabled || isLoading}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="animate-spin" aria-hidden="true" />
+          {children}
+        </>
+      ) : (
+        children
+      )}
+    </Comp>
   )
 }
 

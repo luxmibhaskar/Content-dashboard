@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { getLiveServiceStatuses } from "@/app/actions/services-live";
 import { SERVICES } from "@/lib/services";
 import { cn } from "@/lib/utils";
@@ -31,18 +32,22 @@ export function LiveStatusSection() {
 
   return (
     <div className="border-t border-border pt-3">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="xs"
+        loading={loading}
         onClick={toggle}
-        className="flex items-center text-xs font-medium text-muted-foreground hover:text-foreground"
+        className="justify-start px-0 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground"
       >
-        <span className={cn("mr-1.5 inline-block transition-transform", open && "rotate-90")}>&rsaquo;</span>
+        {!loading && (
+          <span className={cn("mr-1.5 inline-block transition-transform", open && "rotate-90")}>&rsaquo;</span>
+        )}
         Live Status
-      </button>
+      </Button>
 
       {open && (
         <div className="mt-2 space-y-1 text-xs">
-          {loading && <p className="text-muted-foreground">Checking...</p>}
           {results &&
             LIVE_SERVICES.map((s) => {
               const status = results[s.id];
