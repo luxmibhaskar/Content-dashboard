@@ -4,8 +4,10 @@ import { BRAND_COOKIE, BRAND_LABELS, DEFAULT_BRAND, isBrand } from "@/lib/brand"
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
 import { localDateKey } from "@/lib/date";
 import { StreakStrip } from "@/components/streak-strip";
+import { GoalProgressStrip } from "@/components/goal-progress-strip";
 import { ServicesPanel } from "@/components/services-panel";
 import { getBackupStatuses } from "@/lib/backup-status";
+import type { Goal } from "@/lib/types";
 
 export default async function TodayPage() {
   const cookieStore = await cookies();
@@ -31,6 +33,19 @@ export default async function TodayPage() {
   const backupStatuses = await getBackupStatuses();
   const failingBackups = backupStatuses.filter((s) => s.isFailing);
 
+  // Section 6.5: current_value is pulled live from Analytics for Views
+  // goals (the one metric this app already tracks), everything else
+  // (Subscribers, Revenue, Community Members, Custom) has no tracked
+  // source yet, so it stays manual entry.
+  const [{ data: goalRows }, { data: viewRows }] = await Promise.all([
+    supabase.from("goals").select("id, brand, goal_text, target_metric, target_value, current_value, target_date, status").eq("brand", brand),
+    supabase.from("content_calendar").select("views").eq("brand", brand),
+  ]);
+  const totalViews = (viewRows ?? []).reduce((sum, r) => sum + (r.views ?? 0), 0);
+  const goals: Goal[] = (goalRows ?? []).map((g) =>
+    g.target_metric === "Views" ? { ...g, current_value: totalViews } : g,
+  );
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       {/* Section 5.0: small, quiet strip above the (future) next-up hero,
@@ -42,6 +57,13 @@ export default async function TodayPage() {
         todayWalked={todayRow?.walked ?? false}
         todayPosted={todayRow?.posted ?? false}
       />
+
+      {/* Section 6.5: same quiet-strip treatment as the streak strip
+          above, 2-3 active goals is the realistic use case, not a
+          dashboard of its own. */}
+      <div className="mt-2">
+        <GoalProgressStrip goals={goals} />
+      </div>
 
       {failingBackups.length > 0 && (
         <p className="mt-3 text-sm text-destructive">

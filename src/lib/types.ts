@@ -343,3 +343,25 @@ export type Collaborator = {
   notes: string | null;
   last_contact_date: string | null;
 };
+
+// Section 6.5: Goals & Milestones
+export const TARGET_METRIC_OPTIONS = [
+  "Subscribers/Followers",
+  "Views",
+  "Revenue",
+  "Community Members",
+  "Custom",
+] as const;
+
+export const GOAL_STATUSES = ["On Track", "Behind", "Achieved", "Abandoned"] as const;
+
+export type Goal = {
+  id: string;
+  brand: Brand;
+  goal_text: string;
+  target_metric: string | null;
+  target_value: number | null;
+  current_value: number | null;
+  target_date: string | null;
+  status: string;
+};
