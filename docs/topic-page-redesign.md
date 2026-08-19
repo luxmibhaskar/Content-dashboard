@@ -45,7 +45,15 @@ Structure, top to bottom:
 
 1. **Summary**: roughly 1000+ words, clean easy-to-read prose, genuinely
    readable, not an AI-formatted list. No em dashes anywhere in it, no
-   AI-feeling phrasing or symbols.
+   AI-feeling phrasing or symbols. **No markdown syntax of any kind**, no
+   `#`/`##` headers, no `**bold**`, no `[text](url)` bracketed links, no
+   blockquote-style isolated quotes with a citation floating alone on its
+   own line. Citations get woven naturally into the sentence itself
+   (e.g. "a 2025 Lancet review found..." or "...according to UCLA
+   Health"), never broken out as a separate quoted fragment followed by a
+   dangling source link. This should read as continuous, real prose
+   start to finish, the kind a person would actually enjoy reading, not
+   a structured research report with headers and citation blocks.
 2. **Sources** (global): collapsible, collapsed by default, directly
    below the summary. Contains the links the summary drew from. This is
    separate from the per-container sources described below.

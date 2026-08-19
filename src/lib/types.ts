@@ -184,12 +184,36 @@ export type ResearchCopyResult = {
   generatedAt: string;
 };
 
-// docs/topic-page-redesign.md Section 2, Tab 2 "Scripts". Schema added
-// now alongside research_copy per the "build full schemas upfront"
-// convention, the Scripts tab UI itself is a later piece.
-export type ScriptsResult = {
+// Run now runs as 3 separate Claude calls sharing one web search pass
+// (summary, sources & containers, titles/description/tags), each with its
+// own token budget since content length genuinely varies by topic and no
+// single fixed budget survives every topic. This tracks live per-step
+// status, polled from the tab while Run is pending, so progress is real
+// and visible instead of one long silent wait. Overwritten each Run, no
+// history, same convention as research_copy itself.
+export type ResearchStep = "summary" | "sources" | "copy";
+export type StepStatus = "pending" | "running" | "done" | "error";
+
+export type ResearchProgress = {
+  status: "idle" | "running" | "done" | "error";
+  steps: Record<ResearchStep, StepStatus>;
+  error: string | null;
+  updatedAt: string;
+};
+
+// docs/topic-page-redesign.md Section 2, Tab 2 "Scripts": each script is
+// "a complete, self-contained video" living in one container, hooks +
+// body + CTAs together, not one shared hook list for the whole tab.
+// Short-form formats can produce several of these containers when the
+// topic supports it; long-form produces one.
+export type ScriptContainer = {
   hooks: string[];
-  scripts: { body: string; ctaOptions: string[] }[];
+  body: string;
+  ctaOptions: string[];
+};
+
+export type ScriptsResult = {
+  scripts: ScriptContainer[];
   generatedAt: string;
 };
 

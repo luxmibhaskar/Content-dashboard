@@ -33,7 +33,7 @@ export default async function JourneyEntryPage({
   const boundDelete = deleteJourneyEntry.bind(null, entry.id);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <Link href="/journey" className="text-sm text-muted-foreground hover:underline">
         &larr; My Journey Log
       </Link>

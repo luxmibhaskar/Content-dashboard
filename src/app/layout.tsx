@@ -45,6 +45,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-brand={brand}
       className={`${manrope.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Applies the stored/system theme before first paint, in <head>
+            so it runs before body renders, avoids a flash of the wrong
+            theme. The toggle itself (src/components/theme-toggle.tsx)
+            just reads .dark back on mount and flips it on click. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem("theme");var d=s?s==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;if(d)document.documentElement.classList.add("dark");}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

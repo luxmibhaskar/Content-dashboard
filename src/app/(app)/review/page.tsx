@@ -44,7 +44,7 @@ export default async function ReviewPage({
   ]);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold">Weekly Review</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         15-20 minutes, Sundays. Missed weeks just resume next Sunday, never combine two

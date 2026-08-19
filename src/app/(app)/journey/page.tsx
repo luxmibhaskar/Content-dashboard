@@ -16,6 +16,7 @@ export default async function JourneyLogPage({
     pillar?: string;
     sub_topic?: string;
     q?: string;
+    angle_worthy?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -28,7 +29,7 @@ export default async function JourneyLogPage({
   let query = supabase
     .from("journey_log")
     .select(
-      "id, brand, entry_date, pillar_focus, sub_topic, key_lesson_insight, tags_keywords, angle_worthy",
+      "id, brand, entry_date, pillar_focus, sub_topic, what_i_did_experienced, key_lesson_insight, tags_keywords, angle_worthy",
     )
     .eq("brand", brand)
     .order("entry_date", { ascending: false });
@@ -37,6 +38,7 @@ export default async function JourneyLogPage({
   if (params.to) query = query.lte("entry_date", params.to);
   if (params.pillar) query = query.contains("pillar_focus", [params.pillar]);
   if (params.sub_topic) query = query.contains("sub_topic", [params.sub_topic]);
+  if (params.angle_worthy) query = query.eq("angle_worthy", true);
   if (params.q) {
     const term = `%${params.q}%`;
     query = query.or(
@@ -47,7 +49,7 @@ export default async function JourneyLogPage({
   const { data: entries } = await query;
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">My Journey Log</h1>
         <form action={createJourneyEntry}>
@@ -131,10 +133,23 @@ export default async function JourneyLogPage({
             className="h-8 rounded-md border border-input bg-background px-2 text-sm"
           />
         </div>
+        {/* docs/topic-page-redesign.md Section 3: Personal Angle Bank is
+            this toggle now, not a separate page, "your best lived-
+            experience angles" is just this same list filtered down. */}
+        <label className="flex items-center gap-1.5 pb-1.5 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            name="angle_worthy"
+            value="1"
+            defaultChecked={Boolean(params.angle_worthy)}
+            className="size-3.5 rounded border-input"
+          />
+          Angle-worthy only
+        </label>
         <Button type="submit" size="sm" variant="outline">
           Filter
         </Button>
-        {(params.from || params.to || params.pillar || params.sub_topic || params.q) && (
+        {(params.from || params.to || params.pillar || params.sub_topic || params.q || params.angle_worthy) && (
           <Link href="/journey" className="text-xs text-muted-foreground hover:underline">
             Clear filters
           </Link>
@@ -159,7 +174,9 @@ export default async function JourneyLogPage({
                   )}
                 </div>
                 <p className="truncate text-sm">
-                  {entry.key_lesson_insight || "No lesson recorded yet"}
+                  {entry.key_lesson_insight ||
+                    entry.what_i_did_experienced ||
+                    "No lesson recorded yet"}
                 </p>
               </div>
             </Link>

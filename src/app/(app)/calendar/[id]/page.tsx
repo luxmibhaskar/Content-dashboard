@@ -23,6 +23,14 @@ import {
 import { updateContentItem } from "./actions";
 import { retrieveContentDetail } from "@/lib/archive-lifecycle";
 
+// Research & Copy's Run now runs 3 sequential Claude calls in one server
+// action request (see research-copy-actions.ts), and the research call
+// alone has already run 223s+ on a real topic. Vercel's serverless
+// default sits well under that. maxDuration only takes effect set at the
+// page level (Next.js docs, route-segment-config/maxDuration), it does
+// nothing set on the action file itself.
+export const maxDuration = 300;
+
 // docs/topic-page-redesign.md: supersedes the original 10.1.1-10.1.6
 // section structure. Creator Input, Audience Strategy, Viewer POV,
 // Normal POV, and Recording Section are gone as separate sections,
@@ -136,7 +144,7 @@ export default async function TopicPage({
   );
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
         &larr; Content Calendar
       </Link>
@@ -585,6 +593,7 @@ export default async function TopicPage({
           briefIntent={item.brief_intent}
           keywords={item.raw_keywords_topics}
           researchCopy={item.research_copy}
+          scripts={item.scripts}
         />
       </div>
 

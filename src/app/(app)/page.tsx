@@ -8,6 +8,7 @@ import { PILLAR_STRUCTURE } from "@/lib/pillars";
 import { StreakStrip } from "@/components/streak-strip";
 import { GoalProgressStrip } from "@/components/goal-progress-strip";
 import { PillarTree, type TreeTopic } from "@/components/pillar-tree";
+import { TodayQuickEntry } from "@/components/today-quick-entry";
 import { ServicesPanel } from "@/components/services-panel";
 import { getBackupStatuses } from "@/lib/backup-status";
 import type { Goal } from "@/lib/types";
@@ -98,7 +99,7 @@ export default async function TodayPage() {
   }
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       {/* Section 5.0: small, quiet strip above the (future) next-up hero,
           not itself the focal point of this screen. */}
       <StreakStrip
@@ -115,6 +116,8 @@ export default async function TodayPage() {
       <div className="mt-2">
         <GoalProgressStrip goals={goals} />
       </div>
+
+      <TodayQuickEntry />
 
       {failingBackups.length > 0 && (
         <p className="mt-3 text-sm text-destructive">

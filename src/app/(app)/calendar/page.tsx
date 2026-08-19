@@ -49,7 +49,7 @@ export default async function CalendarPage({
   ]);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Content Calendar</h1>
         <Button asChild size="sm">

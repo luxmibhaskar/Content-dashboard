@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { WebSearchResult } from "@/lib/serpapi";
-import type { ResearchCopyResult } from "@/lib/types";
+import type { ResearchCopyResult, ResearchStep, ScriptsResult, StepStatus } from "@/lib/types";
+import { logDiagnostic } from "@/lib/diagnostic-log";
 
 // A stuck request previously ran 10+ minutes before ever failing or
 // returning, burning real API credit the whole time with no way for the
@@ -29,6 +30,75 @@ async function withFriendlyTimeout<T>(promise: Promise<T>): Promise<T> {
     }
     throw err;
   }
+}
+
+// Verified live 3 times now, with 3 different fixed budgets (8000, then
+// 16000, then a scoped-down 8000 for a narrower piece): content length
+// genuinely varies by topic, manually bumping a fixed max_tokens number
+// each time a new topic exceeds it is chasing a moving target, not a
+// fix. This self-heals instead: if a call gets cut off mid-generation
+// (stop_reason "max_tokens"), retry it once with a meaningfully higher
+// budget before giving up.
+//
+// Uses messages.create() directly rather than messages.parse(): parse()
+// throws before ever handing back the response on a parse/validation
+// failure (see node_modules/@anthropic-ai/sdk/src/lib/parser.ts,
+// parseMessage throws inside its own .map() over the resolved message),
+// which would hide stop_reason from us right when we need it most, and
+// was exactly the gap that left a truncated-JSON failure with zero
+// trace in the log earlier. Calling create() first means stop_reason is
+// visible before any parsing is even attempted.
+const MAX_TOKENS_RETRY_MULTIPLIER = 2;
+const MAX_TOKENS_RETRY_CEILING = 32000;
+
+async function createWithTruncationRetry(
+  label: string,
+  request: Anthropic.MessageCreateParamsNonStreaming,
+): Promise<Anthropic.Message> {
+  const first = await withFriendlyTimeout(client.messages.create(request));
+  if (first.stop_reason !== "max_tokens") {
+    return first;
+  }
+
+  const retryMaxTokens = Math.min(
+    (request.max_tokens || 0) * MAX_TOKENS_RETRY_MULTIPLIER,
+    MAX_TOKENS_RETRY_CEILING,
+  );
+  await logDiagnostic(
+    `[research-and-copy] ${label}: hit max_tokens at budget=${request.max_tokens}, actual output_tokens=${first.usage.output_tokens}, retrying once at ${retryMaxTokens}`,
+  );
+  return withFriendlyTimeout(client.messages.create({ ...request, max_tokens: retryMaxTokens }));
+}
+
+// docs/topic-page-redesign.md Section 2 Tab 1 item 1: no markdown syntax
+// of any kind in the summary (or article-style container summaries,
+// which use "the same clean-prose rules"). The prompt instructions above
+// are the actual fix, this is only a backstop for whatever slips through
+// despite them, strips visible markdown syntax rather than trying to
+// rewrite prose structure (can't turn a dangling-citation sentence back
+// into a woven one with a regex, that has to come from generation).
+// Logs when it actually had to change something, so a prompt regression
+// stays visible instead of getting silently papered over.
+async function stripMarkdownArtifacts(text: string, label: string): Promise<string> {
+  const original = text.trim();
+  const stripped = original
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/^>\s?/gm, "")
+    .split("\n")
+    .filter((line) => !/^\(?https?:\/\/\S+\)?$/.test(line.trim()))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (stripped !== original) {
+    await logDiagnostic(
+      `[research-and-copy] ${label}: markdown artifacts found in model output despite the prompt instruction, stripped as backstop`,
+    );
+  }
+  return stripped;
 }
 
 export type AlternativesVerdict = {
@@ -76,52 +146,92 @@ export async function synthesizeServiceAlternatives(
   };
 }
 
-const ResearchCopySchema = z.object({
-  summary: z.string(),
-  globalSources: z.array(z.object({ title: z.string(), url: z.string() })).max(15),
+// No .max() caps here on purpose. Verified live: the model returning
+// more sources/containers than we want to *display* (a valid, complete
+// response, just longer than intended) hit zod's array .max() and
+// failed the whole call the exact same way real truncation does,
+// "Too big: expected array to have <=6 items", a different bug wearing
+// the same symptom. A schema cap turns "slightly more than expected"
+// into a hard failure; slicing to the display limit after parsing (see
+// synthesizeResearchAndCopy) achieves the same result without ever
+// rejecting an otherwise-valid response.
+const SourcesAndContainersSchema = z.object({
+  globalSources: z.array(z.object({ title: z.string(), url: z.string() })),
+  containers: z.array(
+    z.object({
+      type: z.enum(["discussion", "article"]),
+      sourceName: z.string(),
+      items: z.array(z.string()).nullable(),
+      articleSummary: z.string().nullable(),
+      sources: z.array(z.object({ title: z.string(), url: z.string() })),
+    }),
+  ),
+});
+
+const MAX_GLOBAL_SOURCES = 15;
+const MAX_CONTAINERS = 6;
+const MAX_CONTAINER_ITEMS = 8;
+const MAX_CONTAINER_SOURCES = 5;
+
+const CopyFieldsSchema = z.object({
   titles: z.array(z.string()).length(3),
   description: z.string(),
   keywordTags: z.array(z.string()).max(10),
   questionTags: z.array(z.string()).max(10),
-  containers: z
-    .array(
-      z.object({
-        type: z.enum(["discussion", "article"]),
-        sourceName: z.string(),
-        items: z.array(z.string()).max(8).nullable(),
-        articleSummary: z.string().nullable(),
-        sources: z.array(z.object({ title: z.string(), url: z.string() })).max(5),
-      }),
-    )
-    .max(6),
 });
+
+type ResearchStepCallback = (step: ResearchStep, status: StepStatus) => Promise<void> | void;
 
 // docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy": one
 // Run, full depth from the start, no separate shallow-then-deep step.
-// Two-call design, not one: step 1 lets Claude actually search the open
-// web (whatever sources genuinely surface something useful, not fixed
-// to a hardcoded set of APIs), producing a free-form dossier with
-// inline source citations; step 2 extracts that dossier into the exact
-// shape Tab 1 renders. Splitting it this way means step 2 is reformat-
-// ting/extracting already-researched, already-cited material rather
-// than researching and structuring in one pass, lower hallucination
-// risk than asking a single call to do both under a rigid schema.
+//
+// 3 calls, not 1 or 2. Verified live twice that a single fixed
+// max_tokens budget for "write the whole dossier in one pass" doesn't
+// survive every topic (8000 then 16000 both hit stop_reason
+// "max_tokens" mid-generation on real topics, the second time producing
+// a truncated dossier that broke the old structure call's JSON parsing
+// entirely). Content length genuinely varies by topic, there's no safe
+// fixed number for "everything in one call." Splitting into naturally-
+// sized pieces means each piece's budget only has to cover that piece.
+//
+// Call 1 (summary) is the only one with the web_search tool and does
+// the real searching, same "freeform text, not structured output"
+// reasoning as before (rigid schema + live tool-calling together raises
+// hallucination risk). Calls 2 and 3 are NOT given the tool at all, so
+// it's structurally impossible for them to search again, not just an
+// instruction the model could ignore. Call 2 reuses call 1's actual
+// search results by replaying its full message history (tool_use/
+// tool_result blocks included) as a prior turn, so it can pull discussion
+// pain points and article summaries straight from the raw findings, not
+// just what made it into the polished summary prose. Call 3 only needs
+// the finished summary text, not the raw search transcript.
 export async function synthesizeResearchAndCopy(params: {
   title: string;
   briefIntent: string | null;
   keywords: string | null;
+  onStep?: ResearchStepCallback;
 }): Promise<ResearchCopyResult> {
-  const researchStartedAt = Date.now();
-  const researchResponse = await withFriendlyTimeout(
-    client.messages.create({
+  const topicContext = `Topic title: ${params.title}
+Brief description: ${params.briefIntent || "(not provided)"}
+Keywords: ${params.keywords || "(not provided)"}`;
+
+  await params.onStep?.("summary", "running");
+
+  const summaryUserContent = `${topicContext}
+
+Research this topic thoroughly, searching broadly, whatever sources genuinely surface something useful for this specific topic: forums, Reddit, Quora, news, YouTube, communities, anything relevant, not a fixed checklist of sites. This same research gets reused by a follow-up pass that pulls out discussion pain points and article summaries from what you find, so search broadly enough to cover those too, not only what this summary itself ends up citing.
+
+Then write the SUMMARY: a genuinely readable, clean prose overview of everything worth knowing about this topic for planning a video, roughly 1000+ words. Write like a knowledgeable person explaining it, not a listicle, not a structured research report. Weave every citation naturally into the sentence itself, the way a person telling you about something they read would, for example "a 2025 Lancet review found the benefit levels off around 7,000 steps" or "UCLA Health reports...". Never cite as a bracketed [Title](URL) link, never as a quote broken out on its own line followed by a dangling source URL, and never use markdown syntax anywhere in this summary: no # or ## or ### headers, no **bold**, no bullet lists. Continuous prose start to finish, nothing structural. Open directly with the first real substantive point, never with a line narrating what you're about to do, for example never start with something like "I'll research this thoroughly across multiple angles" or "Let's look at this topic", the reader should be reading actual content from the very first sentence.`;
+
+  const summaryStartedAt = Date.now();
+  const summaryResponse = await createWithTruncationRetry("summary call", {
     model: "claude-opus-5",
-    // Verified live: at 8000 this hit stop_reason "max_tokens" and cut
-    // the dossier off mid-generation (lost the entire ARTICLE SOURCES
-    // section on an 8-search pull). Token budget isn't what was making
-    // this slow, the 8 sequential real web searches were (~100s of the
-    // ~160s total), so restoring headroom here doesn't meaningfully add
-    // latency back, it just stops truncating real content.
-    max_tokens: 16000,
+    // Scoped to just the summary now (not summary+sources+discussion+
+    // article all at once), so this budget only has to cover a
+    // ~1000+ word prose piece, not four sections combined. If a topic
+    // still exceeds this, createWithTruncationRetry retries once at 2x
+    // rather than failing, no manual number-chasing needed.
+    max_tokens: 8000,
     output_config: { effort: "medium" },
     // web_search_20260209's "dynamic filtering" auto-attaches a
     // code-execution environment that can re-invoke web_search itself
@@ -131,84 +241,270 @@ export async function synthesizeResearchAndCopy(params: {
     // The 20250305 version doesn't auto-attach that environment, so
     // one query costs exactly one use.
     tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 8 }],
+    // docs/topic-page-redesign.md Section 2 Tab 1 item 1: the summary
+    // requirement is explicit now, no markdown syntax of any kind, no
+    // headers, no bracketed links, no isolated quote-plus-dangling-link
+    // blocks, citations woven into the sentence itself. Verified live:
+    // the model defaults to exactly that structured-report shape
+    // (### headers, [Title](url) links) unless told not to, this
+    // instruction is the actual fix, stripMarkdownArtifacts below is
+    // only a backstop for whatever slips through. Also verified live: it
+    // defaults to opening with a line narrating its own process ("I'll
+    // research this thoroughly across multiple angles") before the real
+    // content starts, same category of problem, told not to here too.
     system:
-      "You are a thorough content researcher for a solo creator planning a video on the topic below. Search the web broadly, whatever sources genuinely surface something useful for this specific topic, forums, news, YouTube, communities, anything relevant, not a fixed checklist of sites. Every claim, statistic, or discussion point you use must trace back to something you actually found, never invent facts, numbers, or quotes. Cite sources inline as you go using the format [Title](URL) directly after the claim or paragraph it supports.",
+      "You are a thorough content researcher for a solo creator planning a video on the topic below. Every claim, statistic, or discussion point you use must trace back to something you actually found, never invent facts, numbers, or quotes. Never use em dashes anywhere. Write clean, continuous prose a person would actually enjoy reading, the way someone knowledgeable would explain it out loud, never a structured research report. No markdown syntax anywhere: no headers, no bold, no bracketed [text](url) links, no blockquote-style isolated quotes with a citation floating alone on its own line. Every citation gets woven directly into the sentence it supports, e.g. \"a 2025 Lancet review found...\" or \"...according to UCLA Health\", never broken out as a separate fragment with a dangling source URL after it. Open directly with real substantive content, never with a line narrating what you're about to do (e.g. never \"I'll research this thoroughly\" or \"Let's look at this\"), the first sentence should already be teaching the reader something.",
+    messages: [{ role: "user", content: summaryUserContent }],
+  });
+
+  await logDiagnostic(
+    `[research-and-copy] summary call: ${Date.now() - summaryStartedAt}ms, web_search_requests=${summaryResponse.usage.server_tool_use?.web_search_requests ?? "unknown"}, stop_reason=${summaryResponse.stop_reason}, output_tokens=${summaryResponse.usage.output_tokens}`,
+  );
+
+  const rawSummary = summaryResponse.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("\n\n")
+    .trim();
+
+  if (!rawSummary) {
+    await params.onStep?.("summary", "error");
+    throw new Error("Research pass returned no content.");
+  }
+  const summary = await stripMarkdownArtifacts(rawSummary, "summary");
+  await params.onStep?.("summary", "done");
+
+  await params.onStep?.("sources", "running");
+
+  const sourcesFormat = zodOutputFormat(SourcesAndContainersSchema);
+  const sourcesStartedAt = Date.now();
+  const sourcesResponse = await createWithTruncationRetry("sources call", {
+    model: "claude-opus-5",
+    max_tokens: 16000,
+    output_config: { effort: "low", format: sourcesFormat },
+    // docs/topic-page-redesign.md Section 2 Tab 1 item 6: article-style
+    // containers use "the same clean-prose rules as the main summary",
+    // so articleSummary gets the identical no-markdown, woven-citation
+    // instruction as the summary call above, not a looser version of it.
+    system:
+      "You extract structured findings from an already-completed research pass, you do not add new research, invent anything not present in it, or search again. Never use em dashes anywhere in any text field. For articleSummary specifically: clean, continuous prose, no markdown syntax of any kind (no headers, no bold, no bracketed [text](url) links, no isolated quote-plus-dangling-link blocks), every citation woven naturally into the sentence itself, exactly the same rules as the main research summary.",
+    // Replays call 1's own turn (including its web_search tool_use/
+    // tool_result blocks) so this call can read the raw findings, not
+    // just the finished summary text, no tools attached here means it
+    // structurally cannot search again.
+    messages: [
+      { role: "user", content: summaryUserContent },
+      { role: "assistant", content: summaryResponse.content },
+      {
+        role: "user",
+        content: `From the research above, do not search again, extract:
+
+1. globalSources: every source the summary drew from, as {title, url} pairs, focus on the roughly 15 most important if there are more.
+2. containers: one per genuinely useful discussion (forum/Reddit/Quora/community thread) or article (news/blog post) source found in the research above, whether or not it made it into the summary's citations. type "discussion" for discussion-style blocks (items = each distinct pain point/question/suggestion found there as its own array entry, articleSummary = null), type "article" for article-style blocks (articleSummary = a roughly 500-word summary of that specific piece in clean prose, items = null). sourceName = that source's name (e.g. "Reddit", or the specific forum/publication). sources = that source's own thread/comment/article URLs as {title, url} pairs, focus on the 5 best if there are more. Only include a container if it's genuinely useful for this specific topic, not filler, it's fine to have zero of either type if nothing surfaced, and focus on the 6 most genuinely useful if more surfaced.`,
+      },
+    ],
+  });
+
+  await logDiagnostic(
+    `[research-and-copy] sources call: ${Date.now() - sourcesStartedAt}ms, stop_reason=${sourcesResponse.stop_reason}, output_tokens=${sourcesResponse.usage.output_tokens}`,
+  );
+
+  let sourcesParsed: z.infer<typeof SourcesAndContainersSchema>;
+  try {
+    const sourcesText = sourcesResponse.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    sourcesParsed = sourcesFormat.parse(sourcesText);
+  } catch (err) {
+    // Called manually (not via messages.parse()) specifically so the
+    // stop_reason log line above always lands first, whatever happens
+    // here. Verified live: a parse/validation failure here previously
+    // left zero trace in the log, no elapsed time, no error, nothing to
+    // check afterward.
+    await logDiagnostic(
+      `[research-and-copy] sources call: parsing FAILED: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    await params.onStep?.("sources", "error");
+    throw err;
+  }
+  await params.onStep?.("sources", "done");
+
+  // Enforced here, not as a schema .max() (see SourcesAndContainersSchema
+  // comment): a response that's valid but longer than we want to display
+  // gets trimmed, not rejected outright.
+  const globalSources = sourcesParsed.globalSources.slice(0, MAX_GLOBAL_SOURCES);
+  const containers = await Promise.all(
+    sourcesParsed.containers.slice(0, MAX_CONTAINERS).map(async (c) => ({
+      ...c,
+      items: c.items ? c.items.slice(0, MAX_CONTAINER_ITEMS) : null,
+      sources: c.sources.slice(0, MAX_CONTAINER_SOURCES),
+      // Article-style containers use the same clean-prose, no-markdown
+      // rules as the main summary (docs/topic-page-redesign.md Section 2
+      // Tab 1 item 6), same backstop applies.
+      articleSummary: c.articleSummary
+        ? await stripMarkdownArtifacts(c.articleSummary, `sources call container "${c.sourceName}"`)
+        : c.articleSummary,
+    })),
+  );
+
+  await params.onStep?.("copy", "running");
+
+  const painPoints = containers
+    .filter((c) => c.type === "discussion" && c.items && c.items.length > 0)
+    .flatMap((c) => c.items!.map((item) => `- (${c.sourceName}) ${item}`))
+    .join("\n");
+
+  const copyFormat = zodOutputFormat(CopyFieldsSchema);
+  const copyStartedAt = Date.now();
+  const copyResponse = await createWithTruncationRetry("copy call", {
+    model: "claude-opus-5",
+    max_tokens: 3000,
+    output_config: { effort: "low", format: copyFormat },
+    system:
+      "You extract titles, a description, and tags from an already-completed research summary, you do not add new research or invent facts not present in it. Never use em dashes anywhere in any text field.",
+    messages: [
+      {
+        role: "user",
+        content: `${topicContext}
+
+Research summary:
+${summary}
+
+${painPoints ? `Discussion pain points/questions found during research:\n${painPoints}\n\n` : ""}Produce:
+1. titles: 3 distinct, compelling title options for this video based on the research.
+2. description: one description under roughly 300 words covering the main points, not padded.
+3. keywordTags and questionTags: derive from the research, keywordTags as short plain tags, questionTags phrased as real people search.`,
+      },
+    ],
+  });
+
+  await logDiagnostic(
+    `[research-and-copy] copy call: ${Date.now() - copyStartedAt}ms, stop_reason=${copyResponse.stop_reason}, output_tokens=${copyResponse.usage.output_tokens}`,
+  );
+
+  let copyParsed: z.infer<typeof CopyFieldsSchema>;
+  try {
+    const copyText = copyResponse.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    copyParsed = copyFormat.parse(copyText);
+  } catch (err) {
+    await logDiagnostic(
+      `[research-and-copy] copy call: parsing FAILED: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    await params.onStep?.("copy", "error");
+    throw err;
+  }
+  await params.onStep?.("copy", "done");
+
+  return {
+    summary,
+    globalSources,
+    containers,
+    ...copyParsed,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+const SHORT_FORM_FORMATS = new Set(["Reel", "Short", "Story"]);
+
+const ScriptContainerSchema = z.object({
+  hooks: z.array(z.string()).length(3),
+  body: z.string(),
+  ctaOptions: z.array(z.string()).min(2).max(4),
+});
+
+// .max() dropped on scripts (see SourcesAndContainersSchema's comment,
+// same reasoning: a same-shaped topic could genuinely support more than
+// 6 self-contained shorts, and a longer-than-expected valid response
+// shouldn't hard-fail the whole call). Trimmed to MAX_SCRIPTS after
+// parsing instead.
+const ScriptsSchema = z.object({
+  scripts: z.array(ScriptContainerSchema).min(1),
+});
+const MAX_SCRIPTS = 6;
+
+// docs/topic-page-redesign.md Section 2, Tab 2 "Scripts": drawn from
+// Tab 1's already-completed research, not a fresh research pass of its
+// own, so this is one structured-output call, not the two-call
+// research+extract split synthesizeResearchAndCopy uses. Pain points and
+// questions from the discussion containers are surfaced explicitly so
+// the script's main points target what real people were actually asking
+// or struggling with, not the topic in the abstract (the spec's "viewer
+// feeling like this is exactly what they were searching for").
+export async function synthesizeScripts(params: {
+  title: string;
+  format: string | null;
+  briefIntent: string | null;
+  keywords: string | null;
+  researchCopy: ResearchCopyResult;
+}): Promise<ScriptsResult> {
+  const painPointsAndQuestions = params.researchCopy.containers
+    .filter((c) => c.type === "discussion" && c.items && c.items.length > 0)
+    .flatMap((c) => c.items!.map((item) => `- (${c.sourceName}) ${item}`))
+    .concat(params.researchCopy.questionTags.map((q) => `- (search question) ${q}`))
+    .join("\n");
+
+  const isShortForm = params.format ? SHORT_FORM_FORMATS.has(params.format) : false;
+
+  const scriptsFormat = zodOutputFormat(ScriptsSchema);
+  const startedAt = Date.now();
+  const response = await createWithTruncationRetry("scripts call", {
+    model: "claude-opus-5",
+    max_tokens: 12000,
+    output_config: { effort: "medium", format: scriptsFormat },
+    system:
+      "You write video scripts for a solo creator's channel, grounded strictly in already-completed research provided to you, you do not invent facts, statistics, or claims not present in that research. Write natural, spoken, direct-address language a person would actually say on camera, never AI-formatted lists or stiff phrasing inside a script body. Never use em dashes anywhere.",
     messages: [
       {
         role: "user",
         content: `Topic title: ${params.title}
+Format: ${params.format || "not set"}
 Brief description: ${params.briefIntent || "(not provided)"}
 Keywords: ${params.keywords || "(not provided)"}
 
-Research this topic thoroughly and write up your findings as a structured dossier with these clearly labeled sections:
+Research summary:
+${params.researchCopy.summary}
 
-SUMMARY: a genuinely readable, clean prose overview of everything worth knowing about this topic for planning a video, roughly 1000+ words. Write like a knowledgeable person explaining it, not a listicle. Cite sources inline as [Title](URL).
+Recurring pain points and questions from the research, the script's main points should specifically address these rather than covering the topic in the abstract:
+${painPointsAndQuestions || "(none surfaced, work from the research summary above)"}
 
-SOURCES: a flat list of every source the summary drew from, one per line, as [Title](URL).
+${
+  isShortForm
+    ? `This is a short-form format (individual 30-60 second videos). Generate multiple distinct, complete scripts if the topic genuinely supports more than one, each fully self-contained, a viewer gets full value from just one alone. Do not pad to a fixed count, generate as many as the material actually supports, at least 1.`
+    : `This is a long-form or non-video format. Generate one complete script covering the topic in depth.`
+}
 
-DISCUSSION SOURCES: for each forum/Reddit/Quora/community thread that surfaced genuinely useful pain points, questions, or suggestions, a labeled block: the source name (e.g. "Reddit", or the specific forum/community name), followed by each distinct pain point/question/suggestion found there as its own line, followed by the specific thread/comment URLs as [Title](URL) lines.
-
-ARTICLE SOURCES: for each news article or blog post that's genuinely worth summarizing on its own, a labeled block: the source name/publication, a roughly 500-word summary of that specific piece in clean prose, followed by its URL as [Title](URL).
-
-Only include a discussion or article source if it's genuinely useful for this specific topic, not generic filler to fill out a section, it's fine to have zero of either type if nothing surfaced.`,
+For each script, produce:
+1. hooks: exactly 3 distinct opening hook line options, the first line or two that would stop someone scrolling, specific to this script's actual content, not generic teasers.
+2. body: the main script content, natural spoken language, direct address ("you"), specifically addressing the pain points/questions above.
+3. ctaOptions: 2 to 4 short call-to-action line options for the end, genuinely fitting this content, not generic filler.`,
       },
     ],
-    }),
+  });
+
+  await logDiagnostic(
+    `[research-and-copy] scripts call: ${Date.now() - startedAt}ms, stop_reason=${response.stop_reason}, output_tokens=${response.usage.output_tokens}`,
   );
 
-  // Temporary diagnostic: real web_search invocation count straight
-  // from the API's own usage accounting, and elapsed time for the
-  // research call specifically. Not the dossier's actual content, just
-  // hard numbers to confirm the double-invocation fix instead of
-  // guessing from wall-clock feel.
-  console.log(
-    `[research-and-copy] research call: ${Date.now() - researchStartedAt}ms, web_search_requests=${researchResponse.usage.server_tool_use?.web_search_requests ?? "unknown"}, stop_reason=${researchResponse.stop_reason}`,
-  );
-
-  const dossier = researchResponse.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("\n\n");
-
-  if (!dossier.trim()) {
-    throw new Error("Research pass returned no content.");
+  let parsed: z.infer<typeof ScriptsSchema>;
+  try {
+    const text = response.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    parsed = scriptsFormat.parse(text);
+  } catch (err) {
+    await logDiagnostic(
+      `[research-and-copy] scripts call: parsing FAILED: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    throw err;
   }
 
-  const structureStartedAt = Date.now();
-  const structureResponse = await withFriendlyTimeout(
-    client.messages.parse({
-      model: "claude-opus-5",
-      max_tokens: 12000,
-      output_config: { effort: "low", format: zodOutputFormat(ResearchCopySchema) },
-      system:
-        "You extract and lightly reformat an already-researched dossier into a fixed structure, you do not add new research or invent anything not present in the dossier. Never use em dashes anywhere in any text field, write clean plain prose, avoid AI-formatted lists or AI-feeling phrasing in the summary and article summaries specifically, they should read like a person wrote them.",
-      messages: [
-        {
-          role: "user",
-          content: `Dossier:
-
-${dossier}
-
-Extract this into the target structure:
-1. summary: the SUMMARY section verbatim in clean prose (rewrite only to remove em dashes or AI-feeling phrasing if present, keep the substance and length, roughly 1000+ words).
-2. globalSources: every [Title](URL) from the SOURCES section.
-3. titles: 3 distinct, compelling title options for this video based on the research.
-4. description: one description under roughly 300 words covering the main points, not padded.
-5. keywordTags and questionTags: derive from the research, keywordTags as short plain tags, questionTags phrased as real people search.
-6. containers: one per DISCUSSION SOURCES or ARTICLE SOURCES block in the dossier. type "discussion" for discussion-style blocks (items = each pain point/question/suggestion as its own array entry, articleSummary = null), type "article" for article-style blocks (articleSummary = the ~500-word summary, items = null). sourceName = that block's source name. sources = that block's own [Title](URL) lines. Omit entirely if the dossier had none of that type.`,
-        },
-      ],
-    }),
-  );
-
-  console.log(
-    `[research-and-copy] structure call: ${Date.now() - structureStartedAt}ms, stop_reason=${structureResponse.stop_reason}`,
-  );
-
-  const parsed = structureResponse.parsed_output;
-  if (!parsed) {
-    throw new Error("Research & Copy synthesis did not return a parseable result.");
-  }
-
-  return { ...parsed, generatedAt: new Date().toISOString() };
+  return {
+    scripts: parsed.scripts.slice(0, MAX_SCRIPTS),
+    generatedAt: new Date().toISOString(),
+  };
 }

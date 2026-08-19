@@ -1,14 +1,22 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { Check, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CollapsibleSection } from "@/components/collapsible-section";
-import type { ResearchCopyContainer, ResearchCopyResult, ResearchSource } from "@/lib/types";
+import type {
+  ResearchCopyContainer,
+  ResearchCopyResult,
+  ResearchProgress,
+  ResearchSource,
+  ResearchStep,
+} from "@/lib/types";
 import {
   runResearchAndCopy,
+  getResearchProgress,
   updateResearchInput,
   useResearchTitle,
   useResearchDescription,
@@ -16,6 +24,39 @@ import {
   useResearchQuestionTags,
   type RunResearchState,
 } from "@/app/(app)/calendar/[id]/research-copy-actions";
+
+const STEP_LABELS: Record<ResearchStep, string> = {
+  summary: "Summary",
+  sources: "Sources",
+  copy: "Titles & Tags",
+};
+
+// Polled every 3s while Run is pending (see the effect below), a separate
+// concurrent request from Run's own, so it can see progress checkpoints
+// land in Supabase in real time even though Run itself is still one long
+// blocking call. Real per-piece status instead of one opaque spinner.
+function ProgressSteps({ progress }: { progress: ResearchProgress }) {
+  return (
+    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      {(Object.keys(STEP_LABELS) as ResearchStep[]).map((step) => {
+        const status = progress.steps[step];
+        return (
+          <span key={step} className="flex items-center gap-1.5">
+            {status === "done" && <Check className="size-3.5 text-emerald-500" aria-hidden="true" />}
+            {status === "running" && (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            )}
+            {status === "error" && <X className="size-3.5 text-destructive" aria-hidden="true" />}
+            {status === "pending" && <span className="size-1.5 rounded-full bg-muted-foreground/40" />}
+            <span className={status === "done" ? "text-foreground" : undefined}>
+              {STEP_LABELS[step]}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 function SourceLinks({ sources }: { sources: ResearchSource[] }) {
   if (sources.length === 0) {
@@ -151,9 +192,34 @@ export function ResearchAndCopyTab({
   // check runs synchronously on the submit event itself, no render
   // cycle involved, and is reset only once the pending action settles.
   const isSubmittingRef = useRef(false);
-  if (!isRunPending) {
-    isSubmittingRef.current = false;
-  }
+  useEffect(() => {
+    if (!isRunPending) {
+      isSubmittingRef.current = false;
+    }
+  }, [isRunPending]);
+
+  // Runs as its own request, independent of Run's, so it observes
+  // research_progress checkpoints landing in Supabase in real time
+  // instead of only finding out once Run's own promise finally resolves.
+  const [progress, setProgress] = useState<ResearchProgress | null>(null);
+  useEffect(() => {
+    if (!isRunPending) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await getResearchProgress(contentId);
+        if (!cancelled) setProgress(next);
+      } catch (err) {
+        console.error("[research-and-copy] progress poll failed:", err);
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isRunPending, contentId]);
 
   return (
     <div className="space-y-5">
@@ -191,6 +257,7 @@ export function ResearchAndCopyTab({
             </Button>
           </form>
         </div>
+        {isRunPending && progress && <ProgressSteps progress={progress} />}
         {runState.error && (
           <p className="text-sm text-destructive" role="alert">
             {runState.error}

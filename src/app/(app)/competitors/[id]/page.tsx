@@ -35,7 +35,7 @@ export default async function CompetitorPage({
   const boundDelete = deleteCompetitor.bind(null, competitor.id);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <Link href="/competitors" className="text-sm text-muted-foreground hover:underline">
         &larr; Competitors
       </Link>

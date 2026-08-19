@@ -142,7 +142,7 @@ export default async function HookLibraryPage() {
   const thumbnailGroups = groupThumbnailsByConcept((thumbnails ?? []) as LiveThumbnailRow[]);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold">Hook Library</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         An automatic aggregation of whichever Title, Hook, and Thumbnail variant is live on

@@ -33,7 +33,7 @@ export default async function IdeaPage({
   const boundTransfer = transferToCalendar.bind(null, idea.id);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <Link href="/ideas" className="text-sm text-muted-foreground hover:underline">
         &larr; Idea Panel
       </Link>

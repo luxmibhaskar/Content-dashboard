@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResearchAndCopyTab } from "@/components/research-and-copy-tab";
-import type { ResearchCopyResult } from "@/lib/types";
+import { ScriptsTab } from "@/components/scripts-tab";
+import type { ResearchCopyResult, ScriptsResult } from "@/lib/types";
 
 type Tab = "research" | "scripts";
 
@@ -21,11 +22,13 @@ export function TopicPageTabs({
   briefIntent,
   keywords,
   researchCopy,
+  scripts,
 }: {
   contentId: string;
   briefIntent: string | null;
   keywords: string | null;
   researchCopy: ResearchCopyResult | null;
+  scripts: ScriptsResult | null;
 }) {
   const [tab, setTab] = useState<Tab>("research");
 
@@ -55,9 +58,7 @@ export function TopicPageTabs({
       </div>
 
       <div className={tab === "scripts" ? "mt-4" : "mt-4 hidden"}>
-        <div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
-          Scripts tab is next up, not built yet.
-        </div>
+        <ScriptsTab contentId={contentId} researchCopy={researchCopy} scripts={scripts} />
       </div>
     </div>
   );

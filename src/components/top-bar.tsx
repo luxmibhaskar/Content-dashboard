@@ -2,23 +2,35 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { DropdownMenu } from "radix-ui";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandSwitcher } from "@/components/brand-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { signOut } from "@/app/actions/auth";
 import type { Brand } from "@/lib/brand";
 
+// docs/topic-page-redesign.md Section 3: Personal Angle Bank is gone as
+// a separate nav item, it's a toggle inside My Journey Log now (see
+// src/app/(app)/journey/page.tsx). Quick Capture is gone as a nav item,
+// replaced by the Today page's own quick-entry box (see
+// src/app/(app)/page.tsx), the underlying /quick-capture page and its
+// migrate-to-X actions stay intact, just unlinked from nav, nothing in
+// the spec asked for that data path itself to be removed.
 const NAV_LINKS = [
   { href: "/", label: "Today" },
   { href: "/analytics", label: "Analytics Overview" },
   { href: "/calendar", label: "Content Calendar" },
   { href: "/ideas", label: "Idea Panel" },
   { href: "/hook-library", label: "Hook Library" },
-  { href: "/angle-bank", label: "Personal Angle Bank" },
-  { href: "/journey", label: "My Journey Log" },
-  { href: "/quick-capture", label: "Quick Capture" },
   { href: "/review", label: "Review" },
   { href: "/competitors", label: "Competitors" },
+];
+
+// Section 3: "the main top bar has gotten crowded", these two move into
+// a "More" overflow menu instead of sitting flat in the row.
+const MORE_LINKS = [
+  { href: "/journey", label: "My Journey Log" },
   { href: "/collaborators", label: "Collaborators" },
 ];
 
@@ -48,8 +60,38 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-0.5 text-sm text-muted-foreground outline-none hover:text-foreground aria-expanded:text-foreground"
+              >
+                More
+                <ChevronDown className="size-3.5" aria-hidden="true" />
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="start"
+                sideOffset={10}
+                className="z-50 min-w-40 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
+              >
+                {MORE_LINKS.map((link) => (
+                  <DropdownMenu.Item key={link.href} asChild>
+                    <Link
+                      href={link.href}
+                      className="block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted"
+                    >
+                      {link.label}
+                    </Link>
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         </nav>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {userEmail && (
             <span className="hidden text-sm text-muted-foreground md:inline">{userEmail}</span>
           )}
@@ -72,7 +114,7 @@ export function TopBar({
 
       {mobileOpen && (
         <nav className="flex flex-col gap-1 border-t border-border px-4 py-3 md:hidden">
-          {NAV_LINKS.map((link) => (
+          {[...NAV_LINKS, ...MORE_LINKS].map((link) => (
             <Link
               key={link.href}
               href={link.href}

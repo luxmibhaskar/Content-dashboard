@@ -104,7 +104,7 @@ export default async function AnalyticsPage({
   const bestTimeToPost = computeBestTimeToPost(extendedRows);
 
   return (
-    <div className="w-full px-4 py-10">
+    <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold">Analytics Overview</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
