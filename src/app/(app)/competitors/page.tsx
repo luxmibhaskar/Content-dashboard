@@ -2,11 +2,12 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
-import { pillarsFor, subTopicsFor } from "@/lib/pillars";
+import { pillarsFor, subTopicsFor, PILLAR_STRUCTURE } from "@/lib/pillars";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SubTopicMultiSelect } from "@/components/sub-topic-multiselect";
 import { PLATFORMS } from "@/lib/types";
 import { createCompetitor } from "./actions";
 
@@ -35,7 +36,7 @@ export default async function CompetitorsPage({
   const [{ data: competitors }, { data: benchmarks }] = await Promise.all([
     supabase
       .from("competitors")
-      .select("id, name, platform, profile_url, notes, active")
+      .select("id, name, platform, profile_url, notes, active, sub_topics")
       .eq("brand", brand)
       .order("created_at", { ascending: false }),
     supabase
@@ -43,6 +44,25 @@ export default async function CompetitorsPage({
       .select("competitor_id, content_calendar:content_id(pillar, sub_topic, views, likes, comments, shares, saves)")
       .eq("brand", brand),
   ]);
+
+  // Filters the actual list below by each competitor's own tagged
+  // sub-topics (set on Add Competitor / edit), not by which content
+  // items they've happened to be benchmarked against, a freshly-tagged
+  // competitor with zero benchmarks yet would otherwise never show up
+  // under a filter, defeating the point of tagging them at creation.
+  // Pillar has no column of its own, derived via PILLAR_STRUCTURE: a
+  // competitor matches a pillar filter if any tagged sub-topic belongs
+  // to it.
+  const structure = PILLAR_STRUCTURE[brand];
+  const visibleCompetitors = (competitors ?? []).filter((c) => {
+    const tags: string[] = c.sub_topics ?? [];
+    if (subTopicFilter && !tags.includes(subTopicFilter)) return false;
+    if (pillarFilter) {
+      const pillarSubs = new Set(structure[pillarFilter] ?? []);
+      if (!tags.some((t) => pillarSubs.has(t))) return false;
+    }
+    return true;
+  });
 
   // Section 14.2, v2: filter the per-topic benchmarks by pillar/sub-topic
   // before rolling them up, so "Used in N topics" and Avg Views reflect
@@ -76,7 +96,63 @@ export default async function CompetitorsPage({
         on each Content Calendar item.
       </p>
 
-      <form method="get" action="/competitors" className="mt-4 flex flex-wrap items-end gap-2">
+      <form
+        action={createCompetitor}
+        className="mt-6 space-y-3 rounded-lg border border-border p-4"
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" name="name" required placeholder="e.g. Competitor A" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="platform">Platform</Label>
+            <Input
+              id="platform"
+              name="platform"
+              list="platform-options"
+              placeholder="YouTube, TikTok, multiple..."
+            />
+            <datalist id="platform-options">
+              {PLATFORMS.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="profile_url">Profile URL</Label>
+          <Input id="profile_url" name="profile_url" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Sub-topics</Label>
+          {/* Keyed on the list length: SubTopicMultiSelect's picked tags
+              are its own client-side state, a plain successful server
+              action submission doesn't reset that (unlike the native
+              Name/Notes inputs, which do clear), so without this a
+              submitted competitor's tags would silently carry over into
+              the next one. Changing the key remounts it fresh. */}
+          <SubTopicMultiSelect
+            key={competitors?.length ?? 0}
+            brand={brand}
+            initialSubTopics={[]}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            rows={2}
+            placeholder="Strong hooks, weak CTAs..."
+          />
+        </div>
+        <Button type="submit" size="sm">
+          + Add Competitor
+        </Button>
+      </form>
+
+      <form method="get" action="/competitors" className="mt-6 flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground" htmlFor="pillar">
             Pillar
@@ -123,50 +199,8 @@ export default async function CompetitorsPage({
         )}
       </form>
 
-      <form
-        action={createCompetitor}
-        className="mt-6 space-y-3 rounded-lg border border-border p-4"
-      >
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" name="name" required placeholder="e.g. Competitor A" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="platform">Platform</Label>
-            <Input
-              id="platform"
-              name="platform"
-              list="platform-options"
-              placeholder="YouTube, TikTok, multiple..."
-            />
-            <datalist id="platform-options">
-              {PLATFORMS.map((p) => (
-                <option key={p} value={p} />
-              ))}
-            </datalist>
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="profile_url">Profile URL</Label>
-          <Input id="profile_url" name="profile_url" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="notes">Notes (optional)</Label>
-          <Textarea
-            id="notes"
-            name="notes"
-            rows={2}
-            placeholder="Strong hooks, weak CTAs..."
-          />
-        </div>
-        <Button type="submit" size="sm">
-          + Add Competitor
-        </Button>
-      </form>
-
-      <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
-        {(competitors ?? []).map((c) => (
+      <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
+        {visibleCompetitors.map((c) => (
           <li key={c.id}>
             <Link
               href={`/competitors/${c.id}`}
@@ -182,6 +216,11 @@ export default async function CompetitorsPage({
                 {c.notes && (
                   <p className="truncate text-xs text-muted-foreground">{c.notes}</p>
                 )}
+                {c.sub_topics.length > 0 && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    {c.sub_topics.join(" · ")}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
                 {c.platform && <span>{c.platform}</span>}
@@ -196,9 +235,14 @@ export default async function CompetitorsPage({
             </Link>
           </li>
         ))}
-        {(competitors?.length ?? 0) === 0 && (
+        {visibleCompetitors.length === 0 && (competitors?.length ?? 0) === 0 && (
           <li className="px-3 py-6 text-center text-sm text-muted-foreground">
             No competitors yet. Add your first one above.
+          </li>
+        )}
+        {visibleCompetitors.length === 0 && (competitors?.length ?? 0) > 0 && (
+          <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+            No competitors match this filter.
           </li>
         )}
       </ul>

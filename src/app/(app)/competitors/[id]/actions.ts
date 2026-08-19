@@ -19,6 +19,7 @@ export async function updateCompetitor(id: string, formData: FormData) {
       profile_url: str(formData, "profile_url"),
       notes: str(formData, "notes"),
       active: formData.get("active") === "on",
+      sub_topics: formData.getAll("sub_topics").map(String),
     })
     .eq("id", id);
 

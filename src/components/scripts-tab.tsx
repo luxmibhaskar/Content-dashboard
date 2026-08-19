@@ -2,40 +2,29 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import type { ResearchCopyResult, ScriptContainer, ScriptsResult } from "@/lib/types";
+import type { AtomizedShort, ResearchCopyResult, ScriptPointer, ScriptsResult } from "@/lib/types";
 import { runScripts, type RunScriptsState } from "@/app/(app)/calendar/[id]/scripts-actions";
 
-function ScriptCard({ script, index }: { script: ScriptContainer; index: number }) {
+function PointerList({ points }: { points: ScriptPointer[] }) {
   return (
-    <div className="space-y-4 rounded-lg border border-border p-4">
-      <p className="text-sm font-medium">Script {index + 1}</p>
-
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Opening hooks</p>
-        <div className="space-y-2">
-          {script.hooks.map((h, i) => (
-            <p key={i} className="rounded-md border border-border p-2.5 text-sm">
-              {h}
-            </p>
-          ))}
+    <div className="space-y-2">
+      {points.map((p, i) => (
+        <div key={i} className="rounded-md border border-border p-2.5">
+          <p className="text-sm font-medium">{p.point}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{p.explanation}</p>
         </div>
-      </div>
+      ))}
+    </div>
+  );
+}
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Script body</p>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{script.body}</p>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">CTA options</p>
-        <div className="space-y-2">
-          {script.ctaOptions.map((c, i) => (
-            <p key={i} className="rounded-md border border-border p-2.5 text-sm">
-              {c}
-            </p>
-          ))}
-        </div>
-      </div>
+function AtomizedShortCard({ short, index }: { short: AtomizedShort; index: number }) {
+  return (
+    <div className="space-y-2 rounded-lg border border-border p-4">
+      <p className="text-sm font-medium">
+        Short {index + 1}: {short.title}
+      </p>
+      <PointerList points={short.pointerScript} />
     </div>
   );
 }
@@ -44,8 +33,10 @@ function ScriptCard({ script, index }: { script: ScriptContainer; index: number 
 // Run from Tab 1's, disabled until research_copy exists since the
 // script's main points are meant to specifically address the pain
 // points/questions Tab 1 surfaced, there's nothing to draw from without
-// it. Multiple self-contained script containers (short-form) or one
-// (long-form), divided the same visual way as Tab 1's source containers.
+// it. One Run produces the full package: hooks + the pain-point-answer
+// line that opens the long-form script, the long-form script itself, a
+// condensed pointer-style pass of the same core topic, and however many
+// atomized standalone shorts the content actually supports.
 export function ScriptsTab({
   contentId,
   researchCopy,
@@ -106,11 +97,61 @@ export function ScriptsTab({
       )}
 
       {scripts && (
-        <div className="space-y-3">
-          {scripts.scripts.map((s, i) => (
-            <ScriptCard key={i} script={s} index={i} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-4 rounded-lg border border-border p-4">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Opening hooks</p>
+              <div className="space-y-2">
+                {scripts.hooks.map((h, i) => (
+                  <p key={i} className="rounded-md border border-border p-2.5 text-sm">
+                    {h}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Pain-point answer (lands right after the hook)
+              </p>
+              <p className="rounded-md border border-border p-2.5 text-sm font-medium">
+                {scripts.painPointAnswer}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Long-form script</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{scripts.longFormScript}</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">CTA options (end of long-form script)</p>
+              <div className="space-y-2">
+                {scripts.ctaOptions.map((c, i) => (
+                  <p key={i} className="rounded-md border border-border p-2.5 text-sm">
+                    {c}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-border p-4">
+            <p className="text-sm font-medium">Short-form pass (same topic, condensed)</p>
+            <PointerList points={scripts.shortFormPointers} />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium">
+              Atomized shorts ({scripts.atomizedShorts.length})
+            </p>
+            <div className="space-y-3">
+              {scripts.atomizedShorts.map((s, i) => (
+                <AtomizedShortCard key={i} short={s} index={i} />
+              ))}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

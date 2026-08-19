@@ -201,19 +201,34 @@ export type ResearchProgress = {
   updatedAt: string;
 };
 
-// docs/topic-page-redesign.md Section 2, Tab 2 "Scripts": each script is
-// "a complete, self-contained video" living in one container, hooks +
-// body + CTAs together, not one shared hook list for the whole tab.
-// Short-form formats can produce several of these containers when the
-// topic supports it; long-form produces one.
-export type ScriptContainer = {
-  hooks: string[];
-  body: string;
-  ctaOptions: string[];
+// docs/topic-page-redesign.md Section 2, Tab 2 "Scripts": one Run
+// produces the full package for the topic, not a branch on the item's
+// own format field. hooks + painPointAnswer are the long-form script's
+// opening (the answer/relief line goes right after whichever hook gets
+// used, placed early on purpose, not buried after buildup), longFormScript
+// is the main body with its own ctaOptions at the end (the one piece in
+// this package that's a complete, read-it-as-written script, unlike the
+// pointer-style pieces below), shortFormPointers condenses the same core
+// topic into a single pointer-style pass (main points + brief
+// explanation each, not full prose, a CTA there is just one more point
+// to ad-lib, not a dedicated field), and atomizedShorts breaks the
+// long-form content into however many genuinely standalone shorts it
+// actually supports, each with its own small pointer script, same
+// reasoning, no dedicated CTA field per short.
+export type ScriptPointer = { point: string; explanation: string };
+
+export type AtomizedShort = {
+  title: string;
+  pointerScript: ScriptPointer[];
 };
 
 export type ScriptsResult = {
-  scripts: ScriptContainer[];
+  hooks: string[];
+  painPointAnswer: string;
+  longFormScript: string;
+  ctaOptions: string[];
+  shortFormPointers: ScriptPointer[];
+  atomizedShorts: AtomizedShort[];
   generatedAt: string;
 };
 
@@ -423,6 +438,7 @@ export type Competitor = {
   profile_url: string | null;
   notes: string | null;
   active: boolean;
+  sub_topics: string[];
 };
 
 // Section 10.1.6: Competitor Benchmarks (per content item)

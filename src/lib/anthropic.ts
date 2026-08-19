@@ -408,23 +408,35 @@ ${painPoints ? `Discussion pain points/questions found during research:\n${painP
   };
 }
 
-const SHORT_FORM_FORMATS = new Set(["Reel", "Short", "Story"]);
-
-const ScriptContainerSchema = z.object({
-  hooks: z.array(z.string()).length(3),
-  body: z.string(),
-  ctaOptions: z.array(z.string()).min(2).max(4),
+const ScriptPointerSchema = z.object({
+  point: z.string(),
+  explanation: z.string(),
 });
 
-// .max() dropped on scripts (see SourcesAndContainersSchema's comment,
-// same reasoning: a same-shaped topic could genuinely support more than
-// 6 self-contained shorts, and a longer-than-expected valid response
-// shouldn't hard-fail the whole call). Trimmed to MAX_SCRIPTS after
-// parsing instead.
+const AtomizedShortSchema = z.object({
+  title: z.string(),
+  // No .max() here either (see SourcesAndContainersSchema's comment,
+  // same reasoning): a genuinely rich topic could support more pointer
+  // points per short than a fixed cap allows, trimmed to
+  // MAX_POINTS_PER_SCRIPT after parsing instead of rejecting a longer-
+  // than-expected valid response outright.
+  pointerScript: z.array(ScriptPointerSchema).min(1),
+});
+
+// Same reasoning again for the top-level arrays: no .max() on
+// atomizedShorts, shortFormPointers, or ctaOptions, trimmed after
+// parsing.
 const ScriptsSchema = z.object({
-  scripts: z.array(ScriptContainerSchema).min(1),
+  hooks: z.array(z.string()).length(3),
+  painPointAnswer: z.string(),
+  longFormScript: z.string(),
+  ctaOptions: z.array(z.string()).min(2),
+  shortFormPointers: z.array(ScriptPointerSchema).min(1),
+  atomizedShorts: z.array(AtomizedShortSchema).min(1),
 });
-const MAX_SCRIPTS = 6;
+const MAX_ATOMIZED_SHORTS = 8;
+const MAX_POINTS_PER_SCRIPT = 8;
+const MAX_CTAS = 4;
 
 // docs/topic-page-redesign.md Section 2, Tab 2 "Scripts": drawn from
 // Tab 1's already-completed research, not a fresh research pass of its
@@ -434,9 +446,16 @@ const MAX_SCRIPTS = 6;
 // the script's main points target what real people were actually asking
 // or struggling with, not the topic in the abstract (the spec's "viewer
 // feeling like this is exactly what they were searching for").
+//
+// One Run always produces the full package below, not a branch on the
+// item's own format field, hooks + painPointAnswer open the long-form
+// script specifically (the answer/relief line lands right after
+// whichever hook gets used), longFormScript is the main body,
+// shortFormPointers condenses that same core topic into a single
+// pointer-style pass, and atomizedShorts breaks the long-form content
+// into however many genuinely standalone shorts it actually supports.
 export async function synthesizeScripts(params: {
   title: string;
-  format: string | null;
   briefIntent: string | null;
   keywords: string | null;
   researchCopy: ResearchCopyResult;
@@ -447,21 +466,24 @@ export async function synthesizeScripts(params: {
     .concat(params.researchCopy.questionTags.map((q) => `- (search question) ${q}`))
     .join("\n");
 
-  const isShortForm = params.format ? SHORT_FORM_FORMATS.has(params.format) : false;
-
   const scriptsFormat = zodOutputFormat(ScriptsSchema);
   const startedAt = Date.now();
   const response = await createWithTruncationRetry("scripts call", {
     model: "claude-opus-5",
-    max_tokens: 12000,
+    // Bumped from the old single-script-shape's 12000: this call now
+    // produces a long-form script plus a full pointer-style pass plus
+    // however many atomized shorts the topic supports, genuinely more
+    // content than before, not a guess-and-hope number. Automatic
+    // retry-at-2x (createWithTruncationRetry) still covers whatever
+    // topic exceeds even this.
+    max_tokens: 16000,
     output_config: { effort: "medium", format: scriptsFormat },
     system:
-      "You write video scripts for a solo creator's channel, grounded strictly in already-completed research provided to you, you do not invent facts, statistics, or claims not present in that research. Write natural, spoken, direct-address language a person would actually say on camera, never AI-formatted lists or stiff phrasing inside a script body. Never use em dashes anywhere.",
+      "You write video scripts and script outlines for a solo creator's channel, grounded strictly in already-completed research provided to you, you do not invent facts, statistics, or claims not present in that research. Write natural, spoken, direct-address language a person would actually say on camera in longFormScript, painPointAnswer, and ctaOptions specifically, never AI-formatted lists or stiff phrasing there. Pointer-style sections (shortFormPointers, and each atomized short's pointerScript) are outlines to glance at while recording, not scripts to read verbatim, short phrases plus a brief explanation each, not full sentences of spoken dialogue, no CTA needed in those, that's just one more point to ad-lib when you get there. Never use em dashes anywhere.",
     messages: [
       {
         role: "user",
         content: `Topic title: ${params.title}
-Format: ${params.format || "not set"}
 Brief description: ${params.briefIntent || "(not provided)"}
 Keywords: ${params.keywords || "(not provided)"}
 
@@ -471,16 +493,19 @@ ${params.researchCopy.summary}
 Recurring pain points and questions from the research, the script's main points should specifically address these rather than covering the topic in the abstract:
 ${painPointsAndQuestions || "(none surfaced, work from the research summary above)"}
 
-${
-  isShortForm
-    ? `This is a short-form format (individual 30-60 second videos). Generate multiple distinct, complete scripts if the topic genuinely supports more than one, each fully self-contained, a viewer gets full value from just one alone. Do not pad to a fixed count, generate as many as the material actually supports, at least 1.`
-    : `This is a long-form or non-video format. Generate one complete script covering the topic in depth.`
-}
+Produce all of the following:
 
-For each script, produce:
-1. hooks: exactly 3 distinct opening hook line options, the first line or two that would stop someone scrolling, specific to this script's actual content, not generic teasers.
-2. body: the main script content, natural spoken language, direct address ("you"), specifically addressing the pain points/questions above.
-3. ctaOptions: 2 to 4 short call-to-action line options for the end, genuinely fitting this content, not generic filler.`,
+1. hooks: exactly 3 distinct opening hook line options, the first line or two that would stop someone scrolling, specific to this topic's actual content, not generic teasers.
+
+2. painPointAnswer: one direct line delivering the core answer or relief the viewer came for, meant to land immediately after whichever hook gets used. Placed early on purpose, don't bury it after buildup, the viewer should get the actual payoff before anything else, not just a promise of one.
+
+3. longFormScript: the main long-form script, natural spoken language, direct address ("you"), specifically addressing the pain points/questions above, picking up the explanation and depth after the hook and pain-point answer rather than repeating them.
+
+4. ctaOptions: 2 to 4 short call-to-action line options for the end of the long-form script specifically, genuinely fitting this content, not generic filler. This is the one piece in the whole package that's a complete, read-it-as-written script, that's why it gets its own CTA and the pointer-style pieces below don't.
+
+5. shortFormPointers: a condensed short-form pass of this same core topic, not a different topic, as a pointer-style outline, each entry one main point plus a brief explanation, short phrases, not full prose or word-for-word lines. This is what you'd glance at to record a single short covering the whole idea compactly.
+
+6. atomizedShorts: look at the long-form script's actual content and identify how many genuinely standalone shorts it could be split into, each one independently valuable on its own, a viewer gets a complete payoff from that one short alone, not a fragment that only makes sense with the rest of the long-form piece. Do not pad to a fixed count, as many as the material genuinely supports, it's fine to have just one or two if that's honestly all it supports. For each one, give a title (what makes it its own standalone piece) and a small pointerScript in the same point-plus-explanation style as item 5, scoped to just that short's slice of the content.`,
       },
     ],
   });
@@ -503,8 +528,19 @@ For each script, produce:
     throw err;
   }
 
+  // Enforced here, not as a schema .max() (see ScriptsSchema's comment):
+  // a response that's valid but longer than we want to display gets
+  // trimmed, not rejected outright.
   return {
-    scripts: parsed.scripts.slice(0, MAX_SCRIPTS),
+    hooks: parsed.hooks,
+    painPointAnswer: parsed.painPointAnswer,
+    longFormScript: parsed.longFormScript,
+    ctaOptions: parsed.ctaOptions.slice(0, MAX_CTAS),
+    shortFormPointers: parsed.shortFormPointers.slice(0, MAX_POINTS_PER_SCRIPT),
+    atomizedShorts: parsed.atomizedShorts.slice(0, MAX_ATOMIZED_SHORTS).map((s) => ({
+      ...s,
+      pointerScript: s.pointerScript.slice(0, MAX_POINTS_PER_SCRIPT),
+    })),
     generatedAt: new Date().toISOString(),
   };
 }

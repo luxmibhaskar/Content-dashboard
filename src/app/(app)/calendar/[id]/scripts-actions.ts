@@ -23,7 +23,7 @@ export async function runScripts(
   try {
     const { data: item, error: itemError } = await supabase
       .from("content_calendar")
-      .select("final_title, raw_idea_title, brief_intent, raw_keywords_topics, format, research_copy")
+      .select("final_title, raw_idea_title, brief_intent, raw_keywords_topics, research_copy")
       .eq("id", contentId)
       .single();
     if (itemError || !item) {
@@ -40,7 +40,6 @@ export async function runScripts(
 
     const scripts = await synthesizeScripts({
       title,
-      format: item.format,
       briefIntent: item.brief_intent,
       keywords: item.raw_keywords_topics,
       researchCopy: item.research_copy,

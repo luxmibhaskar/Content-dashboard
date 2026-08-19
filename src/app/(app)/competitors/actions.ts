@@ -24,6 +24,7 @@ export async function createCompetitor(formData: FormData) {
     platform: str(formData, "platform"),
     profile_url: str(formData, "profile_url"),
     notes: str(formData, "notes"),
+    sub_topics: formData.getAll("sub_topics").map(String),
   });
 
   if (error) {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SubTopicMultiSelect } from "@/components/sub-topic-multiselect";
 import { PLATFORMS, type Competitor } from "@/lib/types";
 import { updateCompetitor, deleteCompetitor } from "./actions";
 
@@ -18,7 +19,7 @@ export default async function CompetitorPage({
 
   const { data: competitor } = await supabase
     .from("competitors")
-    .select("id, brand, name, platform, profile_url, notes, active")
+    .select("id, brand, name, platform, profile_url, notes, active, sub_topics")
     .eq("id", id)
     .single<Competitor>();
 
@@ -65,6 +66,11 @@ export default async function CompetitorPage({
             <Label htmlFor="profile_url">Profile URL</Label>
             <Input id="profile_url" name="profile_url" defaultValue={competitor.profile_url ?? ""} />
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Sub-topics</Label>
+          <SubTopicMultiSelect brand={competitor.brand} initialSubTopics={competitor.sub_topics} />
         </div>
 
         <div className="space-y-1.5">
