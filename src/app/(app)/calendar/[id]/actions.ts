@@ -42,7 +42,7 @@ export async function updateContentItem(id: string, formData: FormData) {
     .update({
       // Header
       final_title: str(formData, "final_title"),
-      production_status: String(formData.get("production_status")),
+      production_status: str(formData, "production_status"),
       viability_status: String(formData.get("viability_status")),
       viability_reason_note: str(formData, "viability_reason_note"),
 

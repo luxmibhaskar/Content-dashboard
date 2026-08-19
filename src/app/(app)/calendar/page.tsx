@@ -6,7 +6,6 @@ import { computeRange, type CalendarRange } from "@/lib/date-range";
 import { CalendarList } from "@/components/calendar-list";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { createContentItem } from "./actions";
 import type { ContentCalendarItem } from "@/lib/types";
 
 const SELECT_COLUMNS =
@@ -28,12 +27,16 @@ export default async function CalendarPage({
 
   const supabase = await createClient();
 
+  // Items with no production_status yet (still being scoped in the Idea
+  // Panel/Scout flow, before Transfer to Calendar assigns a first real
+  // status) intentionally don't render as cards here at all.
   const [{ data: unscheduled }, { data: scheduled }] = await Promise.all([
     supabase
       .from("content_calendar")
       .select(SELECT_COLUMNS)
       .eq("brand", brand)
       .is("publish_date", null)
+      .not("production_status", "is", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("content_calendar")
@@ -41,18 +44,17 @@ export default async function CalendarPage({
       .eq("brand", brand)
       .gte("publish_date", from)
       .lte("publish_date", `${to}T23:59:59`)
+      .not("production_status", "is", null)
       .order("publish_date", { ascending: true }),
   ]);
 
   return (
     <div className="w-full px-4 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Content Calendar</h1>
-        <form action={createContentItem}>
-          <Button type="submit" size="sm">
-            + New
-          </Button>
-        </form>
+        <h1 className="text-3xl font-bold">Content Calendar</h1>
+        <Button asChild size="sm">
+          <Link href="/calendar/new">+ New</Link>
+        </Button>
       </div>
 
       <div className="mt-4 flex items-center gap-2">

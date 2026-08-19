@@ -70,7 +70,7 @@ export default async function CompetitorsPage({
 
   return (
     <div className="w-full px-4 py-10">
-      <h1 className="text-2xl font-semibold">Competitors</h1>
+      <h1 className="text-3xl font-bold">Competitors</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         A high-level map of who you&apos;re benchmarking against. Per-topic benchmarks live
         on each Content Calendar item.

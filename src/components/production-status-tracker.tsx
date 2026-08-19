@@ -5,10 +5,10 @@ export function ProductionStatusTracker({
   status,
   size = "default",
 }: {
-  status: ProductionStatus;
+  status: ProductionStatus | null;
   size?: "sm" | "default";
 }) {
-  const currentIndex = PRODUCTION_STATUSES.indexOf(status);
+  const currentIndex = status ? PRODUCTION_STATUSES.indexOf(status) : -1;
 
   return (
     <div className="flex items-center gap-1">
@@ -31,7 +31,9 @@ export function ProductionStatusTracker({
         );
       })}
       {size === "default" && (
-        <span className="ml-1 text-xs text-muted-foreground">{status}</span>
+        <span className="ml-1 text-xs text-muted-foreground">
+          {status ?? "No status yet"}
+        </span>
       )}
     </div>
   );

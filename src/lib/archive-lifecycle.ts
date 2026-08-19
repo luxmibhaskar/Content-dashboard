@@ -18,7 +18,7 @@ export async function archiveIdleContent(supabase: SupabaseClient, brand: Brand)
     .from("content_calendar")
     .select("id")
     .eq("brand", brand)
-    .eq("production_status", "Published")
+    .eq("production_status", "Published / Scheduled")
     .eq("is_archived", false)
     .not("last_active_at", "is", null)
     .lte("last_active_at", cutoff);

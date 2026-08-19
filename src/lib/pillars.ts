@@ -62,15 +62,17 @@ export function subTopicsFor(brand: Brand): string[] {
 }
 
 // Section 4.3: "one consistent color per pillar, used everywhere."
-// Currently only the Pillar Tree renders pillar color directly; other
-// views show pillar as plain text, unchanged here to stay in scope.
+// Exact hex values from docs/brand-tokens.md (authoritative source),
+// not approximated. BODY = Clay Terracotta, MIND = Iron Charcoal,
+// SOUL = Deep Teal (LBsTransformation); BUILD = Build Indigo,
+// SELL = Sell Amber, SCALE = Scale Green (LBsWorks).
 export const PILLAR_COLORS: Record<string, string> = {
-  Body: "#c2703d",
-  Mind: "#4f6bd6",
-  Soul: "#8a5fc2",
-  Build: "#3b7a8f",
-  Sell: "#3f9f5f",
-  Scale: "#c99a2e",
+  Body: "#C26D4C",
+  Mind: "#1F2937",
+  Soul: "#0F766E",
+  Build: "#4F46E5",
+  Sell: "#F59E0B",
+  Scale: "#10B981",
 };
 
 export function pillarColor(pillar: string): string {

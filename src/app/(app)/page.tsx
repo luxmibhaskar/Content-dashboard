@@ -15,7 +15,7 @@ import type { Goal } from "@/lib/types";
 function devScoreOf(row: {
   my_angle_unique_pov: string | null;
   raw_idea_title: string | null;
-  production_status: string;
+  production_status: string | null;
 }) {
   let score = 0;
   if (row.raw_idea_title) score += 0.5;
@@ -131,7 +131,7 @@ export default async function TodayPage() {
         <PillarTree structure={PILLAR_STRUCTURE[brand]} topicsByBranch={topicsByBranch} />
       </div>
 
-      <h1 className="mt-8 text-2xl font-semibold">Today &middot; {BRAND_LABELS[brand]}</h1>
+      <h1 className="mt-8 text-3xl font-bold">Today &middot; {BRAND_LABELS[brand]}</h1>
 
       {isSunday &&
         (weeklyReviewDone ? (

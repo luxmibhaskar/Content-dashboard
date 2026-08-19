@@ -26,7 +26,7 @@ export default async function AngleBankPage() {
 
   return (
     <div className="w-full px-4 py-10">
-      <h1 className="text-2xl font-semibold">Personal Angle Bank</h1>
+      <h1 className="text-3xl font-bold">Personal Angle Bank</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Your best lived-experience angles, pulled from My Journey Log entries marked
         angle-worthy. Toggle that flag on any entry to add or remove it here.

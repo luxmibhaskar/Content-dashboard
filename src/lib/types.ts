@@ -4,12 +4,10 @@ import type { Brand } from "@/lib/brand";
 // UI touches so far. Expand as later chunks build out more of the topic
 // page (see supabase/migrations/0001_init.sql for the full schema).
 export type ProductionStatus =
-  | "Idea"
-  | "Scripting"
-  | "Filming"
+  | "Ready to Record / Scripted"
+  | "Recorded"
   | "Editing"
-  | "Scheduled"
-  | "Published";
+  | "Published / Scheduled";
 
 export type ViabilityStatus =
   | "Ready"
@@ -18,12 +16,10 @@ export type ViabilityStatus =
   | "On Hold";
 
 export const PRODUCTION_STATUSES: ProductionStatus[] = [
-  "Idea",
-  "Scripting",
-  "Filming",
+  "Ready to Record / Scripted",
+  "Recorded",
   "Editing",
-  "Scheduled",
-  "Published",
+  "Published / Scheduled",
 ];
 
 export const VIABILITY_STATUSES: ViabilityStatus[] = [
@@ -37,7 +33,7 @@ export type ContentCalendarItem = {
   id: string;
   brand: Brand;
   final_title: string | null;
-  production_status: ProductionStatus;
+  production_status: ProductionStatus | null;
   viability_status: ViabilityStatus;
   viability_reason_note: string | null;
   pillar: string | null;
@@ -153,6 +149,48 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   question_style_tags: string[] | null;
   core_tags: string[] | null;
   detailed_viewer_search_phrase_tags: string[] | null;
+
+  printable_marketing_hooks: PrintableMarketingHooks | null;
+
+  research_copy: ResearchCopyResult | null;
+  scripts: ScriptsResult | null;
+};
+
+// docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy":
+// replaces the old research_snapshots-driven Run Research pipeline. One
+// current pass, regenerated wholesale on each Run, no history. Source
+// containers are dynamic (whatever sources actually surfaced something
+// useful get one, not fixed to Google/Reddit/Quora), each with its own
+// collapsible sources sub-section, distinct from the one global
+// sources list under the summary.
+export type ResearchSource = { title: string; url: string };
+
+export type ResearchCopyContainer = {
+  type: "discussion" | "article";
+  sourceName: string;
+  items: string[] | null;
+  articleSummary: string | null;
+  sources: ResearchSource[];
+};
+
+export type ResearchCopyResult = {
+  summary: string;
+  globalSources: ResearchSource[];
+  titles: string[];
+  description: string;
+  keywordTags: string[];
+  questionTags: string[];
+  containers: ResearchCopyContainer[];
+  generatedAt: string;
+};
+
+// docs/topic-page-redesign.md Section 2, Tab 2 "Scripts". Schema added
+// now alongside research_copy per the "build full schemas upfront"
+// convention, the Scripts tab UI itself is a later piece.
+export type ScriptsResult = {
+  hooks: string[];
+  scripts: { body: string; ctaOptions: string[] }[];
+  generatedAt: string;
 };
 
 // Section 10.2.2/10.2.3: Research Snapshots (append-only, latest drives
@@ -186,28 +224,44 @@ export type ResearchSnapshot = {
   reddit_data: WebSearchResult[] | null;
   quora_data: WebSearchResult[] | null;
   summary: string | null;
+  deep_research_data: DeepResearchResult | null;
 };
 
-// Section 10.1.3/10.1.5: AI synthesis run as part of Run Research. Hooks
-// are built specifically from outlier videos (Section on hook
-// generation: significantly overperforming what's typical for the
-// topic, not derived from the average of all pulled results) when any
-// exist in this pull; scripts are generated only for whichever format
-// the research/title actually supports, never both by default.
-export type ResearchSynthesisResult = {
+// Section 19 Scout/Deep Research flow: a second, deeper pass beyond the
+// initial Run Research/Refresh Research pull, run on-demand against that
+// pull's already-fetched raw data (no re-fetch). Unlike the public
+// Viewer POV/Normal POV copy, privateDescription is explicitly
+// creator-facing only, never shown to viewers, and can draw on general
+// knowledge beyond what the search results themselves contain.
+export type DeepResearchResult = {
   titles: string[];
-  hooks: { text: string; basedOnOutlier: boolean }[];
-  thumbnails: {
-    concept: string;
-    main_text_on_image: string;
-    visual_elements: string;
-    emotion_vibe: string;
-  }[];
+  privateDescription: string;
+  shortTags: string[];
+  questionTags: string[];
   formatFit: "short" | "long" | "both";
   formatReason: string;
-  fullScript: string | null;
-  mainPointers: { point_text: string; landing_line: string | null }[] | null;
+  shortPointerVersion: string | null;
+  longFormFocus: string | null;
+  topGoogleSearches: string[];
+  topGoogleAutofill: string[];
+  topYoutubeAutofill: string[];
+  redditQuoraPainPoints: string[];
+  redditQuoraAnswers: string[];
+  redditQuoraSuggestions: string[];
   confidenceNote: string | null;
+};
+
+// Section 19: "Printable / Marketing" deep-dive, delivery-mode hooks
+// (what's shown/said in the first few seconds), distinct from and
+// coexisting with the Title/Hook variants system (which competes on
+// framing, not delivery mode). Generation UI is gone (lived on the now-
+// removed /research subpage, docs/topic-page-redesign.md), field stays
+// schema-only for any existing data.
+export type PrintableMarketingHooks = {
+  visual: string;
+  text: string;
+  verbal: string;
+  generated_at: string;
 };
 
 // Section 10.2.1: Reference Videos Tab

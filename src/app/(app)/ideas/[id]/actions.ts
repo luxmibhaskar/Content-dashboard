@@ -24,8 +24,10 @@ type IdeaFields = {
 // if that's reached without passing through Research first) creates the
 // full content_calendar row the first time, research_snapshots has a
 // hard FK to content_calendar so a real row has to exist before
-// research has anywhere to write results. production_status is left at
-// its default ("Idea") since nothing's been scripted yet.
+// research has anywhere to write results. production_status is left
+// null (the schema default) since nothing's ready to record yet, it
+// stays null, and the item stays off the Calendar view as a card, until
+// Transfer to Calendar assigns its first real status.
 async function ensureMigrated(
   supabase: Awaited<ReturnType<typeof createClient>>,
   existingContentId: string | null,
@@ -101,6 +103,70 @@ export async function updateIdea(id: string, formData: FormData) {
 
   revalidatePath("/ideas");
   redirect(`/ideas/${id}`);
+}
+
+// Section 19: "Transfer to Calendar" from the Idea Panel/Scout flow.
+// Reuses the same auto-created content_calendar row as ensureMigrated
+// (via idea.migrated_to_content_id) rather than creating a duplicate if
+// one already exists from an earlier status change. This is also the
+// action that assigns the item's first real production_status, per the
+// null-until-transfer decision: null items stay off the Calendar view
+// entirely and only start appearing as cards once this runs. Never
+// downgrades an already-set status, idempotent if pressed again.
+export async function transferToCalendar(ideaId: string) {
+  const supabase = await createClient();
+
+  const { data: idea, error: fetchError } = await supabase
+    .from("ideas")
+    .select(
+      "brand, idea_title, pillar, sub_topic, format, brief_description, reference_url, idea_source, source_detail, migrated_to_content_id",
+    )
+    .eq("id", ideaId)
+    .single();
+
+  if (fetchError || !idea) {
+    throw new Error(fetchError?.message ?? "Idea not found.");
+  }
+
+  const fields: IdeaFields = {
+    brand: idea.brand,
+    idea_title: idea.idea_title,
+    pillar: idea.pillar,
+    sub_topic: idea.sub_topic,
+    format: idea.format,
+    brief_description: idea.brief_description,
+    reference_url: idea.reference_url,
+    idea_source: idea.idea_source,
+    source_detail: idea.source_detail,
+  };
+
+  const contentId = await ensureMigrated(supabase, idea.migrated_to_content_id, fields);
+
+  const { data: contentItem, error: contentFetchError } = await supabase
+    .from("content_calendar")
+    .select("production_status")
+    .eq("id", contentId)
+    .single();
+  if (contentFetchError || !contentItem) {
+    throw new Error(contentFetchError?.message ?? "Content calendar entry not found.");
+  }
+
+  if (!contentItem.production_status) {
+    const { error: statusError } = await supabase
+      .from("content_calendar")
+      .update({ production_status: "Ready to Record / Scripted" })
+      .eq("id", contentId);
+    if (statusError) throw new Error(statusError.message);
+  }
+
+  const { error: ideaUpdateError } = await supabase
+    .from("ideas")
+    .update({ migrated_to_content_id: contentId, status: "Ready to work" })
+    .eq("id", ideaId);
+  if (ideaUpdateError) throw new Error(ideaUpdateError.message);
+
+  revalidatePath("/ideas");
+  redirect(`/calendar/${contentId}`);
 }
 
 export async function deleteIdea(id: string) {

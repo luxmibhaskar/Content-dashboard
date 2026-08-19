@@ -23,6 +23,8 @@ const TAB_LABELS: Record<Tab, string> = {
   recording: "Recording Section",
 };
 
+const TAB_KEYS = Object.keys(TAB_LABELS) as Tab[];
+
 const EMPTY_MODE: PlatformModeEntry = {};
 
 function ModeFields({
@@ -106,21 +108,32 @@ export function PublishingAndRecordingTabs({
     }));
   }
 
+  const tabIndex = TAB_KEYS.indexOf(tab);
+
   return (
     <div>
       <input type="hidden" name={platformPublishingName} value={JSON.stringify(platformPublishing)} />
 
-      <div className="flex gap-2 border-b border-border pb-3">
-        {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+      {/* Phase G: a sliding indicator instead of a hard-swapped
+          background, comfortable spacing, understated active state
+          (the pill carries the primary color, not the whole bar). */}
+      <div className="relative grid grid-cols-3 rounded-lg bg-muted/60 p-1">
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-1 left-1 rounded-md bg-primary shadow-sm transition-transform duration-300 ease-out"
+          style={{
+            width: `calc((100% - 0.5rem) / 3)`,
+            transform: `translateX(calc(${tabIndex} * 100%))`,
+          }}
+        />
+        {TAB_KEYS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={cn(
-              "rounded-md px-2.5 py-1 text-sm transition-all duration-150 ease-out active:scale-95",
-              tab === t
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              "relative z-10 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-200 ease-out",
+              tab === t ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {TAB_LABELS[t]}

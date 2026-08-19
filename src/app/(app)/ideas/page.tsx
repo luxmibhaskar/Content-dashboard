@@ -38,10 +38,11 @@ export default async function IdeasPage() {
 
   return (
     <div className="w-full px-4 py-10">
-      <h1 className="text-2xl font-semibold">Idea Panel</h1>
+      <h1 className="text-3xl font-bold">Idea Panel</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Fast capture, under a minute. Deep research and full detail live in the Content
-        Calendar.
+        Fast capture, under a minute. Research (Run Research), Deep Research, and full
+        detail live in the Content Calendar, once Transfer to Calendar sends an idea
+        there.
       </p>
 
       <form action={createIdea} className="mt-6 space-y-3 rounded-lg border border-border p-4">

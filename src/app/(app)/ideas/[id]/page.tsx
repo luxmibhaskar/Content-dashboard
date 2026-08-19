@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
-import { updateIdea, deleteIdea } from "./actions";
+import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
 
 export default async function IdeaPage({
   params,
@@ -30,6 +30,7 @@ export default async function IdeaPage({
 
   const boundUpdate = updateIdea.bind(null, idea.id);
   const boundDelete = deleteIdea.bind(null, idea.id);
+  const boundTransfer = transferToCalendar.bind(null, idea.id);
 
   return (
     <div className="w-full px-4 py-10">
@@ -37,14 +38,35 @@ export default async function IdeaPage({
         &larr; Idea Panel
       </Link>
 
-      {idea.migrated_to_content_id && (
+      {idea.migrated_to_content_id ? (
         <Link
           href={`/calendar/${idea.migrated_to_content_id}`}
           className="mt-2 block text-sm text-muted-foreground hover:underline"
         >
           Open in Content Calendar &rarr;
         </Link>
-      )}
+      ) : null}
+
+      {/* Section 19: reuses the same auto-created content_calendar row as
+          the status dropdown below if one already exists, rather than
+          creating a duplicate. Also the action that assigns the item's
+          first real production_status and makes it first appear as a
+          card on the Calendar view. */}
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border p-3.5">
+        <div>
+          <p className="text-sm font-medium">Transfer to Calendar</p>
+          <p className="text-xs text-muted-foreground">
+            {idea.migrated_to_content_id
+              ? "Already has a Content Calendar entry, marks it ready to record."
+              : "Creates the Content Calendar entry and marks it ready to record."}
+          </p>
+        </div>
+        <form action={boundTransfer}>
+          <Button type="submit" size="sm">
+            Transfer to Calendar
+          </Button>
+        </form>
+      </div>
 
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
@@ -68,7 +90,11 @@ export default async function IdeaPage({
           </select>
           <p className="text-xs text-muted-foreground">
             Moving to Research or Ready to work creates a full Content Calendar entry the
-            first time, if one doesn&apos;t already exist for this idea.
+            first time, if one doesn&apos;t already exist for this idea. It stays off the
+            Calendar view (workable from here and from its Content Calendar page directly)
+            until Transfer to Calendar above assigns its first production status. From
+            there, Run Research pulls YouTube/Google/Reddit/Quora, and Deep Research goes a
+            level further on top of that pull.
           </p>
         </div>
 

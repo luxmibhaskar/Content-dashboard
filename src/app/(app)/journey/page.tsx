@@ -49,7 +49,7 @@ export default async function JourneyLogPage({
   return (
     <div className="w-full px-4 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">My Journey Log</h1>
+        <h1 className="text-3xl font-bold">My Journey Log</h1>
         <form action={createJourneyEntry}>
           <Button type="submit" size="sm">
             + New Entry

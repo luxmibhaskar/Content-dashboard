@@ -143,7 +143,7 @@ export default async function HookLibraryPage() {
 
   return (
     <div className="w-full px-4 py-10">
-      <h1 className="text-2xl font-semibold">Hook Library</h1>
+      <h1 className="text-3xl font-bold">Hook Library</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         An automatic aggregation of whichever Title, Hook, and Thumbnail variant is live on
         each item, not somewhere to add entries directly. Performance ratings show once

@@ -105,7 +105,7 @@ export default async function AnalyticsPage({
 
   return (
     <div className="w-full px-4 py-10">
-      <h1 className="text-2xl font-semibold">Analytics Overview</h1>
+      <h1 className="text-3xl font-bold">Analytics Overview</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {ANALYTICS_RANGES.map((r) => (

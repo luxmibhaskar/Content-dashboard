@@ -17,6 +17,17 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+  /* docs/brand-tokens.md Typography scale. text-3xl is unused by
+     default and repurposed here as this app's actual H1 size (32px),
+     the only size in the scale that doesn't already line up with a
+     stock Tailwind step. xs/sm/base keep their existing pixel sizes
+     (12/14/16, already exact matches for Caption/Small/Body) and only
+     pick up the spec's line-heights. */
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.2;
+  --text-base--line-height: 1.6;
+  --text-sm--line-height: 1.5;
+  --text-xs--line-height: 1.4;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -57,11 +68,15 @@
 
 :root {
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* docs/brand-tokens.md: "Text is Ink/Iron Charcoal on light
+     backgrounds." Iron Charcoal and Build Charcoal share this exact hex
+     (shared-neutrals note), so this is a single shared value, not a
+     brand-scoped override like --primary/--ring. */
+  --foreground: #1f2937;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #1f2937;
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: #1f2937;
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
@@ -72,7 +87,12 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  /* docs/brand-tokens.md shared neutral, Input: "Slate border" for both
+     brands. --input already drives every border-input/bg-input usage
+     app-wide (shared Input/Textarea components and the raw native
+     selects/inputs that don't go through them), so retargeting this one
+     token covers both without touching every call site. */
+  --input: #475569;
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -134,4 +154,110 @@
   html {
     @apply font-sans;
   }
+
+  /* Phase G: nothing should look like unstyled default HTML. Base-layer
+     so it fills in behind whatever a component already sets explicitly
+     (e.g. Input/Textarea's own transition-colors), rather than fighting
+     it - see docs/brand-tokens.md Input spec: 1px Slate border, smooth
+     focus transition, generous padding, subtle inset shadow. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    box-shadow: inset 0 1px 2px 0 color-mix(in oklch, var(--input) 18%, transparent);
+    padding-block: 0.5rem;
+    transition:
+      border-color 200ms ease-out,
+      box-shadow 200ms ease-out;
+  }
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    box-shadow:
+      inset 0 1px 2px 0 color-mix(in oklch, var(--input) 18%, transparent),
+      0 0 0 3px color-mix(in oklch, var(--ring) 35%, transparent);
+  }
+  ::placeholder {
+    color: color-mix(in oklch, var(--input) 85%, var(--muted-foreground));
+    opacity: 1;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--primary);
+  }
+
+  /* Native <select> ships zero custom styling anywhere in this app
+     otherwise, this is the one element Phase G calls out by name. */
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23475569' stroke-width='1.5'%3E%3Cpath d='M6 8l4 4 4-4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1rem;
+    padding-right: 1.75rem;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--input) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--input) 55%, transparent);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+}
+
+/* Phase G: brand tokens wired from docs/brand-tokens.md. Neutrals (Ink,
+   Slate, Mist, White) are identical across both brands (shared
+   neutrals); only the primary/pillar-adjacent color and background
+   treatment differ, driven by the brand switcher's data-brand attribute
+   on <html> (set in the root layout from the brand cookie). Written
+   unlayered so it wins over the @layer base defaults above regardless
+   of selector specificity. */
+html[data-brand="lbstransformation"] {
+  --primary: #1f2937;
+  --primary-foreground: #ffffff;
+  --ring: #1f2937;
+  --font-sans: var(--font-manrope);
+}
+
+html[data-brand="lbsworks"] {
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --ring: #4f46e5;
+  --font-sans: var(--font-inter);
+}
+
+/* "Moving away from flat backgrounds": a subtle warm Mist wash for
+   LBsTransformation, a faint technical dot-grid for LBsWorks' "lab"
+   vibe. Fixed attachment so the wash reads as the page's own surface,
+   not something that scrolls with content. */
+html[data-brand="lbstransformation"] body {
+  background-color: var(--background);
+  background-image: radial-gradient(
+    ellipse 90% 60% at 50% -10%,
+    color-mix(in oklch, #f1f5f9 75%, transparent),
+    transparent 70%
+  );
+  background-attachment: fixed;
+}
+
+html[data-brand="lbsworks"] body {
+  background-color: var(--background);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklch, #475569 14%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  background-attachment: fixed;
 }

@@ -5,7 +5,22 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 
-export async function createContentItem() {
+function str(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "") || null;
+}
+
+// docs/topic-page-redesign.md Section 1: the "+ New" form is condensed
+// to Title, Brief Description, Keywords only, everything else fills in
+// from the topic page itself. final_title mirrors the title too (not
+// left blank), same reasoning as the Idea Panel's ensureMigrated: an
+// empty "Untitled" header on a row that's already real underneath reads
+// as broken, not as "not polished yet."
+export async function createContentItem(formData: FormData) {
+  const title = str(formData, "title");
+  if (!title) {
+    throw new Error("Title is required.");
+  }
+
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
@@ -13,7 +28,13 @@ export async function createContentItem() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("content_calendar")
-    .insert({ brand })
+    .insert({
+      brand,
+      final_title: title,
+      raw_idea_title: title,
+      brief_intent: str(formData, "brief_description"),
+      raw_keywords_topics: str(formData, "keywords"),
+    })
     .select("id")
     .single();
 

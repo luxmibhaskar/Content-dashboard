@@ -8,43 +8,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProductionStatusTracker } from "@/components/production-status-tracker";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { ExpandCollapseAll } from "@/components/expand-collapse-all";
-import { CompletenessChecklist } from "@/components/completeness-checklist";
-import { PublishingAndRecordingTabs } from "@/components/publishing-recording-tabs";
 import { CopyButton } from "@/components/copy-button";
-import { ResearchOutputSection } from "@/components/research-output-section";
+import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { CompetitorBenchmarksSection } from "@/components/competitor-benchmarks-section";
 import {
   EARNED_THE_CLICK_OPTIONS,
   FORMATS,
-  IDEA_SOURCES,
   PRODUCTION_STATUSES,
   SUCCESS_METRIC_FOCUS_OPTIONS,
-  TARGET_STAGES,
-  TONE_STYLES,
   VIABILITY_STATUSES,
-  type ChecklistItem,
   type CompetitorBenchmark,
   type ContentCalendarDetail,
-  type MainPoint,
-  type PlatformPublishing,
-  type TextVariant,
-  type ThumbnailVariant,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
-import { refreshResearch } from "./research-actions";
 import { retrieveContentDetail } from "@/lib/archive-lifecycle";
 
+// docs/topic-page-redesign.md: supersedes the original 10.1.1-10.1.6
+// section structure. Creator Input, Audience Strategy, Viewer POV,
+// Normal POV, and Recording Section are gone as separate sections,
+// replaced by the two-tab Research & Copy / Scripts structure below.
+// System & Production and Performance are unaffected, still collapsible
+// sections further down.
 const SELECT_COLUMNS = `
   id, brand, final_title, production_status, viability_status, viability_reason_note,
   pillar, sub_topic, format, publish_date, is_archived,
-  raw_idea_title, raw_keywords_topics, brief_intent, content_angle_hook_direction,
-  reference_inspiration, target_stage_viewer_journey, my_angle_unique_pov,
-  proof_credibility, tone_style, idea_source, source_detail,
-  viewer_problem, promise_outcome, final_title_hook, viewer_keywords_search_phrases,
-  viewer_description, primary_emotion_pain_point, objections_doubts, desired_action_cta,
-  completeness_checklist, format_recommendation,
-  main_pointers, energy_tag, full_script, voice_memo_transcript,
-  platform_publishing,
+  raw_idea_title, raw_keywords_topics, brief_intent,
   sequence_step, sequence_order_custom, evidence_condition, script_outline_link,
   published_url, performance_notes, series_playlist, search_demand_trend_signal,
   success_metric_focus, follow_up_content_ideas, analytics_review_date,
@@ -52,7 +40,8 @@ const SELECT_COLUMNS = `
   derived_from_content_id,
   views, likes, comments, shares, saves, conversions,
   final_description, plain_keyword_tags, question_style_tags,
-  core_tags, detailed_viewer_search_phrase_tags
+  core_tags, detailed_viewer_search_phrase_tags,
+  research_copy, scripts
 `;
 
 export default async function TopicPage({
@@ -88,87 +77,37 @@ export default async function TopicPage({
     if (refreshed) item = refreshed;
   }
 
-  const [
-    { data: siblingItems },
-    { data: sourceItem },
-    { data: derivativeItems },
-    { data: titleVariants },
-    { data: hookVariants },
-    { data: thumbnailVariants },
-    { data: competitorBenchmarks },
-    { data: competitors },
-    { count: researchSnapshotCount },
-  ] = await Promise.all([
-    supabase
-      .from("content_calendar")
-      .select("id, final_title")
-      .eq("brand", item.brand)
-      .neq("id", item.id)
-      .order("final_title", { ascending: true }),
-    item.derived_from_content_id
-      ? supabase
-          .from("content_calendar")
-          .select("id, final_title")
-          .eq("id", item.derived_from_content_id)
-          .single()
-      : Promise.resolve({ data: null }),
-    supabase
-      .from("content_calendar")
-      .select("id, final_title")
-      .eq("derived_from_content_id", item.id),
-    supabase
-      .from("title_variants")
-      .select("id, variant_text, rank, source, performance_rating, is_live")
-      .eq("content_id", id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("hook_variants")
-      .select("id, variant_text, rank, source, performance_rating, is_live")
-      .eq("content_id", id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("thumbnail_variants")
-      .select("id, concept, main_text_on_image, visual_elements, emotion_vibe, rank, source, performance_rating, is_live")
-      .eq("content_id", id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("competitor_benchmarks")
-      .select("id, competitor_id, competitor_name, platform, url, why_benchmark, notes")
-      .eq("content_id", id)
-      .order("created_at", { ascending: true }),
-    supabase.from("competitors").select("id, name").eq("brand", item.brand).eq("active", true),
-    supabase
-      .from("research_snapshots")
-      .select("id", { count: "exact", head: true })
-      .eq("content_id", id),
-  ]);
+  const [{ data: siblingItems }, { data: sourceItem }, { data: derivativeItems }, { data: competitorBenchmarks }, { data: competitors }] =
+    await Promise.all([
+      supabase
+        .from("content_calendar")
+        .select("id, final_title")
+        .eq("brand", item.brand)
+        .neq("id", item.id)
+        .order("final_title", { ascending: true }),
+      item.derived_from_content_id
+        ? supabase
+            .from("content_calendar")
+            .select("id, final_title")
+            .eq("id", item.derived_from_content_id)
+            .single()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("content_calendar")
+        .select("id, final_title")
+        .eq("derived_from_content_id", item.id),
+      supabase
+        .from("competitor_benchmarks")
+        .select("id, competitor_id, competitor_name, platform, url, why_benchmark, notes")
+        .eq("content_id", id)
+        .order("created_at", { ascending: true }),
+      supabase.from("competitors").select("id, name").eq("brand", item.brand).eq("active", true),
+    ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
   const publishDateValue = item.publish_date
     ? new Date(item.publish_date).toISOString().slice(0, 16)
     : "";
-  const checklistItems: ChecklistItem[] = item.completeness_checklist ?? [];
-
-  // Section 10.1.1: Creator Input opens by default unconditionally now,
-  // it's the first thing being filled in on a new item, not gated behind
-  // "does it already have content" like every other section.
-  const canRunResearch = Boolean(item.raw_idea_title && item.brief_intent);
-
-  const hasAudienceStrategy = Boolean(
-    item.viewer_problem ||
-      item.promise_outcome ||
-      item.final_title_hook ||
-      item.viewer_keywords_search_phrases ||
-      item.viewer_description ||
-      item.primary_emotion_pain_point ||
-      (item.objections_doubts && item.objections_doubts.length > 0) ||
-      item.desired_action_cta ||
-      item.format_recommendation ||
-      checklistItems.length > 0,
-  );
-
-  const mainPoints: MainPoint[] = item.main_pointers ?? [];
-  const platformPublishing: PlatformPublishing = item.platform_publishing ?? {};
 
   const hasSystemProduction = Boolean(
     item.sequence_step ||
@@ -198,17 +137,9 @@ export default async function TopicPage({
 
   return (
     <div className="w-full px-4 py-10">
-      <div className="flex items-center justify-between">
-        <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
-          &larr; Content Calendar
-        </Link>
-        <Link
-          href={`/calendar/${item.id}/research`}
-          className="text-sm text-muted-foreground hover:underline"
-        >
-          Research ({researchSnapshotCount ?? 0}) &rarr;
-        </Link>
-      </div>
+      <Link href="/calendar" className="text-sm text-muted-foreground hover:underline">
+        &larr; Content Calendar
+      </Link>
 
       {sourceItem && (
         <Link
@@ -231,28 +162,6 @@ export default async function TopicPage({
           ))}
         </p>
       )}
-
-      {/* Section 10.2.3, moved: one prominent action right at the top of
-          the page instead of only living on the /research subpage, no
-          separate manual step to go find it. Pulls YouTube/Google/
-          Reddit/Quora, then generates ranked title/hook/thumbnail
-          suggestions and a script sized to whatever format the research
-          and title actually support. */}
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border p-4">
-        <div>
-          <p className="text-sm font-medium">Run Research</p>
-          <p className="text-xs text-muted-foreground">
-            {canRunResearch
-              ? "Pulls YouTube, Google, Reddit, and Quora, then generates ranked title/hook/thumbnail suggestions and a script."
-              : "Add a Title and Brief intent in Creator Input below first."}
-          </p>
-        </div>
-        <form action={refreshResearch.bind(null, item.id)}>
-          <Button type="submit" disabled={!canRunResearch}>
-            Run Research
-          </Button>
-        </form>
-      </div>
 
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
@@ -325,9 +234,10 @@ export default async function TopicPage({
             <select
               id="production_status"
               name="production_status"
-              defaultValue={item.production_status}
+              defaultValue={item.production_status ?? ""}
               className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
             >
+              <option value="">No status yet</option>
               {PRODUCTION_STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -416,225 +326,9 @@ export default async function TopicPage({
           <ExpandCollapseAll />
         </div>
 
-        <CollapsibleSection title="Creator Input" defaultOpen>
-          <div className="space-y-1.5">
-            <Label htmlFor="raw_idea_title">Raw idea title</Label>
-            <Input id="raw_idea_title" name="raw_idea_title" defaultValue={item.raw_idea_title ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="raw_keywords_topics">Raw keywords / topics</Label>
-            <Input
-              id="raw_keywords_topics"
-              name="raw_keywords_topics"
-              defaultValue={item.raw_keywords_topics ?? ""}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="brief_intent">Brief intent</Label>
-            <Textarea id="brief_intent" name="brief_intent" defaultValue={item.brief_intent ?? ""} rows={3} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="content_angle_hook_direction">Content angle / hook direction</Label>
-            <Textarea
-              id="content_angle_hook_direction"
-              name="content_angle_hook_direction"
-              defaultValue={item.content_angle_hook_direction ?? ""}
-              rows={2}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="reference_inspiration">Reference / inspiration (text + URLs)</Label>
-            <Textarea
-              id="reference_inspiration"
-              name="reference_inspiration"
-              defaultValue={item.reference_inspiration ?? ""}
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="target_stage_viewer_journey">Target stage (viewer journey)</Label>
-              <select
-                id="target_stage_viewer_journey"
-                name="target_stage_viewer_journey"
-                defaultValue={item.target_stage_viewer_journey ?? ""}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">-</option>
-                {TARGET_STAGES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tone_style">Tone / style</Label>
-              <select
-                id="tone_style"
-                name="tone_style"
-                defaultValue={item.tone_style ?? ""}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">-</option>
-                {TONE_STYLES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="my_angle_unique_pov">My angle / unique POV</Label>
-            <Textarea
-              id="my_angle_unique_pov"
-              name="my_angle_unique_pov"
-              defaultValue={item.my_angle_unique_pov ?? ""}
-              rows={3}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="proof_credibility">Proof / credibility</Label>
-            <Textarea
-              id="proof_credibility"
-              name="proof_credibility"
-              defaultValue={item.proof_credibility ?? ""}
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="idea_source">Idea source</Label>
-              <select
-                id="idea_source"
-                name="idea_source"
-                defaultValue={item.idea_source ?? ""}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="">-</option>
-                {IDEA_SOURCES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="source_detail">Source detail</Label>
-              <Input id="source_detail" name="source_detail" defaultValue={item.source_detail ?? ""} />
-            </div>
-          </div>
-        </CollapsibleSection>
-
-        {/* Renamed from "Viewer POV" - that name now belongs to the new
-            algorithm/platform-optimized publishing tab below, this
-            section (audience strategy fields, the Research Panel,
-            Completeness Checklist, Time-Debt Indicator) is unchanged
-            otherwise. */}
-        <CollapsibleSection title="Audience Strategy" defaultOpen={hasAudienceStrategy}>
-          <div className="space-y-1.5">
-            <Label htmlFor="viewer_problem">Viewer problem</Label>
-            <Input id="viewer_problem" name="viewer_problem" defaultValue={item.viewer_problem ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="promise_outcome">Promise / outcome</Label>
-            <Input id="promise_outcome" name="promise_outcome" defaultValue={item.promise_outcome ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="final_title_hook">Final title / hook</Label>
-            <Input id="final_title_hook" name="final_title_hook" defaultValue={item.final_title_hook ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="viewer_keywords_search_phrases">Viewer keywords / search phrases</Label>
-            <Textarea
-              id="viewer_keywords_search_phrases"
-              name="viewer_keywords_search_phrases"
-              defaultValue={item.viewer_keywords_search_phrases ?? ""}
-              rows={2}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="viewer_description">Viewer description</Label>
-            <Textarea
-              id="viewer_description"
-              name="viewer_description"
-              defaultValue={item.viewer_description ?? ""}
-              rows={2}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="primary_emotion_pain_point">Primary emotion / pain point</Label>
-            <Input
-              id="primary_emotion_pain_point"
-              name="primary_emotion_pain_point"
-              defaultValue={item.primary_emotion_pain_point ?? ""}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="objections_doubts">Objections / doubts (one per line)</Label>
-            <Textarea
-              id="objections_doubts"
-              name="objections_doubts"
-              defaultValue={(item.objections_doubts ?? []).join("\n")}
-              rows={3}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="desired_action_cta">Desired action / CTA</Label>
-            <Input id="desired_action_cta" name="desired_action_cta" defaultValue={item.desired_action_cta ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="format_recommendation">
-              Format recommendation (short vs long, and why)
-            </Label>
-            <Textarea
-              id="format_recommendation"
-              name="format_recommendation"
-              defaultValue={item.format_recommendation ?? ""}
-              rows={2}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Sub-topic completeness checklist</Label>
-            <p className="text-xs text-muted-foreground">
-              Manual for now, this auto-generates from research once Phase 2&apos;s
-              research automation lands.
-            </p>
-            <CompletenessChecklist
-              key={JSON.stringify(checklistItems)}
-              name="completeness_checklist"
-              initialItems={checklistItems}
-            />
-          </div>
-        </CollapsibleSection>
-
-        {/* Section 10.1.4/10.1.5: Viewer POV, Normal POV, and Recording
-            Section as a horizontal row of tabs rather than stacked
-            collapsible sections, per explicit request. The rest of this
-            page's collapse behavior is unchanged. */}
-        <div className="rounded-lg border border-border p-4">
-          <PublishingAndRecordingTabs
-            key={`${JSON.stringify(platformPublishing)}-${JSON.stringify(mainPoints)}`}
-            platformPublishingName="platform_publishing"
-            initialPlatformPublishing={platformPublishing}
-            mainPointersName="main_pointers"
-            initialMainPoints={mainPoints}
-            item={{
-              energy_tag: item.energy_tag,
-              full_script: item.full_script,
-              voice_memo_transcript: item.voice_memo_transcript,
-            }}
-          />
-        </div>
-
         <CollapsibleSection title="System & Production" defaultOpen={hasSystemProduction}>
           <div className="space-y-1.5">
             <Label htmlFor="core_tags">Core tags (one per line, 5-10)</Label>
-            <p className="text-xs text-muted-foreground">
-              From 10.1.3 Research Output. Custom title/hook/thumbnail options live in the
-              Research Output section below the Save button.
-            </p>
             <Textarea
               id="core_tags"
               name="core_tags"
@@ -881,14 +575,16 @@ export default async function TopicPage({
         </div>
       </form>
 
-      {/* Outside the main form on purpose: each variant's Use This/Remove
-          is its own tiny form, and HTML doesn't allow nesting forms. */}
+      {/* docs/topic-page-redesign.md Section 2: outside the main form on
+          purpose, same reasoning as before, Tab 1's Use This/Run/Save
+          are each their own tiny form and HTML doesn't allow nesting
+          forms. */}
       <div className="mt-5">
-        <ResearchOutputSection
+        <TopicPageTabs
           contentId={item.id}
-          titleVariants={(titleVariants ?? []) as TextVariant[]}
-          hookVariants={(hookVariants ?? []) as TextVariant[]}
-          thumbnailVariants={(thumbnailVariants ?? []) as ThumbnailVariant[]}
+          briefIntent={item.brief_intent}
+          keywords={item.raw_keywords_topics}
+          researchCopy={item.research_copy}
         />
       </div>
 

@@ -1,7 +1,7 @@
 export type ContentMetricsRow = {
   pillar: string | null;
   publish_date: string | null;
-  production_status: string;
+  production_status: string | null;
   views: number | null;
   likes: number | null;
   comments: number | null;
@@ -28,7 +28,7 @@ function engagementOf(r: ContentMetricsRow): number {
 // them; views/engagement always show since a genuinely fresh channel with
 // zero views is a normal state, not an "untracked" one.
 export function computeKpis(rows: ContentMetricsRow[]): AnalyticsKpis {
-  const totalPublished = rows.filter((r) => r.production_status === "Published").length;
+  const totalPublished = rows.filter((r) => r.production_status === "Published / Scheduled").length;
 
   let totalViews = 0;
   let totalEngagement = 0;
