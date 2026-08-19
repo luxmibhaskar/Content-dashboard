@@ -3,6 +3,10 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { CollapsibleSection } from "@/components/collapsible-section";
+import { HookLibraryEntryCard } from "@/components/hook-library-entry";
+import { HookLibraryImport } from "@/components/hook-library-import";
+import { HookLibraryExport } from "@/components/hook-library-export";
+import { HOOK_LIBRARY_TYPES, type HookLibraryEntry, type HookLibraryType } from "@/lib/types";
 
 type LiveTextRow = {
   content_id: string;
@@ -119,49 +123,108 @@ export default async function HookLibraryPage() {
 
   const supabase = await createClient();
 
-  const [{ data: hooks }, { data: titles }, { data: thumbnails }] = await Promise.all([
-    supabase
-      .from("hook_variants")
-      .select("content_id, variant_text, performance_rating, content_calendar:content_id(final_title)")
-      .eq("brand", brand)
-      .eq("is_live", true),
-    supabase
-      .from("title_variants")
-      .select("content_id, variant_text, performance_rating, content_calendar:content_id(final_title)")
-      .eq("brand", brand)
-      .eq("is_live", true),
-    supabase
-      .from("thumbnail_variants")
-      .select("content_id, concept, performance_rating, content_calendar:content_id(final_title)")
-      .eq("brand", brand)
-      .eq("is_live", true),
-  ]);
+  const [{ data: hooks }, { data: titles }, { data: thumbnails }, { data: libraryEntries }] =
+    await Promise.all([
+      supabase
+        .from("hook_variants")
+        .select("content_id, variant_text, performance_rating, content_calendar:content_id(final_title)")
+        .eq("brand", brand)
+        .eq("is_live", true),
+      supabase
+        .from("title_variants")
+        .select("content_id, variant_text, performance_rating, content_calendar:content_id(final_title)")
+        .eq("brand", brand)
+        .eq("is_live", true),
+      supabase
+        .from("thumbnail_variants")
+        .select("content_id, concept, performance_rating, content_calendar:content_id(final_title)")
+        .eq("brand", brand)
+        .eq("is_live", true),
+      supabase
+        .from("hook_library_entries")
+        .select("id, brand, type, content")
+        .eq("brand", brand)
+        .order("created_at", { ascending: false }),
+    ]);
 
   const hookGroups = groupByText((hooks ?? []) as LiveTextRow[]);
   const titleGroups = groupByText((titles ?? []) as LiveTextRow[]);
   const thumbnailGroups = groupThumbnailsByConcept((thumbnails ?? []) as LiveThumbnailRow[]);
 
+  const entriesByType: Record<HookLibraryType, HookLibraryEntry[]> = {
+    visual: [],
+    text: [],
+    verbal: [],
+  };
+  for (const entry of (libraryEntries ?? []) as HookLibraryEntry[]) {
+    entriesByType[entry.type].push(entry);
+  }
+
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-10">
+    <div className="w-full max-w-[90rem] mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold">Hook Library</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        An automatic aggregation of whichever Title, Hook, and Thumbnail variant is live on
-        each item, not somewhere to add entries directly. Performance ratings show once
-        they&apos;re tracked on individual variants.
-      </p>
 
-      <div className="mt-6 space-y-3">
-        <CollapsibleSection title={`Hook Patterns (${hookGroups.length})`} defaultOpen>
-          <GroupList groups={hookGroups} emptyLabel="No live hooks yet. Use a hook variant on a topic page to see it here." />
-        </CollapsibleSection>
+      {/* Delivery-Mode Hooks comes first on purpose: this is the
+          frequent, in-the-moment reference reached for while actually
+          drafting a hook. The aggregation below is more retrospective
+          and already has its own dedicated moment in the Weekly Review
+          checklist (builder-brief.md Section 12), it doesn't need to
+          compete for top attention here too. */}
+      <div className="mt-4">
+        <h2 className="text-xl font-bold">Delivery-Mode Hooks</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          A swipe file of hook examples by delivery mode, what&apos;s shown or said in the
+          first few seconds, separate from the framing patterns below. Pick a type, then
+          import a CSV or JSON file, every entry in it is added as that one type (no AI
+          involved), or edit an entry directly. Export works the same way, one type at a time,
+          or all three at once.
+        </p>
 
-        <CollapsibleSection title={`Title Patterns (${titleGroups.length})`}>
-          <GroupList groups={titleGroups} emptyLabel="No live titles yet." />
-        </CollapsibleSection>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {HOOK_LIBRARY_TYPES.map((type) => (
+            <div key={type} className="space-y-3 rounded-lg border border-border p-4">
+              <p className="text-sm font-medium capitalize">
+                {type} ({entriesByType[type].length})
+              </p>
+              <div className="space-y-2">
+                {entriesByType[type].map((entry) => (
+                  <HookLibraryEntryCard key={entry.id} entry={entry} />
+                ))}
+                {entriesByType[type].length === 0 && (
+                  <p className="text-sm text-muted-foreground">No {type} hooks yet.</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
 
-        <CollapsibleSection title={`Thumbnail Patterns (${thumbnailGroups.length})`}>
-          <GroupList groups={thumbnailGroups} emptyLabel="No live thumbnails yet." />
-        </CollapsibleSection>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <HookLibraryImport />
+          <HookLibraryExport />
+        </div>
+      </div>
+
+      <div className="mt-10 border-t border-border pt-8">
+        <h2 className="text-xl font-bold">Live Variant Aggregation</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          An automatic aggregation of whichever Title, Hook, and Thumbnail variant is live on
+          each item, not somewhere to add entries directly. Performance ratings show once
+          they&apos;re tracked on individual variants.
+        </p>
+
+        <div className="mt-3 space-y-3">
+          <CollapsibleSection title={`Hook Patterns (${hookGroups.length})`} defaultOpen>
+            <GroupList groups={hookGroups} emptyLabel="No live hooks yet. Use a hook variant on a topic page to see it here." />
+          </CollapsibleSection>
+
+          <CollapsibleSection title={`Title Patterns (${titleGroups.length})`}>
+            <GroupList groups={titleGroups} emptyLabel="No live titles yet." />
+          </CollapsibleSection>
+
+          <CollapsibleSection title={`Thumbnail Patterns (${thumbnailGroups.length})`}>
+            <GroupList groups={thumbnailGroups} emptyLabel="No live thumbnails yet." />
+          </CollapsibleSection>
+        </div>
       </div>
     </div>
   );

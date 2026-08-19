@@ -303,6 +303,22 @@ export type PrintableMarketingHooks = {
   generated_at: string;
 };
 
+// Standalone Hook Library (coexists with the real-usage aggregation on
+// the same page): a swipe-file of delivery-mode hook examples, imported
+// from CSV/JSON or entered directly, independent of any one content
+// item. Same visual/text/verbal delivery-mode axis as
+// PrintableMarketingHooks above, but many entries per type instead of
+// one triplet per topic.
+export const HOOK_LIBRARY_TYPES = ["visual", "text", "verbal"] as const;
+export type HookLibraryType = (typeof HOOK_LIBRARY_TYPES)[number];
+
+export type HookLibraryEntry = {
+  id: string;
+  brand: Brand;
+  type: HookLibraryType;
+  content: string;
+};
+
 // Section 10.2.1: Reference Videos Tab
 export type ReferenceVideo = {
   id: string;
