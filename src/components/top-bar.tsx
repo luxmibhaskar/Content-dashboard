@@ -2,14 +2,16 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { DropdownMenu } from "radix-ui";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandSwitcher } from "@/components/brand-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StreakGoalsBar } from "@/components/streak-goals-bar";
 import { StreakGoalsModal } from "@/components/streak-goals-modal";
 import { signOut } from "@/app/actions/auth";
+import { cn } from "@/lib/utils";
 import type { Brand } from "@/lib/brand";
 import type { Goal } from "@/lib/types";
 
@@ -41,6 +43,15 @@ const MORE_LINKS = [
 
 const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted";
 
+// Layout follow-up item 5: "/" only matches the Dashboard page itself,
+// every other nav href also covers its own sub-routes (e.g. /ideas/[id]
+// still lights up "Idea Panel"), so opening an idea's own page doesn't
+// leave every nav item looking inactive.
+function isActiveHref(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 // Responsive follow-up: replaces a single flex row that wrapped onto a
 // second line once nav links + the streak/goals shuffle no longer fit
 // side by side, with actual progressive disclosure across 3 tiers,
@@ -57,31 +68,45 @@ const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-no
 // rather than two hand-duplicated dropdowns.
 function MoreMenu({
   links,
+  pathname,
   onOpenGoalsModal,
 }: {
   links: { href: string; label: string }[];
+  pathname: string;
   onOpenGoalsModal: () => void;
 }) {
+  // The dropdown itself is the "nav item" for whichever page it
+  // contains while collapsed, without this the trigger looks identical
+  // whether or not you're on e.g. Topic Map, the only page-level signal
+  // would be inside a menu that's closed by default.
+  const containsActivePage = links.some((link) => isActiveHref(pathname, link.href));
+
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="flex items-center gap-0.5 outline-none hover:text-foreground aria-expanded:text-foreground"
+          aria-label="More menu"
+          className={cn(
+            "flex items-center justify-center rounded-md p-1 outline-none hover:text-foreground aria-expanded:text-foreground",
+            containsActivePage && "nav-link-active text-foreground",
+          )}
         >
-          More
-          <ChevronDown className="size-3.5" aria-hidden="true" />
+          <Menu className="size-4" aria-hidden="true" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           align="end"
           sideOffset={10}
-          className="z-50 min-w-40 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          className="nav-dropdown-content z-50 min-w-40 rounded-lg p-1 text-popover-foreground duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2"
         >
           {links.map((link) => (
             <DropdownMenu.Item key={link.href} asChild>
-              <Link href={link.href} className={DROPDOWN_ITEM_CLASSNAME}>
+              <Link
+                href={link.href}
+                className={cn(DROPDOWN_ITEM_CLASSNAME, isActiveHref(pathname, link.href) && "nav-link-active")}
+              >
                 {link.label}
               </Link>
             </DropdownMenu.Item>
@@ -116,6 +141,7 @@ export function TopBar({
   todayPosted: boolean;
   goals: Goal[];
 }) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   // Lifted here (not inside StreakGoalsModal) because it needs to open
   // from more than one place: the desktop/tablet More menu, the mobile
@@ -162,7 +188,13 @@ export function TopBar({
                     |
                   </span>
                 )}
-                <Link href={link.href} className="hover:text-foreground">
+                <Link
+                  href={link.href}
+                  className={cn(
+                    "rounded-md px-2 py-1 hover:text-foreground",
+                    isActiveHref(pathname, link.href) && "nav-link-active text-foreground",
+                  )}
+                >
                   {link.label}
                 </Link>
               </Fragment>
@@ -170,13 +202,13 @@ export function TopBar({
             <span aria-hidden="true" className="text-border">
               |
             </span>
-            <MoreMenu links={MORE_LINKS} onOpenGoalsModal={openGoalsModal} />
+            <MoreMenu links={MORE_LINKS} pathname={pathname} onOpenGoalsModal={openGoalsModal} />
           </nav>
 
           {/* Tablet only: nav links folded into the same More dropdown
               instead of a row that no longer fits at this width. */}
           <div className="hidden text-sm text-muted-foreground md:block lg:hidden">
-            <MoreMenu links={[...NAV_LINKS, ...MORE_LINKS]} onOpenGoalsModal={openGoalsModal} />
+            <MoreMenu links={[...NAV_LINKS, ...MORE_LINKS]} pathname={pathname} onOpenGoalsModal={openGoalsModal} />
           </div>
 
           {/* Tablet and up, folds into the mobile panel below. */}
@@ -219,7 +251,10 @@ export function TopBar({
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                className={cn(
+                  "rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground",
+                  isActiveHref(pathname, link.href) && "nav-link-active text-foreground",
+                )}
               >
                 {link.label}
               </Link>

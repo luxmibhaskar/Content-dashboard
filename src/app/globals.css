@@ -332,3 +332,33 @@ html[data-brand="lbsworks"] body {
     display: none;
   }
 }
+
+/* Layout follow-up item 4: the top bar's More menu dropdown, same
+   frosted-glass + brand-glow language as .glow-card above, just the
+   static surface (a small nav dropdown doesn't need GlowCard's own
+   pointer-tracked tilt/sheen). Entrance/exit motion is handled in
+   top-bar.tsx via tw-animate-css's data-state utilities, tied to
+   Radix's own open/closed state instead of an instant show/hide. */
+.nav-dropdown-content {
+  background: color-mix(in oklch, var(--popover) 70%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in oklch, var(--glow-1) 40%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--glow-1) 20%, transparent),
+    0 12px 32px -16px color-mix(in oklch, var(--glow-1) 55%, transparent);
+}
+
+/* Layout follow-up item 5: active-page indicator on top-bar nav items
+   (src/components/top-bar.tsx), same glass + brand-glow language as
+   .glow-card/.nav-dropdown-content above, sized down for an inline nav
+   pill rather than a full card. Always --glow-1, not GlowCard's
+   per-instance 1/2/3 picks, this marks "the current page" as one
+   consistent accent, not a decorative variety pick. */
+.nav-link-active {
+  background: color-mix(in oklch, var(--popover) 55%, transparent);
+  border: 1px solid color-mix(in oklch, var(--glow-1) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--glow-1) 30%, transparent),
+    0 0 14px -2px color-mix(in oklch, var(--glow-1) 70%, transparent);
+}
