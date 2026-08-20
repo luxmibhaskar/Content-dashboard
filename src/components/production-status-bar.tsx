@@ -1,7 +1,7 @@
 import { PRODUCTION_STATUSES, type ProductionStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// Section 19 Calendar card redesign: replaces the old status-dots
+// docs/topic-page-redesign.md Section 0.5: replaces the old status-dots
 // tracker on cards specifically. A centered, ~80%-width bar/label,
 // intensity increases with pipeline stage so "Published / Scheduled"
 // reads as visibly done at a glance, not just as text.

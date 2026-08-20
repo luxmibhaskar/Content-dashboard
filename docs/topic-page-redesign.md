@@ -18,6 +18,33 @@ workable from the Idea Panel only. The first real status gets set, and
 the item first appears as a Calendar card, when a "Transfer to Calendar"
 action fires.
 
+## 0.5. Calendar card layout (List View, `src/components/calendar-list.tsx`)
+
+Confirmed spec, previously only decided in conversation and referenced
+in code by a comment citing a "Section 19" that doesn't actually cover
+this (Section 19 of `builder-brief.md` is the Build Phases list) — this
+section is that spec's real home now. Refines `builder-brief.md`
+Section 10.0's four-things list with the actual spatial layout:
+
+- **Top-left**: Title (one line, truncated).
+- **Top-right**: the Viability Status dot (green/amber/grey), not the
+  pillar tag. This is the deliberate choice: whether an item is
+  workable right now is the thing worth a glance-able top corner, ahead
+  of which pillar it belongs to.
+- **Second row**: the pillar-colored tag (`src/components/pillar-tag.tsx`,
+  `docs/brand-tokens.md`'s Tag styling), plus the sub-topic as plain
+  text next to it, plus an "Archived" badge when applicable.
+- **Bottom, horizontally centered**: the production status bar
+  (`src/components/production-status-bar.tsx`, `mx-auto w-4/5`,
+  intensity increases with pipeline stage), pushed to the card's bottom
+  edge via `mt-auto` regardless of how much the rows above it take up.
+
+Items with `production_status = null` (Idea-stage, not yet transferred
+to the Calendar) never reach this list at all (filtered in
+`calendar/page.tsx`), so "the full production status range" a card can
+show is only the 4 real stages above, idea-stage is a Idea Panel-only
+concept, not a 5th card stage.
+
 ## 1. "+ New" content item form
 
 Condensed to three fields only, shown centered in a comfortably

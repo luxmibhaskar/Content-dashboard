@@ -5,12 +5,14 @@ import { PillarTag } from "@/components/pillar-tag";
 import { GlowCard } from "@/components/glow-card";
 import type { ContentCalendarItem } from "@/lib/types";
 
-// Section 19 Calendar card redesign: title top, pillar-colored tag,
-// production status as a centered bar in the lower-middle (replacing the
-// old status dots), viability dot kept alongside as a separate concern
-// (is this workable right now vs. where in the pipeline). Items with no
-// production_status yet are filtered out before reaching this list (see
-// calendar/page.tsx), so status is always non-null here.
+// Card layout confirmed and documented in
+// docs/topic-page-redesign.md Section 0.5: title top-left, Viability
+// dot top-right (deliberately, not the pillar tag: workable-right-now
+// is the glance-able signal), pillar tag in its own row below,
+// production status as a centered bar in the lower-middle (replacing
+// the old status dots). Items with no production_status yet are
+// filtered out before reaching this list (see calendar/page.tsx), so
+// status is always non-null here.
 export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
   return (
     <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
