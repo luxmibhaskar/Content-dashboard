@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/top-bar";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
+import { getLatestPlatformCounts } from "@/app/actions/platforms";
 
 export default async function AppLayout({
   children,
@@ -21,10 +22,11 @@ export default async function AppLayout({
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
+  const platformCounts = await getLatestPlatformCounts(brand);
 
   return (
     <div className="flex min-h-svh flex-col">
-      <TopBar brand={brand} userEmail={user.email ?? null} />
+      <TopBar brand={brand} userEmail={user.email ?? null} platformCounts={platformCounts} />
       <main className="flex-1">{children}</main>
     </div>
   );

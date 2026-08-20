@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { PlatformsModal } from "@/components/platforms-modal";
 import { signOut } from "@/app/actions/auth";
 import type { Brand } from "@/lib/brand";
+import type { Platform } from "@/lib/platforms";
 
 // docs/topic-page-redesign.md Section 3: Personal Angle Bank is gone as
 // a separate nav item, it's a toggle inside My Journey Log now (see
@@ -38,9 +39,11 @@ const MORE_LINKS = [
 export function TopBar({
   brand,
   userEmail,
+  platformCounts,
 }: {
   brand: Brand;
   userEmail: string | null;
+  platformCounts: Partial<Record<Platform, number>>;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -61,7 +64,7 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
-          <PlatformsModal />
+          <PlatformsModal initialCounts={platformCounts} />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button
@@ -127,7 +130,7 @@ export function TopBar({
             </Link>
           ))}
           <div className="px-2 py-2">
-            <PlatformsModal />
+            <PlatformsModal initialCounts={platformCounts} />
           </div>
           <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
             {userEmail && <span className="truncate text-xs text-muted-foreground">{userEmail}</span>}

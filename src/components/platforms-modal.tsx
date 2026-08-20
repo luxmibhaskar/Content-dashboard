@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Dialog } from "radix-ui";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PLATFORMS } from "@/lib/platforms";
+import { PLATFORMS, type Platform } from "@/lib/platforms";
+import { savePlatformCounts } from "@/app/actions/platforms";
 
-// Phase 1 of the Command Center redesign: the entry form only. Saving
-// isn't wired to storage yet, that lands with Phase 2's platform_snapshots
-// table, no fake Save button pretending to persist something it can't yet.
-export function PlatformsModal() {
+// Redesign Phase 2 of the Command Center redesign: wired to
+// platform_snapshots (supabase/migrations/0012_platform_snapshots.sql).
+// initialCounts is each platform's latest saved snapshot (fetched in
+// the (app) layout), pre-filling the form instead of opening blank.
+export function PlatformsModal({ initialCounts }: { initialCounts: Partial<Record<Platform, number>> }) {
   const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -35,35 +38,48 @@ export function PlatformsModal() {
           </div>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
             Manually enter each platform&apos;s current follower/subscriber count.
-            Not wired to storage yet, this is the entry form only, saving lands
-            once the Platforms data model is in place.
+            Saved as today&apos;s snapshot, re-saving later today updates it rather
+            than adding a duplicate.
           </Dialog.Description>
 
-          <div className="mt-4 space-y-3">
-            {PLATFORMS.map((platform) => (
-              <div key={platform} className="flex items-center justify-between gap-3">
-                <label htmlFor={`platform-${platform}`} className="text-sm">
-                  {platform}
-                </label>
-                <input
-                  id={`platform-${platform}`}
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  disabled
-                  className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm disabled:opacity-50"
-                />
-              </div>
-            ))}
-          </div>
+          <form
+            action={(formData) => {
+              startTransition(async () => {
+                await savePlatformCounts(formData);
+                setOpen(false);
+              });
+            }}
+          >
+            <div className="mt-4 space-y-3">
+              {PLATFORMS.map((platform) => (
+                <div key={platform} className="flex items-center justify-between gap-3">
+                  <label htmlFor={`platform-${platform}`} className="text-sm">
+                    {platform}
+                  </label>
+                  <input
+                    id={`platform-${platform}`}
+                    name={`platform-${platform}`}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    defaultValue={initialCounts[platform] ?? ""}
+                    className="h-8 w-32 rounded-md border border-input bg-background px-2 text-sm"
+                  />
+                </div>
+              ))}
+            </div>
 
-          <div className="mt-5 flex justify-end gap-2">
-            <Dialog.Close asChild>
-              <Button type="button" variant="outline" size="sm">
-                Close
+            <div className="mt-5 flex justify-end gap-2">
+              <Dialog.Close asChild>
+                <Button type="button" variant="outline" size="sm">
+                  Cancel
+                </Button>
+              </Dialog.Close>
+              <Button type="submit" size="sm" disabled={isPending}>
+                {isPending ? "Saving..." : "Save"}
               </Button>
-            </Dialog.Close>
-          </div>
+            </div>
+          </form>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
