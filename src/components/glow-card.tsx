@@ -65,11 +65,25 @@ export function GlowCard({
     mouseY.set(0.5);
   }
 
+  // Touch has no mouse-leave equivalent: a tap fires one pointermove at
+  // the touch point (tilting the card) with no guaranteed follow-up
+  // event over the card to reset it, so without this a tapped card can
+  // stay visibly tilted after the finger lifts. pointerup/pointercancel
+  // both fire reliably on touch (cancel covers e.g. the browser taking
+  // the gesture over for scrolling mid-touch). Scoped to touch only:
+  // resetting on every pointerup would also fire for a mouse click,
+  // snapping a hovered card flat mid-hover for no reason.
+  function handlePointerEnd(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType === "touch") handlePointerLeave();
+  }
+
   return (
     <motion.div
       ref={ref}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
       style={{
         rotateX,
         rotateY,

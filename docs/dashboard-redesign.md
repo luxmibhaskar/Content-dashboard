@@ -130,6 +130,21 @@ generic neon:
   `useReducedMotion()` to branch render output, which caused a real
   server/client hydration mismatch, since that hook's first client-side
   value can differ from its SSR value).
+- **Touch-tilt reset** (responsive audit follow-up): Pointer Events fire
+  for touch as well as mouse, but touch has no mouse-leave equivalent, a
+  tap fires one `pointermove` (tilting the card) with no guaranteed
+  follow-up event over the card to reset it, so a tapped card could stay
+  visibly tilted after the finger lifts. `onPointerUp`/`onPointerCancel`
+  in `glow-card.tsx` now reset the tilt back to flat, scoped to
+  `e.pointerType === "touch"` only, resetting on every `pointerup` would
+  also fire for a mouse click and snap a hovered card flat mid-hover for
+  no reason. Code-reviewed and typechecked, not live-verified on a real
+  touchscreen: this session's automation browser profile has
+  `prefers-reduced-motion: reduce` set (correctly disabling the tilt
+  entirely, working as designed) and synthetic `PointerEvent` dispatch
+  doesn't reliably reach React's synthetic event system in this
+  environment even for the already-working mouse path, so this
+  particular fix is worth an actual phone tap to confirm.
 
 Applied to every genuine standalone card/panel across the app: KPI
 tiles, the Content Calendar grid, list panels (Journey Log, Ideas,
