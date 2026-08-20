@@ -18,6 +18,17 @@ import type {
 // (for an instant no-round-trip confidence check) and the server
 // actions that actually save can import this same module.
 
+// Shared by every "paste from AI chat" entry point that targets
+// research_copy_versions specifically (the topic page's Research & Copy
+// tab, and Content Calendar's "+ New (Manual)" create-from-paste flow),
+// one hint text describing the same template either way.
+export const RESEARCH_PASTE_TEMPLATE_HINT = `Expects these headers, each on its own line, in this order:
+SUMMARY / SOURCES / TITLES / DESCRIPTION / KEYWORD TAGS / QUESTION TAGS / SOURCE FINDINGS (optional).
+Sources as "Title - https://...", one per line. Titles as a numbered or bulleted list.
+Source findings as "### Source Name (Discussion)" or "### Source Name (Article)" blocks, each with
+its own content and an optional "Links:" sub-list underneath (not "Sources:", that collides with the
+top-level SOURCES header). See docs/topic-page-redesign.md Section 7.`;
+
 const HEADER_RE =
   /^#{0,3}\s*(SUMMARY|SOURCES|TITLES|DESCRIPTION|KEYWORD TAGS|QUESTION TAGS|SOURCE FINDINGS|HOOKS|PAIN-POINT ANSWER|LONG-FORM SCRIPT|CTA OPTIONS|SHORT-FORM POINTERS|ATOMIZED SHORTS)\s*:?\s*$/i;
 

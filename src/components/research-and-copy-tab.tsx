@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
+import { RESEARCH_PASTE_TEMPLATE_HINT } from "@/lib/paste-import";
 import type {
   ResearchCopyContainer,
   ResearchCopyVersion,
@@ -30,13 +31,6 @@ import {
   setActiveResearchCopyVersion,
   type RunResearchState,
 } from "@/app/(app)/calendar/[id]/research-copy-actions";
-
-const RESEARCH_PASTE_TEMPLATE_HINT = `Expects these headers, each on its own line, in this order:
-SUMMARY / SOURCES / TITLES / DESCRIPTION / KEYWORD TAGS / QUESTION TAGS / SOURCE FINDINGS (optional).
-Sources as "Title - https://...", one per line. Titles as a numbered or bulleted list.
-Source findings as "### Source Name (Discussion)" or "### Source Name (Article)" blocks, each with
-its own content and an optional "Links:" sub-list underneath (not "Sources:", that collides with the
-top-level SOURCES header). See docs/topic-page-redesign.md Section 7.`;
 
 const STEP_LABELS: Record<ResearchStep, string> = {
   summary: "Summary",
@@ -356,13 +350,11 @@ export function ResearchAndCopyTab({
   briefIntent,
   keywords,
   versions,
-  leadWithPaste = false,
 }: {
   contentId: string;
   briefIntent: string | null;
   keywords: string | null;
   versions: ResearchCopyVersion[];
-  leadWithPaste?: boolean;
 }) {
   const manual = versions.find((v) => v.source === "manual");
   const ai = versions.find((v) => v.source === "ai");
@@ -450,10 +442,7 @@ export function ResearchAndCopyTab({
               isSubmittingRef.current = true;
             }}
           >
-            {/* "+ New (Manual)" leads with Paste below, not Run, Run
-                stays fully present and usable, just visually secondary
-                (outline instead of solid) on this one landing. */}
-            <Button type="submit" variant={leadWithPaste ? "outline" : "default"} loading={isRunPending}>
+            <Button type="submit" loading={isRunPending}>
               {ai ? "Run Again" : "Run"}
             </Button>
           </form>
@@ -464,12 +453,7 @@ export function ResearchAndCopyTab({
             {runState.error}
           </p>
         )}
-        <PasteImportSection
-          action={boundImportPaste}
-          templateHint={RESEARCH_PASTE_TEMPLATE_HINT}
-          initialOpen={leadWithPaste}
-          emphasize={leadWithPaste}
-        />
+        <PasteImportSection action={boundImportPaste} templateHint={RESEARCH_PASTE_TEMPLATE_HINT} />
       </GlowCard>
 
       {!manual && !ai ? (

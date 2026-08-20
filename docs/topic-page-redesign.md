@@ -47,32 +47,39 @@ concept, not a 5th card stage.
 
 ## 1. "+ New" content item form
 
-Condensed to three fields only, shown centered in a comfortably
-proportioned layout, not full-width stretched: Title, Brief Description,
-Keywords. This is context only, nothing else collects input here.
-
 Two clearly labeled entry points on the Content Calendar page, not one
-button with a hidden toggle, both landing on this same three-field form
-(`src/app/(app)/calendar/new/page.tsx`, one page, `?entry=manual`
-distinguishes them):
+button with a hidden toggle, genuinely different flows now, not two
+label variants of the same form (`src/app/(app)/calendar/new/page.tsx`,
+one page, `?entry=manual` branches which one renders):
 
-- **"+ New (AI Research)"**: unchanged, the original flow. Submitting
-  ("Run") creates the item and lands on the topic page with Run leading,
+- **"+ New (AI Research)"** (`entry` unset): unchanged, the original
+  flow. Condensed to three fields only, shown centered in a comfortably
+  proportioned layout, not full-width stretched: Title, Brief
+  Description, Keywords, this is context only, nothing else collects
+  input here. Submitting ("Run") creates the item
+  (`createContentItem`) and lands on the topic page with Run leading,
   same as it always has.
-- **"+ New (Manual)"**: same three fields, same item creation
-  (`createContentItem`, `src/app/(app)/calendar/actions.ts`, `entry`
-  carried through as a hidden field so the redirect can append
-  `?entry=manual`), submitting says "Continue" instead of "Run" since
-  nothing runs yet on this path. Lands on the topic page with Research &
-  Copy's "Paste from AI chat" (Section 7) already expanded and
-  autofocused, its heading styled as the primary action rather than a
-  small collapsed toggle, and Run rendered `outline` instead of solid,
-  visually secondary but still fully present and clickable, never
-  removed or disabled. Only affects this one first landing
-  (`leadWithPaste` threaded through `TopicPageTabs` →
-  `ResearchAndCopyTab` → `PasteImportSection`'s `initialOpen`/`emphasize`
-  props), revisiting the page later goes back to Run leading regardless
-  of how the item was originally created.
+- **"+ New (Manual)"** (`entry=manual`): paste-first, no
+  Title/Brief Description/Keywords form at all, replaces the earlier
+  "collect three fields, then Continue, then land on the topic page
+  with Paste expanded" flow rather than sitting alongside it (that
+  earlier flow's `leadWithPaste` plumbing through `TopicPageTabs` →
+  `ResearchAndCopyTab` → `PasteImportSection` is gone, nothing sets it
+  anymore). Tapping the button goes straight to a paste prompt
+  (`CreateFromPasteForm`, same template as Section 7's "Paste from AI
+  chat"). The item genuinely doesn't exist until the paste parses
+  confidently: `createContentItemFromPaste`
+  (`src/app/(app)/calendar/actions.ts`) parses first, and only on a
+  confident match creates the `content_calendar` row, writes the parsed
+  result as the Manual `research_copy_versions` source (auto-activated,
+  it's always the item's first version), runs Competitor
+  auto-population, and redirects to the new topic page, landing already
+  populated. Title comes from the parsed research's own first title
+  option (`parseResearchCopyPaste` guarantees at least one whenever it
+  returns non-null), not collected separately, still editable on the
+  topic page afterward like any other title. On a low-confidence parse,
+  same fallback UX as Section 7's own paste import: the raw text stays
+  right there, editable, with an inline message, nothing gets created.
 
 ## 2. Topic page: two tabs, not five sections
 

@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 type ImportState = { fallbackRaw: string | null };
 
@@ -27,35 +26,19 @@ type ImportState = { fallbackRaw: string | null };
 export function PasteImportSection({
   action,
   templateHint,
-  initialOpen = false,
-  emphasize = false,
 }: {
   action: (prevState: ImportState, formData: FormData) => Promise<ImportState>;
   templateHint: string;
-  // "+ New (Manual)" (src/app/(app)/calendar/new/page.tsx) lands on the
-  // topic page with this expanded already, rather than collapsed behind
-  // a "+" the way it normally starts, since pasting is the whole point
-  // of having chosen that entry point.
-  initialOpen?: boolean;
-  // Same landing: a plain heading instead of a small muted toggle
-  // button, so this reads as the primary action on the page, not a
-  // secondary option tucked under Run. Still collapsible either way,
-  // just not styled like something meant to stay closed.
-  emphasize?: boolean;
 }) {
-  const [open, setOpen] = useState(initialOpen);
+  const [open, setOpen] = useState(false);
   const [state, formAction, isPending] = useActionState(action, { fallbackRaw: null });
 
   return (
-    <div className={cn("border-t border-border pt-3", emphasize && "border-primary/30")}>
+    <div className="border-t border-border pt-3">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          emphasize
-            ? "text-sm font-medium text-foreground hover:text-primary"
-            : "text-xs text-muted-foreground hover:text-foreground",
-        )}
+        className="text-xs text-muted-foreground hover:text-foreground"
       >
         Paste from AI chat {open ? "−" : "+"}
       </button>
@@ -67,7 +50,6 @@ export function PasteImportSection({
             name="pasted_text"
             required
             rows={10}
-            autoFocus={emphasize}
             defaultValue={state.fallbackRaw ?? undefined}
             className="w-full rounded-md border border-input bg-background p-2 font-mono text-xs"
             placeholder="Paste the free AI chat's response here, matching the template above."
