@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
+import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { createIdea } from "./actions";
 
 type IdeaListRow = {
@@ -53,14 +54,7 @@ export default async function IdeasPage() {
           <Input id="idea_title" name="idea_title" required placeholder="What's the idea?" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="pillar">Pillar</Label>
-            <Input id="pillar" name="pillar" placeholder="e.g. Body" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sub_topic">Sub-topic</Label>
-            <Input id="sub_topic" name="sub_topic" />
-          </div>
+          <PillarSubTopicSelects brand={brand} initialPillar="" initialSubTopic="" />
           <div className="space-y-1.5">
             <Label htmlFor="format">Format</Label>
             <select

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
+import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
 
 export default async function IdeaPage({
@@ -101,14 +102,11 @@ export default async function IdeaPage({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="pillar">Pillar</Label>
-            <Input id="pillar" name="pillar" defaultValue={idea.pillar ?? ""} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sub_topic">Sub-topic</Label>
-            <Input id="sub_topic" name="sub_topic" defaultValue={idea.sub_topic ?? ""} />
-          </div>
+          <PillarSubTopicSelects
+            brand={idea.brand}
+            initialPillar={idea.pillar ?? ""}
+            initialSubTopic={idea.sub_topic ?? ""}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

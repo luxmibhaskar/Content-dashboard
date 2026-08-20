@@ -16,6 +16,13 @@ const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-backgroun
 // multiselect, this is one pillar and one sub-topic per item, not a
 // set), sub-topic's own option list re-derives from whichever pillar is
 // currently selected, not every branch from every pillar at once.
+//
+// Returns the two field blocks directly, no wrapping grid of its own:
+// every caller (Content Calendar's topic page, Idea Panel's quick-add
+// form and its own edit page) places Pillar/Sub-topic inside a
+// different surrounding grid already, wrapping here would fight
+// whatever the caller needs (a 2-column grid on one page, one slot
+// inside a 4-column grid on another).
 export function PillarSubTopicSelects({
   brand,
   initialPillar,
@@ -42,7 +49,7 @@ export function PillarSubTopicSelects({
       : subTopicsForPillar;
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <>
       <div className="space-y-1.5">
         <Label htmlFor="pillar">Pillar</Label>
         <select
@@ -81,6 +88,6 @@ export function PillarSubTopicSelects({
           ))}
         </select>
       </div>
-    </div>
+    </>
   );
 }

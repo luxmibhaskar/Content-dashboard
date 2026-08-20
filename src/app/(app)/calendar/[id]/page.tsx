@@ -254,11 +254,13 @@ export default async function TopicPage({
           />
         </div>
 
-        <PillarSubTopicSelects
-          brand={item.brand}
-          initialPillar={item.pillar ?? ""}
-          initialSubTopic={item.sub_topic ?? ""}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <PillarSubTopicSelects
+            brand={item.brand}
+            initialPillar={item.pillar ?? ""}
+            initialSubTopic={item.sub_topic ?? ""}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
