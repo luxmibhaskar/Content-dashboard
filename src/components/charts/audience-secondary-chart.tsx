@@ -35,7 +35,14 @@ export function AudienceSecondaryChart({
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2">
+      {/* Below sm, a plain flex-wrap left the 3rd button ("Output vs
+          Milestone", the longest label) dangling alone on its own row,
+          left-aligned with empty space beside it, reading like a layout
+          accident. A 2-column grid with that button spanning both
+          columns makes the wrap a deliberate full-width row instead.
+          sm+ reverts to the original inline row, there's room for all
+          three there already. */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {VIEW_KEYS.map((key) => (
           <button
             key={key}
@@ -43,6 +50,7 @@ export function AudienceSecondaryChart({
             onClick={() => setView(key)}
             className={cn(
               "rounded-md px-2.5 py-1 text-sm",
+              key === "output" && "col-span-2 sm:col-span-1",
               view === key
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-muted",
