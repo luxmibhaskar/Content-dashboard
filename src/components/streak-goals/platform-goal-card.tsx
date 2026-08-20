@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
@@ -8,6 +8,8 @@ import { PlatformIconPicker } from "@/components/streak-goals/platform-icon-pick
 import { findPlatformIcon } from "@/lib/platform-icons";
 import { isViewsGoal } from "@/lib/goals";
 import { updateGoal, deleteGoal } from "@/app/actions/goals";
+import { logPastPlatformSnapshot } from "@/app/actions/platforms";
+import { todayDateKey } from "@/lib/streaks";
 import { GOAL_STATUSES, type Goal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +30,11 @@ function progressLabel(goal: Goal) {
 
 export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 | 3 }) {
   const [isPending, startTransition] = useTransition();
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [isBackfillPending, startBackfillTransition] = useTransition();
   const boundUpdate = updateGoal.bind(null, goal.id);
   const boundDelete = deleteGoal.bind(null, goal.id);
+  const boundLogPast = logPastPlatformSnapshot.bind(null, goal.platform_name ?? "");
   const iconEntry = findPlatformIcon(goal.icon_slug);
   // Views is the one distinct case, that number comes from Analytics,
   // not something to manually log here. Every other platform's current
@@ -112,6 +117,42 @@ export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 
           </Button>
         </div>
       </form>
+
+      {/* Item 2 of this follow-up: seeding real historical data for a
+          platform that's only just being added, same spirit as the
+          streak backfill, a real date input rather than only ever
+          accumulating forward from today. Not shown for Views, that
+          number isn't something to snapshot into platform_snapshots.
+          Not its own GlowCard, this already lives inside one. */}
+      {!isViews && (
+        <div className="mt-3 border-t border-border pt-3">
+          <button
+            type="button"
+            onClick={() => setBackfillOpen((v) => !v)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Log a past count {backfillOpen ? "−" : "+"}
+          </button>
+          {backfillOpen && (
+            <form
+              action={(formData) => startBackfillTransition(() => boundLogPast(formData))}
+              className="mt-2 flex flex-wrap items-center gap-2"
+            >
+              <input
+                type="date"
+                name="snapshot_date"
+                max={todayDateKey()}
+                required
+                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              />
+              <Input name="count" type="number" min={0} placeholder="Count" className="h-8 w-28 text-sm" />
+              <Button type="submit" size="xs" variant="outline" loading={isBackfillPending}>
+                Save
+              </Button>
+            </form>
+          )}
+        </div>
+      )}
     </GlowCard>
   );
 }

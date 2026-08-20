@@ -1,6 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { localDateKey } from "@/lib/date";
 
 // Platforms/Streak & Goals consolidation: the old Platforms modal (a
@@ -13,19 +16,40 @@ import { localDateKey } from "@/lib/date";
 // table), just from a different entry point. Re-saving the same day
 // upserts that day's row rather than piling up duplicates, unchanged
 // from before.
-export async function logPlatformSnapshot(brand: string, platformName: string, count: number) {
+async function upsertSnapshot(brand: string, platformName: string, count: number, snapshotDate: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("platform_snapshots").upsert(
-    {
-      brand,
-      platform: platformName,
-      follower_count: Math.round(count),
-      snapshot_date: localDateKey(new Date()),
-    },
+    { brand, platform: platformName, follower_count: Math.round(count), snapshot_date: snapshotDate },
     { onConflict: "brand,platform,snapshot_date" },
   );
 
   if (error) throw new Error(error.message);
+}
+
+export async function logPlatformSnapshot(brand: string, platformName: string, count: number) {
+  await upsertSnapshot(brand, platformName, count, localDateKey(new Date()));
+}
+
+// "Log a past count" (src/components/streak-goals/platform-goal-card.tsx),
+// same spirit as the streak backfill: seeding real history for a
+// platform that's only just being added to the dashboard, rather than
+// only ever accumulating forward from today. Bound to the goal's
+// platform_name from the card, brand comes from the cookie like every
+// other action here, snapshot_date is a real date input, not hardcoded
+// to today.
+export async function logPastPlatformSnapshot(platformName: string, formData: FormData) {
+  const cookieStore = await cookies();
+  const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
+  const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
+
+  const snapshotDate = String(formData.get("snapshot_date") ?? "");
+  const raw = formData.get("count");
+  if (!snapshotDate || raw === null || raw === "") return;
+  const count = Number(raw);
+  if (!Number.isFinite(count) || count < 0) return;
+
+  await upsertSnapshot(brand, platformName, count, snapshotDate);
+  revalidatePath("/", "layout");
 }
 
 // Latest snapshot per platform, any platform name (not a fixed union

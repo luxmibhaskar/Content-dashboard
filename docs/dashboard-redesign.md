@@ -411,3 +411,14 @@ every platform goal's current count, not just those 4:
   arbitrary platform names, they were already general. Only the write
   side (the removed modal, now the goal card) and the CHECK constraint
   were actually scoped to 4 platforms.
+- **"Log a past count"**, same spirit as the streak backfill: a real
+  date input on each platform goal's card
+  (`platform-goal-card.tsx`, hidden for Views), seeding real history for
+  a platform that's only just being added to the dashboard rather than
+  only ever accumulating forward from today. `logPastPlatformSnapshot`
+  in `src/app/actions/platforms.ts` shares its actual upsert with the
+  current-count path (`upsertSnapshot`), just with a caller-supplied
+  `snapshot_date` instead of always today. Verified directly in the
+  browser: backfilling one past date for a platform with no prior
+  history took Total Audience Growth from its "not enough history"
+  placeholder to an actual two-point line.
