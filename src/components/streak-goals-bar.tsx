@@ -2,11 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { findPlatformIcon } from "@/lib/platform-icons";
-import {
-  getServerShuffleVisibleSnapshot,
-  getShuffleVisibleSnapshot,
-  subscribeToShuffleVisible,
-} from "@/lib/shuffle-visibility";
+import { postStreakVisibility, shuffleVisibility, walkStreakVisibility } from "@/lib/shuffle-visibility";
 import type { Goal } from "@/lib/types";
 
 const ROTATE_MS = 4000;
@@ -25,7 +21,10 @@ function progressLabel(goal: Goal) {
 // modal). Always expanded, never collapsible (confirmed). With more
 // than one goal, shuffles through them one at a time rather than
 // cramming every platform into the bar at once (confirmed, ~4s per
-// platform).
+// platform). Walk streak, Posting streak, and the platform shuffle each
+// have their own independent visibility toggle in the Streak & Goals
+// modal (src/lib/shuffle-visibility.ts), hiding one never affects the
+// others.
 export function StreakGoalsBar({
   walkStreak,
   postStreak,
@@ -38,9 +37,19 @@ export function StreakGoalsBar({
   onOpenGoalsModal: () => void;
 }) {
   const shuffleVisible = useSyncExternalStore(
-    subscribeToShuffleVisible,
-    getShuffleVisibleSnapshot,
-    getServerShuffleVisibleSnapshot,
+    shuffleVisibility.subscribe,
+    shuffleVisibility.getSnapshot,
+    shuffleVisibility.getServerSnapshot,
+  );
+  const walkStreakVisible = useSyncExternalStore(
+    walkStreakVisibility.subscribe,
+    walkStreakVisibility.getSnapshot,
+    walkStreakVisibility.getServerSnapshot,
+  );
+  const postStreakVisible = useSyncExternalStore(
+    postStreakVisibility.subscribe,
+    postStreakVisibility.getSnapshot,
+    postStreakVisibility.getServerSnapshot,
   );
   const withProgress = goals.filter((g) => progressLabel(g) !== null);
   const [index, setIndex] = useState(0);
@@ -58,12 +67,16 @@ export function StreakGoalsBar({
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-4 border-b border-border px-4 py-2 text-sm text-muted-foreground">
-      <span>
-        Walk streak: <span className="font-medium text-foreground">{walkStreak}</span>
-      </span>
-      <span>
-        Posting streak: <span className="font-medium text-foreground">{postStreak}</span>
-      </span>
+      {walkStreakVisible && (
+        <span>
+          Walk streak: <span className="font-medium text-foreground">{walkStreak}</span>
+        </span>
+      )}
+      {postStreakVisible && (
+        <span>
+          Posting streak: <span className="font-medium text-foreground">{postStreak}</span>
+        </span>
+      )}
       {shuffleVisible &&
         (current ? (
           <span className="flex items-center gap-1.5">

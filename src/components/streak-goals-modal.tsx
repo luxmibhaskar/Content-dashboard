@@ -7,12 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StreakLogForm } from "@/components/streak-goals/streak-log-form";
 import { PlatformGoalCard } from "@/components/streak-goals/platform-goal-card";
 import { AddPlatformGoalForm } from "@/components/streak-goals/add-platform-goal-form";
-import {
-  getServerShuffleVisibleSnapshot,
-  getShuffleVisibleSnapshot,
-  setShuffleVisible,
-  subscribeToShuffleVisible,
-} from "@/lib/shuffle-visibility";
+import { postStreakVisibility, shuffleVisibility, walkStreakVisibility } from "@/lib/shuffle-visibility";
 import type { Goal } from "@/lib/types";
 
 type Tab = "streak" | "goals";
@@ -47,9 +42,19 @@ export function StreakGoalsModal({
 }) {
   const [tab, setTab] = useState<Tab>("streak");
   const shuffleVisible = useSyncExternalStore(
-    subscribeToShuffleVisible,
-    getShuffleVisibleSnapshot,
-    getServerShuffleVisibleSnapshot,
+    shuffleVisibility.subscribe,
+    shuffleVisibility.getSnapshot,
+    shuffleVisibility.getServerSnapshot,
+  );
+  const walkStreakVisible = useSyncExternalStore(
+    walkStreakVisibility.subscribe,
+    walkStreakVisibility.getSnapshot,
+    walkStreakVisibility.getServerSnapshot,
+  );
+  const postStreakVisible = useSyncExternalStore(
+    postStreakVisibility.subscribe,
+    postStreakVisibility.getSnapshot,
+    postStreakVisibility.getServerSnapshot,
   );
 
   return (
@@ -70,19 +75,39 @@ export function StreakGoalsModal({
             &middot; Posting streak: <span className="font-medium text-foreground">{postStreak}</span>
           </Dialog.Description>
 
-          {/* Follow-up item 1: a visibility preference for the top-bar's
-              rotating platform-goal display, not a data change. Walk
-              streak and Posting streak always stay in the top bar,
-              only the shuffle itself is affected. */}
-          <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={shuffleVisible}
-              onChange={(e) => setShuffleVisible(e.target.checked)}
-              className="size-4 rounded border-input"
-            />
-            Show platform shuffle in top bar
-          </label>
+          {/* Follow-up: independent visibility preferences for the three
+              elements in the top bar's streak/goals row, not data
+              changes. Each toggle controls only its own element, hiding
+              one never affects the others. */}
+          <div className="mt-4 space-y-1.5">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={walkStreakVisible}
+                onChange={(e) => walkStreakVisibility.set(e.target.checked)}
+                className="size-4 rounded border-input"
+              />
+              Show Walk streak in top bar
+            </label>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={postStreakVisible}
+                onChange={(e) => postStreakVisibility.set(e.target.checked)}
+                className="size-4 rounded border-input"
+              />
+              Show Posting streak in top bar
+            </label>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={shuffleVisible}
+                onChange={(e) => shuffleVisibility.set(e.target.checked)}
+                className="size-4 rounded border-input"
+              />
+              Show platform shuffle in top bar
+            </label>
+          </div>
 
           <div className="mt-4 inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
             <Button

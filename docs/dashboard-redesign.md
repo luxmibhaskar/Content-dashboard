@@ -437,17 +437,18 @@ every platform goal's current count, not just those 4:
   Milestone, but nothing in the calendar UI flags this combination, so
   it silently reads as zero output for that item. Worth a UI warning
   later; not built now, out of scope for this follow-up.
-- **Top-bar shuffle visibility toggle**: a checkbox in the Streak &
-  Goals modal ("Show platform shuffle in top bar"), controlling only the
-  rotating platform-goal element in `streak-goals-bar.tsx` (icon, name,
-  progress). Walk streak and Posting streak stay visible in the top bar
-  regardless of this setting, only the shuffle itself is affected.
-  localStorage-backed `useSyncExternalStore`
-  (`src/lib/shuffle-visibility.ts`), same pattern as the theme toggle
-  and the audience-graphs split, a visibility preference only, no data
-  changes. Verified live: unchecking it removes the shuffle from the top
-  bar immediately and across a fresh navigation, while streak counts
-  stay put; the default (no stored preference) is visible.
+- **Top-bar visibility toggles**: three independent checkboxes in the
+  Streak & Goals modal, one each for Walk streak, Posting streak, and
+  the rotating platform-goal shuffle (icon, name, progress) in
+  `streak-goals-bar.tsx`. Each controls only its own element, hiding one
+  never affects the others. localStorage-backed `useSyncExternalStore`
+  via a small shared factory (`src/lib/shuffle-visibility.ts`,
+  `createVisibilityToggle`, one instance per element, its own storage
+  key and listener set), same pattern as the theme toggle and the
+  audience-graphs split, a visibility preference only, no data changes.
+  Verified live: unchecking just Walk streak removes only that element
+  from the top bar, Posting streak and the platform shuffle stay put;
+  the default (no stored preference) is visible for all three.
 - **System & Services restructuring**: "Check Alternatives" (the
   per-service check button and stored verdict, backed by
   `service_alternative_checks` and the `checkAlternatives` action) is
