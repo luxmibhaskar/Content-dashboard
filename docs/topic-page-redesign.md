@@ -49,8 +49,30 @@ concept, not a 5th card stage.
 
 Condensed to three fields only, shown centered in a comfortably
 proportioned layout, not full-width stretched: Title, Brief Description,
-Keywords. This is context only, nothing else collects input here. A
-"Run" action triggers the first research pass.
+Keywords. This is context only, nothing else collects input here.
+
+Two clearly labeled entry points on the Content Calendar page, not one
+button with a hidden toggle, both landing on this same three-field form
+(`src/app/(app)/calendar/new/page.tsx`, one page, `?entry=manual`
+distinguishes them):
+
+- **"+ New (AI Research)"**: unchanged, the original flow. Submitting
+  ("Run") creates the item and lands on the topic page with Run leading,
+  same as it always has.
+- **"+ New (Manual)"**: same three fields, same item creation
+  (`createContentItem`, `src/app/(app)/calendar/actions.ts`, `entry`
+  carried through as a hidden field so the redirect can append
+  `?entry=manual`), submitting says "Continue" instead of "Run" since
+  nothing runs yet on this path. Lands on the topic page with Research &
+  Copy's "Paste from AI chat" (Section 7) already expanded and
+  autofocused, its heading styled as the primary action rather than a
+  small collapsed toggle, and Run rendered `outline` instead of solid,
+  visually secondary but still fully present and clickable, never
+  removed or disabled. Only affects this one first landing
+  (`leadWithPaste` threaded through `TopicPageTabs` →
+  `ResearchAndCopyTab` → `PasteImportSection`'s `initialOpen`/`emphasize`
+  props), revisiting the page later goes back to Run leading regardless
+  of how the item was originally created.
 
 ## 2. Topic page: two tabs, not five sections
 

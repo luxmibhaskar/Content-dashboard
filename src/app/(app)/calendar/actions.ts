@@ -42,5 +42,10 @@ export async function createContentItem(formData: FormData) {
     throw new Error(error?.message ?? "Failed to create content item.");
   }
 
-  redirect(`/calendar/${data.id}`);
+  // "+ New (Manual)" carries `entry=manual` through from the form
+  // (src/app/(app)/calendar/new/page.tsx) so the topic page knows to
+  // lead with "Paste from AI chat" expanded instead of Run, "+ New (AI
+  // Research)" carries nothing and lands exactly as it always has.
+  const entry = str(formData, "entry");
+  redirect(`/calendar/${data.id}${entry === "manual" ? "?entry=manual" : ""}`);
 }

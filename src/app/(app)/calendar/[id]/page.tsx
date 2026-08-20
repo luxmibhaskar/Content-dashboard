@@ -56,10 +56,19 @@ const SELECT_COLUMNS = `
 
 export default async function TopicPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ entry?: string }>;
 }) {
   const { id } = await params;
+  const { entry } = await searchParams;
+  // "+ New (Manual)" (src/app/(app)/calendar/new/page.tsx) lands here
+  // with ?entry=manual straight after creation, so Research & Copy
+  // leads with "Paste from AI chat" expanded instead of Run. Only ever
+  // read on this one first landing, not persisted, revisiting the page
+  // later (with or without the query string) goes back to Run leading.
+  const leadWithPaste = entry === "manual";
   const supabase = await createClient();
 
   const { data: initialItem } = await supabase
@@ -614,6 +623,7 @@ export default async function TopicPage({
           keywords={item.raw_keywords_topics}
           researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
           scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
+          leadWithPaste={leadWithPaste}
         />
       </div>
 

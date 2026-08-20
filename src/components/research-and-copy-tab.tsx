@@ -295,11 +295,13 @@ export function ResearchAndCopyTab({
   briefIntent,
   keywords,
   versions,
+  leadWithPaste = false,
 }: {
   contentId: string;
   briefIntent: string | null;
   keywords: string | null;
   versions: ResearchCopyVersion[];
+  leadWithPaste?: boolean;
 }) {
   const manual = versions.find((v) => v.source === "manual");
   const ai = versions.find((v) => v.source === "ai");
@@ -387,7 +389,10 @@ export function ResearchAndCopyTab({
               isSubmittingRef.current = true;
             }}
           >
-            <Button type="submit" loading={isRunPending}>
+            {/* "+ New (Manual)" leads with Paste below, not Run, Run
+                stays fully present and usable, just visually secondary
+                (outline instead of solid) on this one landing. */}
+            <Button type="submit" variant={leadWithPaste ? "outline" : "default"} loading={isRunPending}>
               {ai ? "Run Again" : "Run"}
             </Button>
           </form>
@@ -398,7 +403,12 @@ export function ResearchAndCopyTab({
             {runState.error}
           </p>
         )}
-        <PasteImportSection action={boundImportPaste} templateHint={RESEARCH_PASTE_TEMPLATE_HINT} />
+        <PasteImportSection
+          action={boundImportPaste}
+          templateHint={RESEARCH_PASTE_TEMPLATE_HINT}
+          initialOpen={leadWithPaste}
+          emphasize={leadWithPaste}
+        />
       </GlowCard>
 
       {!manual && !ai ? (

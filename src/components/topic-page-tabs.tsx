@@ -23,12 +23,18 @@ export function TopicPageTabs({
   keywords,
   researchCopyVersions,
   scriptsVersions,
+  leadWithPaste = false,
 }: {
   contentId: string;
   briefIntent: string | null;
   keywords: string | null;
   researchCopyVersions: ResearchCopyVersion[];
   scriptsVersions: ScriptsVersion[];
+  // "+ New (Manual)" (src/app/(app)/calendar/new/page.tsx) lands here
+  // straight after creation: Research & Copy's "Paste from AI chat"
+  // opens expanded by default instead of Run being the only obvious
+  // action, Run itself is untouched, still right there, still usable.
+  leadWithPaste?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("research");
   // Section 7: Scripts' Run reads whichever research version is
@@ -58,6 +64,7 @@ export function TopicPageTabs({
           briefIntent={briefIntent}
           keywords={keywords}
           versions={researchCopyVersions}
+          leadWithPaste={leadWithPaste}
         />
       </div>
 

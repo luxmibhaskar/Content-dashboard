@@ -50,11 +50,21 @@ export default async function CalendarPage({
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">Content Calendar</h1>
-        <Button asChild size="sm">
-          <Link href="/calendar/new">+ New</Link>
-        </Button>
+        {/* Two clearly labeled entry points, not one button with a
+            hidden toggle: both collect the same three fields
+            (docs/topic-page-redesign.md Section 1), they only differ in
+            what the topic page leads with once you land there, see the
+            `entry` param handling on that page. */}
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/calendar/new?entry=manual">+ New (Manual)</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/calendar/new">+ New (AI Research)</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-4 flex items-center gap-2">
