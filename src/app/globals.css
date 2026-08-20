@@ -248,10 +248,17 @@ html[data-brand="lbsworks"] {
   --glow-3: #10b981; /* Scale Green */
 }
 
-/* "Moving away from flat backgrounds": a subtle warm Mist wash for
-   LBsTransformation, a faint technical dot-grid for LBsWorks' "lab"
-   vibe. Fixed attachment so the wash reads as the page's own surface,
-   not something that scrolls with content. */
+/* "Moving away from flat backgrounds": both brands use the same
+   light-from-above radial-gradient wash (same shape/position/falloff),
+   consistent visual language, only the tint differs per brand. LBsWorks
+   originally had a dot-grid here instead (the spec's "either/or"
+   wording), swapped for this same wash type per a later consistency
+   follow-up, brand expressed through color only, not through a
+   different effect. Both intentionally near-imperceptible, the bar is
+   "the page doesn't feel flat", not a visible design element, LBsWorks'
+   being newly built isn't a reason for it to read more prominent than
+   LBsTransformation's. Fixed attachment so the wash reads as the page's
+   own surface, not something that scrolls with content. */
 html[data-brand="lbstransformation"] body {
   background-color: var(--background);
   background-image: radial-gradient(
@@ -265,11 +272,10 @@ html[data-brand="lbstransformation"] body {
 html[data-brand="lbsworks"] body {
   background-color: var(--background);
   background-image: radial-gradient(
-    circle,
-    color-mix(in oklch, #475569 14%, transparent) 1px,
-    transparent 1px
+    ellipse 90% 60% at 50% -10%,
+    color-mix(in oklch, #4f46e5 8%, transparent),
+    transparent 70%
   );
-  background-size: 22px 22px;
   background-attachment: fixed;
 }
 

@@ -217,3 +217,17 @@ order:
   rather than navigating and `asChild` would merge the Item's trigger
   props onto `Dialog.Root`, which doesn't forward them anywhere
   meaningful.
+- **LBsWorks background wash matches LBsTransformation's effect type**
+  (`src/app/globals.css`, both brands' `html[data-brand="..."] body`
+  rules): LBsWorks previously had a dot-grid pattern instead of a
+  gradient wash, the original spec's "either/or" wording for the two
+  brands' backgrounds, an inconsistency beyond just color. Both now use
+  the identical light-from-above radial-gradient shape/position/falloff,
+  only the tint differs, LBsTransformation keeps its existing near-white
+  Mist tone, LBsWorks now uses a low-strength mix of Build Indigo (`#4F46E5`,
+  its existing `--primary`). The mix percentage isn't the same number for
+  both (Indigo needs a much lower percentage than Mist to read equally
+  faint, Mist is already near-white so a high mix barely shifts the page,
+  the same percentage of a saturated color would not), calibrated in the
+  browser at both a subjective "barely noticeable" bar, side by side, so
+  LBsWorks doesn't read more prominent for being newly built.
