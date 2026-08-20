@@ -16,11 +16,21 @@ supersede it, always check these first for anything they cover:
 - `/docs/topic-page-redesign.md` — authoritative topic page structure and
   production status taxonomy, supersedes builder-brief.md Sections 9, 10.1,
   and 13 (marked with ⚠ notes at each affected section).
+- `/docs/dashboard-redesign.md` — authoritative Today-page "Command
+  Center" layout and the app-wide visual treatment pass, a separate
+  4-phase track from builder-brief.md's own phases (see "Current build
+  phase" below for how the two numbering schemes are told apart).
 
 Where any of these three conflict with builder-brief.md, the newer, more
 specific file wins, builder-brief.md remains correct for everything not
 explicitly marked superseded. Read all relevant docs in full before
 starting any new feature, don't work from summaries alone.
+
+Instructions given in conversation that aren't yet captured in any doc
+file are a gap, not a one-off. When conversation reveals real spec (a
+redesign, a taxonomy, a phase breakdown) that has no home in these docs,
+write it into the appropriate doc (or a new one, referenced here) rather
+than letting it live only in that session's transcript.
 
 ## Tech stack
 
@@ -30,10 +40,24 @@ CSS + Tremor (KPI/dashboard components) + react-d3-tree + Framer Motion
 
 ## Current build phase
 
-Building **Phase 1 (Core)** only, see Section 19 of the builder brief for
-the exact list. Don't build Phase 2 or 3 features even if they'd be easy
-to add alongside something in Phase 1, flag them as noted-for-later
-instead of building them early.
+Two separate, unrelated phase numbering schemes exist in this project.
+When "Phase N" comes up, always confirm which one is meant:
+
+- **Builder-brief phases** (`docs/builder-brief.md` Section 19): Phase 1
+  (Core), Phase 2 (Flow & Research), Phase 3 (Advanced). Status as of
+  this note: Phase 1 and Phase 2 are substantially built. Phase 3 is
+  partial, Hook Library and Weekly Review are built; the Pillar Tree
+  (Section 15.1) was built then removed as part of the dashboard
+  redesign below; the Services panel's live status checks and "Check
+  Alternatives" research (Section 5.3) are not yet built.
+- **Redesign phases** (`docs/dashboard-redesign.md`): Phase 1 (Command
+  Center layout) and Phase 2 (Platforms data model) are built. Phase 3
+  (Command Center graphs) and Phase 4 (full visual treatment) are
+  specified in that doc but not yet built.
+
+Don't build ahead of whichever phase is actually in progress even if a
+later item would be easy to add alongside it, flag it as noted-for-later
+instead.
 
 ## Two standing rules (Section 19 of the builder brief)
 
