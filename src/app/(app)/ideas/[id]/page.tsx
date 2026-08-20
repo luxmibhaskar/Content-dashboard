@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
 
 export default async function IdeaPage({
@@ -29,6 +30,8 @@ export default async function IdeaPage({
   if (!idea) {
     notFound();
   }
+
+  const structure = await getMergedPillarStructure(idea.brand);
 
   const boundUpdate = updateIdea.bind(null, idea.id);
   const boundDelete = deleteIdea.bind(null, idea.id);
@@ -103,7 +106,7 @@ export default async function IdeaPage({
 
         <div className="grid grid-cols-2 gap-4">
           <PillarSubTopicSelects
-            brand={idea.brand}
+            structure={structure}
             initialPillar={idea.pillar ?? ""}
             initialSubTopic={idea.sub_topic ?? ""}
           />

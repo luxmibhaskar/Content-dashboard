@@ -78,3 +78,27 @@ export const PILLAR_COLORS: Record<string, string> = {
 export function pillarColor(pillar: string): string {
   return PILLAR_COLORS[pillar] ?? "#6b7280";
 }
+
+// Merges user-added custom sub-topics (custom_sub_topics table, see
+// src/lib/custom-sub-topics.ts) into the fixed base structure. Pillars
+// themselves never gain entries this way, only sub-topics under a
+// pillar that already exists, a custom row referencing an unknown
+// pillar (shouldn't happen, addCustomSubTopic validates against
+// pillarsFor before insert) is defensively dropped rather than creating
+// a stray pillar. Duplicate names are deduped, not appended twice.
+export function mergeCustomSubTopics(
+  base: PillarStructure,
+  custom: { pillar: string; sub_topic: string }[],
+): PillarStructure {
+  const merged: PillarStructure = {};
+  for (const [pillar, subs] of Object.entries(base)) {
+    merged[pillar] = [...subs];
+  }
+  for (const { pillar, sub_topic } of custom) {
+    if (!merged[pillar]) continue;
+    if (!merged[pillar].includes(sub_topic)) {
+      merged[pillar] = [...merged[pillar], sub_topic];
+    }
+  }
+  return merged;
+}

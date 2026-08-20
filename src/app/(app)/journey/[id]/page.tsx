@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PillarSubtopicPicker } from "@/components/pillar-subtopic-picker";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { MOOD_ENERGY_OPTIONS, type JourneyEntry } from "@/lib/types";
 import { updateJourneyEntry, deleteJourneyEntry } from "./actions";
 
@@ -29,6 +30,8 @@ export default async function JourneyEntryPage({
     notFound();
   }
 
+  const structure = await getMergedPillarStructure(entry.brand);
+
   const boundUpdate = updateJourneyEntry.bind(null, entry.id);
   const boundDelete = deleteJourneyEntry.bind(null, entry.id);
 
@@ -46,7 +49,7 @@ export default async function JourneyEntryPage({
 
         <PillarSubtopicPicker
           key={entry.id}
-          brand={entry.brand}
+          structure={structure}
           initialPillars={entry.pillar_focus}
           initialSubTopics={entry.sub_topic}
         />

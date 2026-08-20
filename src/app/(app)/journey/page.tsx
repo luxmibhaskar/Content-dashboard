@@ -2,7 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
-import { pillarsFor, subTopicsFor } from "@/lib/pillars";
+import { pillarsFor } from "@/lib/pillars";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { createJourneyEntry } from "./actions";
@@ -26,6 +27,7 @@ export default async function JourneyLogPage({
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
 
   const supabase = await createClient();
+  const structure = await getMergedPillarStructure(brand);
 
   let query = supabase
     .from("journey_log")
@@ -114,7 +116,7 @@ export default async function JourneyLogPage({
             className="h-8 rounded-md border border-input bg-background px-2 text-sm"
           >
             <option value="">All</option>
-            {subTopicsFor(brand).map((s) => (
+            {Object.values(structure).flat().map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

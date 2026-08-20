@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { PILLAR_STRUCTURE } from "@/lib/pillars";
-import type { Brand } from "@/lib/brand";
+import type { PillarStructure } from "@/lib/pillars";
 
 export function PillarSubtopicPicker({
-  brand,
+  structure,
   initialPillars,
   initialSubTopics,
 }: {
-  brand: Brand;
+  structure: PillarStructure;
   initialPillars: string[];
   initialSubTopics: string[];
 }) {
-  const structure = PILLAR_STRUCTURE[brand];
   const [pillars, setPillars] = useState<string[]>(initialPillars);
   const [subTopics, setSubTopics] = useState<string[]>(initialSubTopics);
 

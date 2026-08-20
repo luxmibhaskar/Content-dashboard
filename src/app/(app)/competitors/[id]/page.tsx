@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SubTopicMultiSelect } from "@/components/sub-topic-multiselect";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { PLATFORMS, type Competitor } from "@/lib/types";
 import { updateCompetitor, deleteCompetitor } from "./actions";
 
@@ -26,6 +27,8 @@ export default async function CompetitorPage({
   if (!competitor) {
     notFound();
   }
+
+  const structure = await getMergedPillarStructure(competitor.brand);
 
   const { data: benchmarks } = await supabase
     .from("competitor_benchmarks")
@@ -70,7 +73,7 @@ export default async function CompetitorPage({
 
         <div className="space-y-1.5">
           <Label>Sub-topics</Label>
-          <SubTopicMultiSelect brand={competitor.brand} initialSubTopics={competitor.sub_topics} />
+          <SubTopicMultiSelect structure={structure} initialSubTopics={competitor.sub_topics} />
         </div>
 
         <div className="space-y-1.5">

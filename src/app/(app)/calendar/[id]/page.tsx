@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/copy-button";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { GlowCard } from "@/components/glow-card";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import {
   FORMATS,
   PRODUCTION_STATUSES,
@@ -87,6 +88,7 @@ export default async function TopicPage({
     { data: derivativeItems },
     { data: researchCopyVersions },
     { data: scriptsVersions },
+    structure,
   ] = await Promise.all([
     item.derived_from_content_id
       ? supabase
@@ -110,6 +112,7 @@ export default async function TopicPage({
       .from("scripts_versions")
       .select("id, source, data, is_live")
       .eq("content_id", id),
+    getMergedPillarStructure(item.brand),
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
@@ -256,7 +259,7 @@ export default async function TopicPage({
 
         <div className="grid grid-cols-2 gap-4">
           <PillarSubTopicSelects
-            brand={item.brand}
+            structure={structure}
             initialPillar={item.pillar ?? ""}
             initialSubTopic={item.sub_topic ?? ""}
           />

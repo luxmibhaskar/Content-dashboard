@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { createIdea } from "./actions";
 
 type IdeaListRow = {
@@ -25,11 +26,14 @@ export default async function IdeasPage() {
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
 
   const supabase = await createClient();
-  const { data: ideas } = await supabase
-    .from("ideas")
-    .select("id, idea_title, pillar, sub_topic, status")
-    .eq("brand", brand)
-    .order("created_at", { ascending: false });
+  const [{ data: ideas }, structure] = await Promise.all([
+    supabase
+      .from("ideas")
+      .select("id, idea_title, pillar, sub_topic, status")
+      .eq("brand", brand)
+      .order("created_at", { ascending: false }),
+    getMergedPillarStructure(brand),
+  ]);
 
   const rows = (ideas ?? []) as IdeaListRow[];
   const grouped: Record<(typeof IDEA_STATUSES)[number], IdeaListRow[]> = {
@@ -54,7 +58,7 @@ export default async function IdeasPage() {
           <Input id="idea_title" name="idea_title" required placeholder="What's the idea?" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <PillarSubTopicSelects brand={brand} initialPillar="" initialSubTopic="" />
+          <PillarSubTopicSelects structure={structure} initialPillar="" initialSubTopic="" />
           <div className="space-y-1.5">
             <Label htmlFor="format">Format</Label>
             <select

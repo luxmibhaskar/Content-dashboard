@@ -2,7 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
-import { pillarsFor, subTopicsFor, PILLAR_STRUCTURE } from "@/lib/pillars";
+import { pillarsFor } from "@/lib/pillars";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +35,7 @@ export default async function CompetitorsPage({
 
   const supabase = await createClient();
 
-  const [{ data: competitors }, { data: benchmarks }] = await Promise.all([
+  const [{ data: competitors }, { data: benchmarks }, structure] = await Promise.all([
     supabase
       .from("competitors")
       .select("id, name, platform, profile_url, notes, active, sub_topics")
@@ -44,6 +45,7 @@ export default async function CompetitorsPage({
       .from("competitor_benchmarks")
       .select("competitor_id, content_calendar:content_id(pillar, sub_topic, views, likes, comments, shares, saves)")
       .eq("brand", brand),
+    getMergedPillarStructure(brand),
   ]);
 
   // Filters the actual list below by each competitor's own tagged
@@ -51,10 +53,9 @@ export default async function CompetitorsPage({
   // items they've happened to be benchmarked against, a freshly-tagged
   // competitor with zero benchmarks yet would otherwise never show up
   // under a filter, defeating the point of tagging them at creation.
-  // Pillar has no column of its own, derived via PILLAR_STRUCTURE: a
-  // competitor matches a pillar filter if any tagged sub-topic belongs
-  // to it.
-  const structure = PILLAR_STRUCTURE[brand];
+  // Pillar has no column of its own, derived via structure (merged with
+  // custom_sub_topics): a competitor matches a pillar filter if any
+  // tagged sub-topic, custom or fixed, belongs to it.
   const visibleCompetitors = (competitors ?? []).filter((c) => {
     const tags: string[] = c.sub_topics ?? [];
     if (subTopicFilter && !tags.includes(subTopicFilter)) return false;
@@ -133,7 +134,7 @@ export default async function CompetitorsPage({
               the next one. Changing the key remounts it fresh. */}
           <SubTopicMultiSelect
             key={competitors?.length ?? 0}
-            brand={brand}
+            structure={structure}
             initialSubTopics={[]}
           />
         </div>
@@ -182,7 +183,7 @@ export default async function CompetitorsPage({
             className="h-8 rounded-md border border-input bg-background px-2 text-sm"
           >
             <option value="">All</option>
-            {subTopicsFor(brand).map((s) => (
+            {Object.values(structure).flat().map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

@@ -1,6 +1,12 @@
 import { cookies } from "next/headers";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
-import { PILLAR_STRUCTURE, pillarColor } from "@/lib/pillars";
+import { pillarColor, pillarsFor } from "@/lib/pillars";
+import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { GlowCard } from "@/components/glow-card";
+import { addCustomSubTopic } from "./actions";
 
 // Deliberately not named "Pillar Tree", that name is already associated
 // with a different, removed feature (the organic branch visualization,
@@ -17,7 +23,8 @@ export default async function TopicMapPage() {
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
-  const structure = PILLAR_STRUCTURE[brand];
+  const structure = await getMergedPillarStructure(brand);
+  const pillars = pillarsFor(brand);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
@@ -25,6 +32,41 @@ export default async function TopicMapPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         Every pillar and its sub-topics for this brand, hub-and-spoke.
       </p>
+
+      {/* Custom sub-topics are extensible (pillars are not), added here
+          and merged everywhere else the pillar structure is read
+          (Idea Panel, Production Status, Competitors, Journey Log filters,
+          see src/lib/custom-sub-topics.ts). */}
+      <form action={addCustomSubTopic} className="mt-6">
+        <GlowCard glow={1} className="flex flex-wrap items-end gap-3 p-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="pillar">Pillar</Label>
+            <select
+              id="pillar"
+              name="pillar"
+              defaultValue=""
+              required
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="" disabled>
+                Choose a pillar
+              </option>
+              {pillars.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sub_topic">New sub-topic</Label>
+            <Input id="sub_topic" name="sub_topic" required placeholder="e.g. Cold Exposure" className="h-8" />
+          </div>
+          <Button type="submit" size="sm">
+            + Add sub-topic
+          </Button>
+        </GlowCard>
+      </form>
 
       <div className="mt-8 space-y-10">
         {Object.entries(structure).map(([pillar, subTopics]) => {

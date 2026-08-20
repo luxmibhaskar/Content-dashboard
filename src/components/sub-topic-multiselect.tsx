@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { DropdownMenu } from "radix-ui";
 import { ChevronDown, X } from "lucide-react";
-import { PILLAR_STRUCTURE } from "@/lib/pillars";
-import type { Brand } from "@/lib/brand";
+import type { PillarStructure } from "@/lib/pillars";
 
 // Competitors "Add Competitor" / edit forms: tag-input pattern, not a
 // wall of checkboxes. Open the dropdown, pick a sub-topic, it moves out
@@ -16,13 +15,12 @@ import type { Brand } from "@/lib/brand";
 // just sees name="sub_topics" values via formData.getAll, unchanged from
 // the checkbox version.
 export function SubTopicMultiSelect({
-  brand,
+  structure,
   initialSubTopics,
 }: {
-  brand: Brand;
+  structure: PillarStructure;
   initialSubTopics: string[];
 }) {
-  const structure = PILLAR_STRUCTURE[brand];
   const [subTopics, setSubTopics] = useState<string[]>(initialSubTopics);
   const selected = new Set(subTopics);
 

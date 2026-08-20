@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { PILLAR_STRUCTURE } from "@/lib/pillars";
-import type { Brand } from "@/lib/brand";
+import type { PillarStructure } from "@/lib/pillars";
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 text-sm";
 
@@ -24,15 +23,14 @@ const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-backgroun
 // whatever the caller needs (a 2-column grid on one page, one slot
 // inside a 4-column grid on another).
 export function PillarSubTopicSelects({
-  brand,
+  structure,
   initialPillar,
   initialSubTopic,
 }: {
-  brand: Brand;
+  structure: PillarStructure;
   initialPillar: string;
   initialSubTopic: string;
 }) {
-  const structure = PILLAR_STRUCTURE[brand];
   const pillars = Object.keys(structure);
   const [pillar, setPillar] = useState(initialPillar);
 
