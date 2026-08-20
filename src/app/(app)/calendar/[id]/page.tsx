@@ -20,6 +20,8 @@ import {
   VIABILITY_STATUSES,
   type CompetitorBenchmark,
   type ContentCalendarDetail,
+  type ResearchCopyVersion,
+  type ScriptsVersion,
 } from "@/lib/types";
 import { updateContentItem } from "./actions";
 import { retrieveContentDetail } from "@/lib/archive-lifecycle";
@@ -49,8 +51,7 @@ const SELECT_COLUMNS = `
   derived_from_content_id,
   views, likes, comments, shares, saves, conversions,
   final_description, plain_keyword_tags, question_style_tags,
-  core_tags, detailed_viewer_search_phrase_tags,
-  research_copy, scripts
+  core_tags, detailed_viewer_search_phrase_tags
 `;
 
 export default async function TopicPage({
@@ -86,32 +87,50 @@ export default async function TopicPage({
     if (refreshed) item = refreshed;
   }
 
-  const [{ data: siblingItems }, { data: sourceItem }, { data: derivativeItems }, { data: competitorBenchmarks }, { data: competitors }] =
-    await Promise.all([
-      supabase
-        .from("content_calendar")
-        .select("id, final_title")
-        .eq("brand", item.brand)
-        .neq("id", item.id)
-        .order("final_title", { ascending: true }),
-      item.derived_from_content_id
-        ? supabase
-            .from("content_calendar")
-            .select("id, final_title")
-            .eq("id", item.derived_from_content_id)
-            .single()
-        : Promise.resolve({ data: null }),
-      supabase
-        .from("content_calendar")
-        .select("id, final_title")
-        .eq("derived_from_content_id", item.id),
-      supabase
-        .from("competitor_benchmarks")
-        .select("id, competitor_id, competitor_name, platform, url, why_benchmark, notes")
-        .eq("content_id", id)
-        .order("created_at", { ascending: true }),
-      supabase.from("competitors").select("id, name").eq("brand", item.brand).eq("active", true),
-    ]);
+  const [
+    { data: siblingItems },
+    { data: sourceItem },
+    { data: derivativeItems },
+    { data: competitorBenchmarks },
+    { data: competitors },
+    { data: researchCopyVersions },
+    { data: scriptsVersions },
+  ] = await Promise.all([
+    supabase
+      .from("content_calendar")
+      .select("id, final_title")
+      .eq("brand", item.brand)
+      .neq("id", item.id)
+      .order("final_title", { ascending: true }),
+    item.derived_from_content_id
+      ? supabase
+          .from("content_calendar")
+          .select("id, final_title")
+          .eq("id", item.derived_from_content_id)
+          .single()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("content_calendar")
+      .select("id, final_title")
+      .eq("derived_from_content_id", item.id),
+    supabase
+      .from("competitor_benchmarks")
+      .select("id, competitor_id, competitor_name, platform, url, why_benchmark, notes")
+      .eq("content_id", id)
+      .order("created_at", { ascending: true }),
+    supabase.from("competitors").select("id, name").eq("brand", item.brand).eq("active", true),
+    // Manual (pasted) and AI (Run) coexist as separate rows now
+    // (docs/topic-page-redesign.md Section 7), at most one of each
+    // source per item, is_live marks which one is currently active.
+    supabase
+      .from("research_copy_versions")
+      .select("id, source, data, is_live")
+      .eq("content_id", id),
+    supabase
+      .from("scripts_versions")
+      .select("id, source, data, is_live")
+      .eq("content_id", id),
+  ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
   const publishDateValue = item.publish_date
@@ -593,8 +612,8 @@ export default async function TopicPage({
           contentId={item.id}
           briefIntent={item.brief_intent}
           keywords={item.raw_keywords_topics}
-          researchCopy={item.research_copy}
-          scripts={item.scripts}
+          researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
+          scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
         />
       </div>
 

@@ -282,16 +282,92 @@ action settles, success or failure alike, so a naive uncontrolled
 textarea would lose exactly the raw text the fallback path is supposed
 to preserve. This was also caught and fixed in testing.
 
-**Save path, shared with Run**: parsing happens server-side
+**Save path**: parsing happens server-side
 (`importResearchCopyPaste`/`importScriptsPaste`,
 `src/app/(app)/calendar/[id]/research-copy-actions.ts` and
-`scripts-actions.ts`), and on a confident parse both actions call the
-exact same shared save function the real AI-calling Run uses
-(`saveResearchCopyResult`/`saveScriptsResult`, extracted from the
-previously-inlined Run logic specifically for this). For Research &
-Copy, that means Competitor auto-population (Section 5) and
-`research_progress` being marked done fire identically whether the
-research came from a paid Run or a free paste, no separate path that
-could silently skip either. Verified live: a well-formed paste with a
-known competitor's name in the summary correctly surfaced an
-auto-populated Competitor Benchmark, exactly as a real Run would.
+`scripts-actions.ts`), and on a confident parse both actions write
+through `upsertVersionAndAutoActivate` (`src/lib/content-versions.ts`),
+the same shared helper Run itself uses, just with `source: "manual"`
+instead of `"ai"` — see Section 8 below for what that actually writes
+to and why. For Research & Copy, every save (Manual or AI alike) also
+runs Competitor auto-population (Section 5), scanning that version's
+own text, no separate path that could silently skip it. Verified live: a
+well-formed paste with a known competitor's name in the summary
+correctly surfaced an auto-populated Competitor Benchmark, exactly as a
+real Run would.
+
+## 8. Manual and AI research/scripts coexist per item
+
+Confirmed spec: a Manual (pasted) version and an AI (Run) version exist
+side by side per content item, for both Research & Copy and Scripts,
+one never overwrites the other. Reuses the `is_live` pattern already
+proven at the schema level by `title_variants`/`hook_variants`/
+`thumbnail_variants` (`supabase/migrations/0001_init.sql`): a partial
+unique index enforcing at most one `is_live = true` row per content
+item. Unlike those tables, this is the first place that pattern actually
+gets a working "mark active" UI, `title_variants` etc. never had one,
+they're read-only outside of Hook Library/Analytics and the archive
+lifecycle.
+
+**Schema** (`supabase/migrations/0015_research_copy_scripts_versions.sql`):
+two new tables, `research_copy_versions` and `scripts_versions`, each
+`(id, content_id, brand, source, data jsonb, is_live, created_at,
+updated_at)`, `source` is `'manual' | 'ai'`. A partial unique index on
+`(content_id) where is_live` enforces the one-active-version rule; a
+plain unique index on `(content_id, source)` keeps the existing
+"regenerated wholesale each time, no history" convention, just scoped
+per source now — re-running AI overwrites only the AI row, re-pasting
+Manual overwrites only the Manual row, via
+`upsertVersionAndAutoActivate` (`src/lib/content-versions.ts`), shared
+by both actions files for both tables. The old single-blob
+`content_calendar.research_copy`/`.scripts` columns are gone, migrated
+into the new tables as the `'ai'` source (all pre-existing data came
+from Run, Paste didn't exist before this) and set active, so every
+existing item's visible behavior is unchanged until someone adds a
+Manual version alongside it.
+
+**Auto-activate, once, never silently reassigned**: a brand-new item's
+first version, of either source, becomes active automatically (nothing
+else for it to be). Saving a second version, or re-saving an existing
+one, never changes which version is active, that's a deliberate choice
+via "Make active" (`setActiveResearchCopyVersion`/
+`setActiveScriptsVersion`), the same radio-exclusive toggle for both
+tables (`setActiveVersion` in `content-versions.ts`), two sequential
+updates (unset the current active row, then set the target one), not a
+single atomic transaction — this app has no multi-statement transaction
+API wired up anywhere, and doesn't need one for a single-user tool with
+no concurrent writers to race against.
+
+**Downstream behavior, decided explicitly rather than assumed**:
+- **Scripts' Run reads whichever research_copy_versions row is
+  currently active, full stop.** Not always the AI one. If Manual is
+  active, an AI Scripts Run synthesizes from the pasted research's text,
+  same as it would from AI research.
+- **Competitor auto-population runs on every research_copy save,
+  independent of active status**, both Manual and AI, each scanning its
+  own text. Gating it on "active only" would mean a competitor mentioned
+  in the non-active version never surfaces until someone happens to
+  flip it active later.
+- **Copy-Ready panel's "Use This" buttons need no active concept at
+  all**: each version's panel renders its own complete set of Use This
+  buttons (title/description/keyword tags/question tags), already
+  non-destructive and creator-picked per field before this change, that
+  extends unchanged to two panels instead of one.
+- **`research_progress`** (the AI Run's own step-by-step polling status)
+  stays tied to the Run process specifically, Paste never touches it,
+  there's nothing to poll for a synchronous parse.
+- **`scripts_versions.is_live`** has no current downstream technical
+  consumer (nothing reads it programmatically the way Scripts' Run reads
+  research_copy_versions' active flag), it exists for UI clarity and
+  schema symmetry with Research & Copy, per this project's "build full
+  schemas upfront" convention.
+
+**UI**: both versions always render as two clearly labeled panels,
+"Manual" and "AI Research" (`VersionPanel` in `research-and-copy-tab.tsx`
+and `scripts-tab.tsx`), side by side at `lg:` and up, stacked below that
+(two full research/script breakdowns side by side is real width to ask
+for, per the responsive audit's finding about bare `grid-cols-2` staying
+cramped on narrow screens, this one deliberately waits for `lg:`
+instead). A version with nothing in it yet shows a plain "Nothing
+pasted/run yet" placeholder rather than an empty shell. The active one
+shows an "Active" badge; the other shows a "Make active" button.

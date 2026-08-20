@@ -151,9 +151,6 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   detailed_viewer_search_phrase_tags: string[] | null;
 
   printable_marketing_hooks: PrintableMarketingHooks | null;
-
-  research_copy: ResearchCopyResult | null;
-  scripts: ScriptsResult | null;
 };
 
 // docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy":
@@ -182,6 +179,24 @@ export type ResearchCopyResult = {
   questionTags: string[];
   containers: ResearchCopyContainer[];
   generatedAt: string;
+};
+
+// Manual (pasted) and AI (Run) research coexist per content item instead
+// of one overwriting the other (supabase/migrations/0015_research_copy_scripts_versions.sql),
+// mirroring the title_variants/hook_variants/thumbnail_variants is_live
+// pattern: one row per source, is_live marks which one currently feeds
+// downstream consumers (Scripts' Run input, specifically), a partial
+// unique index enforces at most one live row per content item. Unlike
+// those tables, at most one row per (content_id, source) too, "Run"
+// still only ever overwrites the AI row, "Paste from AI chat" still
+// only ever overwrites the Manual row.
+export type VersionSource = "manual" | "ai";
+
+export type ResearchCopyVersion = {
+  id: string;
+  source: VersionSource;
+  data: ResearchCopyResult;
+  is_live: boolean;
 };
 
 // Run now runs as 3 separate Claude calls sharing one web search pass
@@ -230,6 +245,17 @@ export type ScriptsResult = {
   shortFormPointers: ScriptPointer[];
   atomizedShorts: AtomizedShort[];
   generatedAt: string;
+};
+
+// Same Manual/AI coexistence as ResearchCopyVersion above, independent
+// active flag from research_copy_versions, Research & Copy and Scripts
+// are separate concerns (you could have Manual active for research and
+// AI active for scripts on the same item).
+export type ScriptsVersion = {
+  id: string;
+  source: VersionSource;
+  data: ScriptsResult;
+  is_live: boolean;
 };
 
 // Section 10.2.2/10.2.3: Research Snapshots (append-only, latest drives

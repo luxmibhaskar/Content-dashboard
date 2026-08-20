@@ -11,10 +11,11 @@ import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
 import type {
   ResearchCopyContainer,
-  ResearchCopyResult,
+  ResearchCopyVersion,
   ResearchProgress,
   ResearchSource,
   ResearchStep,
+  VersionSource,
 } from "@/lib/types";
 import {
   runResearchAndCopy,
@@ -25,6 +26,7 @@ import {
   useResearchKeywordTags,
   useResearchQuestionTags,
   importResearchCopyPaste,
+  setActiveResearchCopyVersion,
   type RunResearchState,
 } from "@/app/(app)/calendar/[id]/research-copy-actions";
 
@@ -39,6 +41,11 @@ const STEP_LABELS: Record<ResearchStep, string> = {
   summary: "Summary",
   sources: "Sources",
   copy: "Titles & Tags",
+};
+
+const VERSION_LABELS: Record<VersionSource, string> = {
+  manual: "Manual",
+  ai: "AI Research",
 };
 
 // Polled every 3s while Run is pending (see the effect below), a separate
@@ -162,6 +169,122 @@ function SourceContainer({ container }: { container: ResearchCopyContainer }) {
   );
 }
 
+// docs/topic-page-redesign.md Section 7: Manual and AI Research coexist
+// as two separate, always-visible panels, one is_live/"active" (radio-
+// exclusive, same concept as title_variants/hook_variants/
+// thumbnail_variants) but both stay fully visible and usable, active
+// only decides what Scripts' Run reads from. Each panel is a complete,
+// independent copy of the summary/sources/titles/description/tags/
+// containers breakdown, "Use This" buttons act on that panel's own
+// data regardless of which one is active.
+function VersionPanel({
+  contentId,
+  source,
+  version,
+}: {
+  contentId: string;
+  source: VersionSource;
+  version: ResearchCopyVersion | undefined;
+}) {
+  const boundUseTitle = useResearchTitle.bind(null, contentId);
+  const boundUseDescription = useResearchDescription.bind(null, contentId);
+  const boundSetActive = setActiveResearchCopyVersion.bind(null, contentId, source);
+  const researchCopy = version?.data;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">{VERSION_LABELS[source]}</p>
+        {version &&
+          (version.is_live ? (
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary">
+              Active
+            </span>
+          ) : (
+            <form action={boundSetActive}>
+              <Button type="submit" size="xs" variant="ghost">
+                Make active
+              </Button>
+            </form>
+          ))}
+      </div>
+
+      {!researchCopy ? (
+        <p className="text-xs text-muted-foreground">
+          {source === "manual" ? "Nothing pasted yet." : "Nothing run yet."}
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <GlowCard glow={2} className="space-y-2 p-3.5">
+            <p className="text-xs font-medium text-muted-foreground">Summary</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{researchCopy.summary}</p>
+          </GlowCard>
+
+          <CollapsibleSection title={`Sources (${researchCopy.globalSources.length})`} glow={1}>
+            <SourceLinks sources={researchCopy.globalSources} />
+          </CollapsibleSection>
+
+          <GlowCard glow={3} className="space-y-2 p-3.5">
+            <p className="text-xs font-medium text-muted-foreground">Titles</p>
+            <div className="space-y-2">
+              {researchCopy.titles.map((t, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
+                >
+                  <p className="text-sm">{t}</p>
+                  <form action={boundUseTitle}>
+                    <input type="hidden" name="value" value={t} />
+                    <Button type="submit" size="xs" variant="outline">
+                      Use This
+                    </Button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </GlowCard>
+
+          <GlowCard glow={1} className="space-y-2 p-3.5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">Description</p>
+              <form action={boundUseDescription}>
+                <input type="hidden" name="value" value={researchCopy.description} />
+                <Button type="submit" size="xs" variant="outline">
+                  Use This
+                </Button>
+              </form>
+            </div>
+            <p className="text-sm">{researchCopy.description}</p>
+          </GlowCard>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TagContainer
+              label="Keyword tags"
+              tags={researchCopy.keywordTags}
+              contentId={contentId}
+              kind="keyword"
+            />
+            <TagContainer
+              label="Question tags"
+              tags={researchCopy.questionTags}
+              contentId={contentId}
+              kind="question"
+            />
+          </div>
+
+          {researchCopy.containers.length > 0 && (
+            <div className="space-y-3">
+              {researchCopy.containers.map((c, i) => (
+                <SourceContainer key={i} container={c} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy". One
 // Run, full depth from the start, no separate shallow-then-deep step.
 // The Brief Description/Keywords fields live here (not a full Creator
@@ -171,16 +294,17 @@ export function ResearchAndCopyTab({
   contentId,
   briefIntent,
   keywords,
-  researchCopy,
+  versions,
 }: {
   contentId: string;
   briefIntent: string | null;
   keywords: string | null;
-  researchCopy: ResearchCopyResult | null;
+  versions: ResearchCopyVersion[];
 }) {
+  const manual = versions.find((v) => v.source === "manual");
+  const ai = versions.find((v) => v.source === "ai");
+
   const boundUpdateInput = updateResearchInput.bind(null, contentId);
-  const boundUseTitle = useResearchTitle.bind(null, contentId);
-  const boundUseDescription = useResearchDescription.bind(null, contentId);
   const boundImportPaste = importResearchCopyPaste.bind(null, contentId);
 
   // useActionState instead of a plain bound action: this call can take
@@ -264,7 +388,7 @@ export function ResearchAndCopyTab({
             }}
           >
             <Button type="submit" loading={isRunPending}>
-              {researchCopy ? "Run Again" : "Run"}
+              {ai ? "Run Again" : "Run"}
             </Button>
           </form>
         </div>
@@ -277,80 +401,16 @@ export function ResearchAndCopyTab({
         <PasteImportSection action={boundImportPaste} templateHint={RESEARCH_PASTE_TEMPLATE_HINT} />
       </GlowCard>
 
-      {!researchCopy && (
+      {!manual && !ai ? (
         <p className="text-sm text-muted-foreground">
           No research yet. Fill in a Brief Description and Keywords above, then Run for a full
-          research pass, one Run, full depth from the start.
+          research pass, or paste one in above, one Run or Paste, full depth either way.
         </p>
-      )}
-
-      {researchCopy && (
-        <>
-          <GlowCard glow={2} className="space-y-3 p-4">
-            <p className="text-sm font-medium">Summary</p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{researchCopy.summary}</p>
-          </GlowCard>
-
-          <CollapsibleSection title={`Sources (${researchCopy.globalSources.length})`}>
-            <SourceLinks sources={researchCopy.globalSources} />
-          </CollapsibleSection>
-
-          <GlowCard glow={3} className="space-y-3 p-4">
-            <p className="text-sm font-medium">Titles</p>
-            <div className="space-y-2">
-              {researchCopy.titles.map((t, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-3 rounded-md border border-border p-2.5"
-                >
-                  <p className="text-sm">{t}</p>
-                  <form action={boundUseTitle}>
-                    <input type="hidden" name="value" value={t} />
-                    <Button type="submit" size="xs" variant="outline">
-                      Use This
-                    </Button>
-                  </form>
-                </div>
-              ))}
-            </div>
-          </GlowCard>
-
-          <GlowCard glow={1} className="space-y-2 p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Description</p>
-              <form action={boundUseDescription}>
-                <input type="hidden" name="value" value={researchCopy.description} />
-                <Button type="submit" size="xs" variant="outline">
-                  Use This
-                </Button>
-              </form>
-            </div>
-            <p className="text-sm">{researchCopy.description}</p>
-          </GlowCard>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TagContainer
-              label="Keyword tags"
-              tags={researchCopy.keywordTags}
-              contentId={contentId}
-              kind="keyword"
-            />
-            <TagContainer
-              label="Question tags"
-              tags={researchCopy.questionTags}
-              contentId={contentId}
-              kind="question"
-            />
-          </div>
-
-          {researchCopy.containers.length > 0 && (
-            <div className="space-y-3">
-              {researchCopy.containers.map((c, i) => (
-                <SourceContainer key={i} container={c} />
-              ))}
-            </div>
-          )}
-        </>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <VersionPanel contentId={contentId} source="manual" version={manual} />
+          <VersionPanel contentId={contentId} source="ai" version={ai} />
+        </div>
       )}
     </div>
   );

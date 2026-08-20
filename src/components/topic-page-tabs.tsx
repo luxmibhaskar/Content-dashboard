@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ResearchAndCopyTab } from "@/components/research-and-copy-tab";
 import { ScriptsTab } from "@/components/scripts-tab";
-import type { ResearchCopyResult, ScriptsResult } from "@/lib/types";
+import type { ResearchCopyVersion, ScriptsVersion } from "@/lib/types";
 
 type Tab = "research" | "scripts";
 
@@ -21,16 +21,20 @@ export function TopicPageTabs({
   contentId,
   briefIntent,
   keywords,
-  researchCopy,
-  scripts,
+  researchCopyVersions,
+  scriptsVersions,
 }: {
   contentId: string;
   briefIntent: string | null;
   keywords: string | null;
-  researchCopy: ResearchCopyResult | null;
-  scripts: ScriptsResult | null;
+  researchCopyVersions: ResearchCopyVersion[];
+  scriptsVersions: ScriptsVersion[];
 }) {
   const [tab, setTab] = useState<Tab>("research");
+  // Section 7: Scripts' Run reads whichever research version is
+  // currently active, "active" means what it says, full stop, not
+  // always the AI one.
+  const activeResearchCopy = researchCopyVersions.find((v) => v.is_live)?.data ?? null;
 
   return (
     <div>
@@ -53,12 +57,12 @@ export function TopicPageTabs({
           contentId={contentId}
           briefIntent={briefIntent}
           keywords={keywords}
-          researchCopy={researchCopy}
+          versions={researchCopyVersions}
         />
       </div>
 
       <div className={tab === "scripts" ? "mt-4" : "mt-4 hidden"}>
-        <ScriptsTab contentId={contentId} researchCopy={researchCopy} scripts={scripts} />
+        <ScriptsTab contentId={contentId} activeResearchCopy={activeResearchCopy} versions={scriptsVersions} />
       </div>
     </div>
   );
