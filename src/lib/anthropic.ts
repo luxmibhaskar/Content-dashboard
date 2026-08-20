@@ -210,6 +210,14 @@ export async function synthesizeResearchAndCopy(params: {
   briefIntent: string | null;
   keywords: string | null;
   onStep?: ResearchStepCallback;
+  // "Go deeper" from the Manual panel (docs/topic-page-redesign.md
+  // Section 7), a real content_calendar item's pasted-in research
+  // handed to call 1 as a genuine starting point, functionally
+  // different from a fresh pass: search for what this existing
+  // research doesn't already cover and build on it, not replace it. No
+  // other call in the 3-call pipeline changes, call 2 and 3 still just
+  // extract structure from whatever call 1 produced, deepened or fresh.
+  deepenFrom?: ResearchCopyResult;
 }): Promise<ResearchCopyResult> {
   const topicContext = `Topic title: ${params.title}
 Brief description: ${params.briefIntent || "(not provided)"}
@@ -217,7 +225,16 @@ Keywords: ${params.keywords || "(not provided)"}`;
 
   await params.onStep?.("summary", "running");
 
-  const summaryUserContent = `${topicContext}
+  const summaryUserContent = params.deepenFrom
+    ? `${topicContext}
+
+Research already gathered on this topic, pasted in manually by the creator, a real starting point, not a draft to second-guess or discard:
+${params.deepenFrom.summary}
+
+Go deeper from here: search for genuinely new angles, evidence, detail, and discussion this existing research doesn't already cover, the way a second, more thorough pass would build on a first one, not the way a fresh unrelated pass would start over. This same research gets reused by a follow-up pass that pulls out discussion pain points and article summaries from what you find, so search broadly enough to cover those too, not only what the summary itself ends up citing.
+
+Then write the SUMMARY: a genuinely readable, clean prose overview of everything worth knowing about this topic for planning a video, roughly 1000+ words, incorporating both what was already known and what this deeper pass found, one coherent piece, not two stitched together. Write like a knowledgeable person explaining it, not a listicle, not a structured research report. Weave every citation naturally into the sentence itself, the way a person telling you about something they read would, for example "a 2025 Lancet review found the benefit levels off around 7,000 steps" or "UCLA Health reports...". Never cite as a bracketed [Title](URL) link, never as a quote broken out on its own line followed by a dangling source URL, and never use markdown syntax anywhere in this summary: no # or ## or ### headers, no **bold**, no bullet lists. Continuous prose start to finish, nothing structural. Open directly with the first real substantive point, never with a line narrating what you're about to do, for example never start with something like "I'll research this thoroughly across multiple angles" or "Let's look at this topic", the reader should be reading actual content from the very first sentence.`
+    : `${topicContext}
 
 Research this topic thoroughly, searching broadly, whatever sources genuinely surface something useful for this specific topic: forums, Reddit, Quora, news, YouTube, communities, anything relevant, not a fixed checklist of sites. This same research gets reused by a follow-up pass that pulls out discussion pain points and article summaries from what you find, so search broadly enough to cover those too, not only what this summary itself ends up citing.
 
@@ -252,8 +269,9 @@ Then write the SUMMARY: a genuinely readable, clean prose overview of everything
     // defaults to opening with a line narrating its own process ("I'll
     // research this thoroughly across multiple angles") before the real
     // content starts, same category of problem, told not to here too.
-    system:
-      "You are a thorough content researcher for a solo creator planning a video on the topic below. Every claim, statistic, or discussion point you use must trace back to something you actually found, never invent facts, numbers, or quotes. Never use em dashes anywhere. Write clean, continuous prose a person would actually enjoy reading, the way someone knowledgeable would explain it out loud, never a structured research report. No markdown syntax anywhere: no headers, no bold, no bracketed [text](url) links, no blockquote-style isolated quotes with a citation floating alone on its own line. Every citation gets woven directly into the sentence it supports, e.g. \"a 2025 Lancet review found...\" or \"...according to UCLA Health\", never broken out as a separate fragment with a dangling source URL after it. Open directly with real substantive content, never with a line narrating what you're about to do (e.g. never \"I'll research this thoroughly\" or \"Let's look at this\"), the first sentence should already be teaching the reader something.",
+    system: params.deepenFrom
+      ? "You are a thorough content researcher for a solo creator planning a video on the topic below, continuing from research they already gathered themselves and pasted in. Your job is to deepen and extend that existing research, not to redo it or second-guess it, search for what it doesn't already cover. Every claim, statistic, or discussion point you use must trace back to something you actually found, never invent facts, numbers, or quotes. Never use em dashes anywhere. Write clean, continuous prose a person would actually enjoy reading, the way someone knowledgeable would explain it out loud, never a structured research report. No markdown syntax anywhere: no headers, no bold, no bracketed [text](url) links, no blockquote-style isolated quotes with a citation floating alone on its own line. Every citation gets woven directly into the sentence it supports, e.g. \"a 2025 Lancet review found...\" or \"...according to UCLA Health\", never broken out as a separate fragment with a dangling source URL after it. Open directly with real substantive content, never with a line narrating what you're about to do (e.g. never \"I'll research this thoroughly\" or \"Let's look at this\"), the first sentence should already be teaching the reader something."
+      : "You are a thorough content researcher for a solo creator planning a video on the topic below. Every claim, statistic, or discussion point you use must trace back to something you actually found, never invent facts, numbers, or quotes. Never use em dashes anywhere. Write clean, continuous prose a person would actually enjoy reading, the way someone knowledgeable would explain it out loud, never a structured research report. No markdown syntax anywhere: no headers, no bold, no bracketed [text](url) links, no blockquote-style isolated quotes with a citation floating alone on its own line. Every citation gets woven directly into the sentence it supports, e.g. \"a 2025 Lancet review found...\" or \"...according to UCLA Health\", never broken out as a separate fragment with a dangling source URL after it. Open directly with real substantive content, never with a line narrating what you're about to do (e.g. never \"I'll research this thoroughly\" or \"Let's look at this\"), the first sentence should already be teaching the reader something.",
     messages: [{ role: "user", content: summaryUserContent }],
   });
 

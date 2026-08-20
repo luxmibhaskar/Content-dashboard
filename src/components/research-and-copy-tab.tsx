@@ -19,6 +19,7 @@ import type {
 } from "@/lib/types";
 import {
   runResearchAndCopy,
+  deepenResearchFromManual,
   getResearchProgress,
   updateResearchInput,
   useResearchTitle,
@@ -191,6 +192,41 @@ function VersionPanel({
   const boundSetActive = setActiveResearchCopyVersion.bind(null, contentId, source);
   const researchCopy = version?.data;
 
+  // "Go deeper" (Manual only): a real AI research pass seeded from the
+  // pasted content already here, not a fresh independent one, see
+  // deepenResearchFromManual. Same useActionState/polling shape as the
+  // top-level Run above, scoped to this one panel, meaningless on the
+  // AI panel (nothing to deepen from there, that's just Run Again).
+  const initialDeepenState: RunResearchState = { error: null };
+  const [deepenState, deepenAction, isDeepenPending] = useActionState(
+    deepenResearchFromManual.bind(null, contentId),
+    initialDeepenState,
+  );
+  const isDeepenSubmittingRef = useRef(false);
+  useEffect(() => {
+    if (!isDeepenPending) isDeepenSubmittingRef.current = false;
+  }, [isDeepenPending]);
+
+  const [deepenProgress, setDeepenProgress] = useState<ResearchProgress | null>(null);
+  useEffect(() => {
+    if (!isDeepenPending) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const next = await getResearchProgress(contentId);
+        if (!cancelled) setDeepenProgress(next);
+      } catch (err) {
+        console.error("[research-and-copy] deepen progress poll failed:", err);
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isDeepenPending, contentId]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -215,6 +251,31 @@ function VersionPanel({
         </p>
       ) : (
         <div className="space-y-3">
+          {source === "manual" && (
+            <div className="space-y-2">
+              <form
+                action={deepenAction}
+                onSubmit={(e) => {
+                  if (isDeepenSubmittingRef.current) {
+                    e.preventDefault();
+                    return;
+                  }
+                  isDeepenSubmittingRef.current = true;
+                }}
+              >
+                <Button type="submit" size="sm" variant="outline" loading={isDeepenPending}>
+                  Go Deeper (AI Research)
+                </Button>
+              </form>
+              {isDeepenPending && deepenProgress && <ProgressSteps progress={deepenProgress} />}
+              {deepenState.error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {deepenState.error}
+                </p>
+              )}
+            </div>
+          )}
+
           <GlowCard glow={2} className="space-y-2 p-3.5">
             <p className="text-xs font-medium text-muted-foreground">Summary</p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{researchCopy.summary}</p>

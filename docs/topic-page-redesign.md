@@ -393,3 +393,101 @@ cramped on narrow screens, this one deliberately waits for `lg:`
 instead). A version with nothing in it yet shows a plain "Nothing
 pasted/run yet" placeholder rather than an empty shell. The active one
 shows an "Active" badge; the other shows a "Make active" button.
+
+## 9. System & Production removed, Competitor Benchmarks removed, "Go Deeper", Pillar/Sub-topic fixed
+
+Five separate follow-up items, confirmed live one at a time, real risk
+in two of them (data silently nulled on next Save, a whole-account page
+starved of new data) caught and avoided before anything shipped.
+
+**System & Production removed** (the collapsible section, not the
+always-visible Production Status block above it, which stays exactly as
+it was: production status, viability status, viability reason, pillar,
+sub-topic, format, publish date, confirmed unaffected before touching
+anything). Performance metrics (Views/Likes/Comments/Shares/Saves/
+Conversions) was the one field group in that section verified to feed
+something outside itself, `src/lib/analytics.ts` reads those exact
+columns for Analytics Overview's KPIs and charts, so it moved into the
+always-visible block rather than being lost, right after Format/Publish
+date. Every other field the section held (core/detailed tags,
+repurposed-from, sequence step, evidence condition, script outline/
+published URL, performance notes, series/playlist, search demand
+signal, success metric focus, analytics review date, follow-up ideas,
+retention drop notes, earned-the-click) lost its UI. Real bug caught in
+the process: `updateContentItem` (`src/app/(app)/calendar/[id]/actions.ts`)
+unconditionally wrote every one of those fields on every Save, `formData.get(...)
+?? null` for a field with no more input in the form means every future
+Save would have silently nulled all of them out, not just failed to
+show them. Those keys are removed from that update entirely now, the
+columns themselves stay in the schema, untouched, unused, per this
+project's "superseded field stays schema-only" convention. One more
+narrow, lower-stakes loss worth naming: the "Repurposed from (source
+video)" dropdown (`derived_from_content_id`) lived in this section too,
+its only UI setter is gone, so a new repurposed-from relationship can no
+longer be set from the topic page. The read-only "Repurposed from: X" /
+"Derivatives (N)" display near the top of the page is unaffected and
+still reads whatever was set before.
+
+**Competitor Benchmarks section removed** from the topic page
+(`CompetitorBenchmarksSection`, both its auto-populated results display
+and its manual "Add benchmark" form, the only UI anywhere that created
+`competitor_benchmarks` rows). Per-video competitor tracking wasn't
+valuable, whole-account tracking on the Competitors page covers it
+better. Real question surfaced and confirmed before removing anything:
+that whole-account page's own "Used in N topics" and "Avg Views"
+numbers are themselves computed by aggregating `competitor_benchmarks`
+rows, so removing the automatic write alongside the UI would have
+starved the very page being kept. Resolved: automatic population
+(`autoPopulateCompetitorBenchmarks`, Section 5) keeps running silently
+in the background on every Research & Copy save, both Manual and AI,
+regardless of active status, unchanged from Section 8. No manual
+per-item entry exists anymore, only name-matched auto-detection.
+
+**"Go Deeper (AI Research)"**: pressing Run inside the Manual panel,
+once it has pasted content, no longer means "start a fresh independent
+AI pass". `deepenResearchFromManual`
+(`src/app/(app)/calendar/[id]/research-copy-actions.ts`) hands the
+Manual version's data to `synthesizeResearchAndCopy`'s new `deepenFrom`
+param (`src/lib/anthropic.ts`), which rewrites call 1's prompt (system
++ user content) to treat that pasted research as a real starting point,
+"search for what this existing research doesn't already cover and build
+on it, not replace it," rather than researching cold. Calls 2 and 3 in
+the 3-call pipeline are unchanged, they just extract structure from
+whatever call 1 produced either way. The result is still a real AI
+synthesis (a real paid call), so it writes to the AI source
+(`upsertVersionAndAutoActivate(..., "ai", ...)`), same as a normal Run,
+Manual's own row is never touched by this, staying available to deepen
+from again later. Same research_progress step tracking, same Competitor
+auto-population as a normal Run. Button only renders in the Manual
+panel, and only once it has content, "Go deeper from what I already
+have," not something that makes sense with nothing pasted yet or from
+the AI panel itself (that's just Run Again).
+
+**Consistent Run-focused default, confirmed already correct**: checked
+whether a brand-new item and a genuinely old item that's never had
+research run (`g`, real pre-existing Brief Description/Keywords, no
+research_copy_versions rows) render differently. They don't, the
+Research & Copy tab's rendering is driven entirely by whether Manual or
+AI versions exist for that item (`!manual && !ai`), never by how or when
+the item was created, so both already show the identical clean,
+Run-focused view (Run solid, Paste collapsed, "No research yet...").
+No change needed, this item is closed by confirmation, not by a fix.
+
+**Pillar and Sub-topic are real dropdowns now.** Real, confirmed bug:
+they were plain text inputs with zero connection to `PILLAR_STRUCTURE`
+(`src/lib/pillars.ts`), the same fixed Body/Mind/Soul (LBsTransformation,
+5 branches each) / Build/Sell/Scale (LBsWorks, 6/5/7 branches) vocabulary
+already used by the Competitors page's sub-topic multiselect and other
+pillar/branch selectors. Fixed as `PillarSubTopicSelects`
+(`src/components/pillar-sub-topic-selects.tsx`), two coupled native
+`<select>`s (not the Competitors page's tag-input multiselect, this is
+one pillar and one sub-topic per item, not a set): Sub-topic's own
+option list re-derives from whichever pillar is currently selected
+(keyed on pillar, so changing it remounts Sub-topic fresh rather than
+leaving a now-mismatched value selected), not every branch from every
+pillar at once. A pre-existing value that doesn't match the fixed
+vocabulary at all (legacy free text, or a value belonging to the other
+brand) stays selectable as its own extra option instead of the select
+silently falling back to its first option and wiping that value out on
+the next Save, verified live against a genuinely old item carrying
+exactly that kind of legacy value.

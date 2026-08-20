@@ -8,7 +8,25 @@ import { parseResearchCopyPaste } from "@/lib/paste-import";
 import { setActiveVersion, upsertVersionAndAutoActivate } from "@/lib/content-versions";
 import type { ResearchCopyResult, ResearchProgress, ResearchStep, StepStatus, VersionSource } from "@/lib/types";
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
 export type RunResearchState = { error: string | null };
+
+// Shared by runResearchAndCopy (fresh) and deepenResearchFromManual
+// (below): the research_progress step tracking, identical shape either
+// way, only what generates the actual ResearchCopyResult differs.
+function createProgressTracker(supabase: SupabaseServerClient, contentId: string) {
+  const steps: Record<ResearchStep, StepStatus> = {
+    summary: "pending",
+    sources: "pending",
+    copy: "pending",
+  };
+  const writeProgress = async (status: ResearchProgress["status"], error: string | null = null) => {
+    const progress: ResearchProgress = { status, steps: { ...steps }, error, updatedAt: new Date().toISOString() };
+    await supabase.from("content_calendar").update({ research_progress: progress }).eq("id", contentId);
+  };
+  return { steps, writeProgress };
+}
 
 // docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy": one
 // Run, full depth from the start, replaces the old shallow Run Research
@@ -42,16 +60,7 @@ export async function runResearchAndCopy(
   _formData: FormData,
 ): Promise<RunResearchState> {
   const supabase = await createClient();
-
-  const steps: Record<ResearchStep, StepStatus> = {
-    summary: "pending",
-    sources: "pending",
-    copy: "pending",
-  };
-  const writeProgress = async (status: ResearchProgress["status"], error: string | null = null) => {
-    const progress: ResearchProgress = { status, steps: { ...steps }, error, updatedAt: new Date().toISOString() };
-    await supabase.from("content_calendar").update({ research_progress: progress }).eq("id", contentId);
-  };
+  const { steps, writeProgress } = createProgressTracker(supabase, contentId);
 
   try {
     const { data: item, error: itemError } = await supabase
@@ -74,6 +83,77 @@ export async function runResearchAndCopy(
       title,
       briefIntent: item.brief_intent,
       keywords: item.raw_keywords_topics,
+      onStep: async (step, status) => {
+        steps[step] = status;
+        await writeProgress("running");
+      },
+    });
+
+    await upsertVersionAndAutoActivate(supabase, "research_copy_versions", contentId, item.brand, "ai", researchCopy);
+    await autoPopulateCompetitorBenchmarks(supabase, { contentId, brand: item.brand, researchCopy }).catch(() => {});
+    await writeProgress("done");
+    revalidatePath(`/calendar/${contentId}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Something went wrong, try again?";
+    await writeProgress("error", message).catch(() => {});
+    return { error: message };
+  }
+
+  return { error: null };
+}
+
+// "Go deeper" from the Manual panel (docs/topic-page-redesign.md
+// Section 7): functionally distinct from runResearchAndCopy above, this
+// doesn't start a fresh independent pass, it hands the currently-pasted
+// Manual research to synthesizeResearchAndCopy's deepenFrom param so the
+// model searches for what that existing material doesn't already cover
+// and builds on it. The result is a real new AI research pass either
+// way (a real API call, real cost), so it writes to the AI source, same
+// as a normal Run, Manual's own row is never touched, staying available
+// to deepen from again later. Same research_progress tracking, same
+// Competitor auto-population, same everything downstream, only call 1's
+// prompt differs (see synthesizeResearchAndCopy).
+export async function deepenResearchFromManual(
+  contentId: string,
+  _prevState: RunResearchState,
+  _formData: FormData,
+): Promise<RunResearchState> {
+  const supabase = await createClient();
+  const { steps, writeProgress } = createProgressTracker(supabase, contentId);
+
+  try {
+    const [{ data: item, error: itemError }, { data: manualVersion, error: manualError }] = await Promise.all([
+      supabase
+        .from("content_calendar")
+        .select("brand, final_title, raw_idea_title, brief_intent, raw_keywords_topics")
+        .eq("id", contentId)
+        .single(),
+      supabase
+        .from("research_copy_versions")
+        .select("data")
+        .eq("content_id", contentId)
+        .eq("source", "manual")
+        .maybeSingle(),
+    ]);
+    if (itemError || !item) {
+      throw new Error(itemError?.message ?? "Content item not found.");
+    }
+    if (manualError || !manualVersion) {
+      throw new Error("Nothing pasted in Manual to deepen from yet.");
+    }
+
+    const title = item.final_title || item.raw_idea_title;
+    if (!title) {
+      throw new Error("Add a title before running research, there's nothing to search for yet.");
+    }
+
+    await writeProgress("running");
+
+    const researchCopy = await synthesizeResearchAndCopy({
+      title,
+      briefIntent: item.brief_intent,
+      keywords: item.raw_keywords_topics,
+      deepenFrom: manualVersion.data as ResearchCopyResult,
       onStep: async (step, status) => {
         steps[step] = status;
         await writeProgress("running");
