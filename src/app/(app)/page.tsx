@@ -96,7 +96,15 @@ export default async function TodayPage() {
 
   return (
     <div className="w-full max-w-[90rem] mx-auto px-4 py-10">
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr] lg:items-start">
+      {/* Layout bug fix: default (stretch) alignment now, was
+          lg:items-start. With the old Dashboard heading/next-up column
+          gone, the main column had nothing forcing it to match the
+          sidebar's height, stretch plus the main column's own
+          flex-col/flex-1 below makes the two columns end at the same
+          bottom edge again, whichever is naturally taller still wins
+          (e.g. once the optional backup-warning/weekly-review blocks
+          are present). */}
+      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Command Center sidebar: two equal-height containers, Journey
             Log on top (moved here from its old nav position), Content
             Output Tracker below it. */}
@@ -110,7 +118,7 @@ export default async function TodayPage() {
         </div>
 
         {/* Command Center main area */}
-        <div>
+        <div className="flex flex-col">
           <QuickAccessCards />
 
           {/* Layout follow-up: one merged graphs container directly
@@ -120,8 +128,11 @@ export default async function TodayPage() {
               graphs are ever visible together, Total Audience Growth
               plus whichever of the toggle's three views is selected.
               Relative width is user-adjustable and persists, see
-              AudienceGraphsPanel. */}
-          <div className="mt-8">
+              AudienceGraphsPanel. flex-1 (plus AudienceGraphsPanel's own
+              fill) is the actual layout-bug fix: this now grows to
+              match the sidebar's height instead of sizing to its own
+              (shorter) content and leaving a gap below it. */}
+          <div className="mt-8 min-h-0 flex-1">
             <AudienceGraphsPanel
               audienceGrowth={audienceGrowth}
               distribution={audienceDistribution}

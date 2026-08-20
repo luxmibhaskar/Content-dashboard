@@ -97,8 +97,16 @@ export function AudienceGraphsPanel({
   }
 
   return (
-    <GlowCard glow={2} className="p-4">
-      <div ref={containerRef} className="relative flex flex-col md:flex-row">
+    <GlowCard glow={2} fill className="h-full p-4">
+      {/* Layout follow-up: this card now stretches to fill whatever
+          height page.tsx gives it (matching the sidebar's height, see
+          the comment there), rather than sizing to its own content and
+          leaving a visible gap below it. Content stays centered in that
+          taller space instead of pinned to the top with dead space
+          underneath, the charts themselves stay their normal h-64, no
+          need to stretch a donut/bar chart to an odd tall shape just to
+          fill the card. */}
+      <div ref={containerRef} className="relative flex h-full flex-col justify-center md:flex-row">
         <section
           className="w-full md:[width:var(--split-left)]"
           style={{ ["--split-left" as string]: `calc(${split}% - 12px)` }}
