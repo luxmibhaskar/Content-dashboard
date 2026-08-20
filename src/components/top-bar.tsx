@@ -7,6 +7,7 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandSwitcher } from "@/components/brand-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PlatformsModal } from "@/components/platforms-modal";
 import { signOut } from "@/app/actions/auth";
 import type { Brand } from "@/lib/brand";
 
@@ -17,14 +18,14 @@ import type { Brand } from "@/lib/brand";
 // src/app/(app)/page.tsx), the underlying /quick-capture page and its
 // migrate-to-X actions stay intact, just unlinked from nav, nothing in
 // the spec asked for that data path itself to be removed.
+//
+// Command Center redesign: Analytics Overview, Content Calendar, Hook
+// Library, and Competitors are also gone from here, relocated to the
+// Quick Access cards on Today (still one click away, not removed).
 const NAV_LINKS = [
   { href: "/", label: "Today" },
-  { href: "/analytics", label: "Analytics Overview" },
-  { href: "/calendar", label: "Content Calendar" },
   { href: "/ideas", label: "Idea Panel" },
-  { href: "/hook-library", label: "Hook Library" },
   { href: "/review", label: "Review" },
-  { href: "/competitors", label: "Competitors" },
 ];
 
 // Section 3: "the main top bar has gotten crowded", these two move into
@@ -60,6 +61,7 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
+          <PlatformsModal />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button
@@ -124,6 +126,9 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
+          <div className="px-2 py-2">
+            <PlatformsModal />
+          </div>
           <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
             {userEmail && <span className="truncate text-xs text-muted-foreground">{userEmail}</span>}
             <form action={signOut}>
