@@ -181,12 +181,18 @@ export default async function HookLibraryPage() {
           or all three at once.
         </p>
 
+        {/* Independently collapsible (CollapsibleSection, same component
+            as the aggregation section below), each defaulting open: on
+            small devices a long Visual list no longer has to be scrolled
+            past to reach Text or Verbal, each collapses on its own. */}
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {HOOK_LIBRARY_TYPES.map((type, i) => (
-            <GlowCard key={type} glow={((i % 3) + 1) as 1 | 2 | 3} className="space-y-3 p-4">
-              <p className="text-sm font-medium capitalize">
-                {type} ({entriesByType[type].length})
-              </p>
+            <CollapsibleSection
+              key={type}
+              title={`${type[0].toUpperCase()}${type.slice(1)} (${entriesByType[type].length})`}
+              defaultOpen
+              glow={((i % 3) + 1) as 1 | 2 | 3}
+            >
               <div className="space-y-2">
                 {entriesByType[type].map((entry) => (
                   <HookLibraryEntryCard key={entry.id} entry={entry} />
@@ -195,7 +201,7 @@ export default async function HookLibraryPage() {
                   <p className="text-sm text-muted-foreground">No {type} hooks yet.</p>
                 )}
               </div>
-            </GlowCard>
+            </CollapsibleSection>
           ))}
         </div>
 
