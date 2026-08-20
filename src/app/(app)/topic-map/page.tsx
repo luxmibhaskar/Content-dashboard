@@ -38,15 +38,21 @@ export default async function TopicMapPage() {
           (Idea Panel, Production Status, Competitors, Journey Log filters,
           see src/lib/custom-sub-topics.ts). */}
       <form action={addCustomSubTopic} className="mt-6">
-        <GlowCard glow={1} className="flex flex-wrap items-end gap-3 p-4">
+        <GlowCard glow={1} className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div className="space-y-1.5">
             <Label htmlFor="pillar">Pillar</Label>
+            {/* w-full + py-1: bare <select>s pick up a global 0.5rem
+                padding-block (globals.css, Phase G's form-control base
+                styling) that clips this element's own text at h-8, py-1
+                overrides it down to the same padding Input uses. Without
+                w-full it also sizes to its own content instead of the
+                field width every sibling input gets. */}
             <select
               id="pillar"
               name="pillar"
               defaultValue=""
               required
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="" disabled>
                 Choose a pillar
@@ -75,7 +81,7 @@ export default async function TopicMapPage() {
             <div key={pillar} className="flex flex-col items-start gap-4 sm:flex-row sm:gap-8">
               {/* Hub */}
               <div
-                className="flex w-full shrink-0 items-center justify-center rounded-xl border-2 px-4 py-5 text-center text-sm font-semibold sm:w-40"
+                className="pillar-label-glow flex w-full shrink-0 items-center justify-center rounded-xl border-2 px-4 py-5 text-center text-sm font-semibold sm:w-40"
                 style={{
                   borderColor: color,
                   backgroundColor: `${color}22`,
@@ -107,7 +113,7 @@ export default async function TopicMapPage() {
                         aria-hidden="true"
                       />
                       <div
-                        className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+                        className="pillar-label-glow rounded-lg border px-3 py-1.5 text-xs font-medium"
                         style={{ borderColor: `${color}66`, backgroundColor: `${color}14`, color }}
                       >
                         {sub}
