@@ -59,7 +59,7 @@ export default async function ReviewPage({
       <form action={saveWeeklyReview} className="mt-4">
         <input type="hidden" name="week_start_date" value={weekStart} />
         <input type="hidden" name="week_end_date" value={weekEnd} />
-        <GlowCard glow={1} className="space-y-5 p-4">
+        <GlowCard glow={1} className="space-y-6 p-5">
 
         <div className="space-y-1.5">
           <Label htmlFor="posted_as_planned">
@@ -98,12 +98,20 @@ export default async function ReviewPage({
         </div>
 
         <div className="space-y-1.5">
+          {/* Label is flex items-center (ui/label.tsx), each direct
+              child becomes its own flex item, at narrow widths that
+              shrank the Link and the two text runs into separate
+              wrapping columns instead of one normal reading-order
+              paragraph. A single wrapping span keeps this as Label's
+              one child, so it wraps as ordinary inline text. */}
           <Label htmlFor="hook_library_insights">
-            4. Scan{" "}
-            <Link href="/hook-library" className="underline">
-              Hook Library
-            </Link>{" "}
-            — any hook type showing as a repeat winner?
+            <span>
+              4. Scan{" "}
+              <Link href="/hook-library" className="underline">
+                Hook Library
+              </Link>{" "}
+              — any hook type showing as a repeat winner?
+            </span>
           </Label>
           <Textarea
             id="hook_library_insights"
@@ -115,12 +123,14 @@ export default async function ReviewPage({
 
         <div className="space-y-1.5">
           <Label htmlFor="earned_click_updates">
-            5. Update &quot;Did I Earn the Click&quot; for last week&apos;s videos (on each
-            item&apos;s{" "}
-            <Link href="/calendar" className="underline">
-              topic page
-            </Link>
-            ) — summarize here.
+            <span>
+              5. Update &quot;Did I Earn the Click&quot; for last week&apos;s videos (on each
+              item&apos;s{" "}
+              <Link href="/calendar" className="underline">
+                topic page
+              </Link>
+              ) — summarize here.
+            </span>
           </Label>
           <Textarea
             id="earned_click_updates"
