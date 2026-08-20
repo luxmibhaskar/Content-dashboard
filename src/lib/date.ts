@@ -21,6 +21,13 @@ export function addDays(d: Date, days: number): Date {
   return next;
 }
 
+// Monday-start week, matching the week-bucketing already inlined in
+// src/lib/content-output.ts's "This Week" count.
+export function startOfWeek(d: Date): Date {
+  const daysSinceMonday = (d.getDay() + 6) % 7;
+  return addDays(d, -daysSinceMonday);
+}
+
 // Section 12: Weekly Review runs on Sundays, for the Monday-Sunday week
 // that just concluded (today, if today is Sunday).
 export function currentReviewWeek(today: Date = startOfToday()): { start: string; end: string } {

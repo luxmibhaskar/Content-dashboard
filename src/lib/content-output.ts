@@ -17,6 +17,13 @@ function isPublished(row: OutputRow, todayKey: string): row is OutputRow & { pub
   return row.production_status === "Published / Scheduled" && !!row.publish_date && row.publish_date.slice(0, 10) <= todayKey;
 }
 
+// Shared with src/lib/audience-growth.ts's Output vs Milestone view, same
+// "published" definition as everywhere else here, not a separate rule.
+export function publishedDatesOf(rows: OutputRow[]): string[] {
+  const todayKey = localDateKey(startOfToday());
+  return rows.filter((r) => isPublished(r, todayKey)).map((r) => r.publish_date.slice(0, 10));
+}
+
 export function computeOutputCounts(rows: OutputRow[]): OutputCounts {
   const today = startOfToday();
   const todayKey = localDateKey(today);

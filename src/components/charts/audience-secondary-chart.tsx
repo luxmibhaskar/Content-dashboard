@@ -1,0 +1,93 @@
+"use client";
+
+import { useState } from "react";
+import { BarChart, DonutChart } from "@tremor/react";
+import { cn } from "@/lib/utils";
+import type {
+  AudienceDistributionPoint,
+  GrowthVelocityPoint,
+  OutputVsMilestonePoint,
+} from "@/lib/audience-growth";
+import { OutputVsMilestoneChart } from "@/components/charts/output-vs-milestone-chart";
+
+type View = "distribution" | "velocity" | "output";
+
+const VIEW_LABELS: Record<View, string> = {
+  distribution: "Audience Distribution",
+  velocity: "Growth Velocity",
+  output: "Output vs Milestone",
+};
+
+const VIEW_KEYS = Object.keys(VIEW_LABELS) as View[];
+
+// Redesign Phase 3, Graph 2: one graph, three toggleable views, not
+// three separate always-visible charts, per the spec.
+export function AudienceSecondaryChart({
+  distribution,
+  velocity,
+  outputVsMilestone,
+}: {
+  distribution: AudienceDistributionPoint[];
+  velocity: GrowthVelocityPoint[];
+  outputVsMilestone: OutputVsMilestonePoint[];
+}) {
+  const [view, setView] = useState<View>("distribution");
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {VIEW_KEYS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setView(key)}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-sm",
+              view === key
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {VIEW_LABELS[key]}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4">
+        {view === "distribution" &&
+          (distribution.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No platform counts logged yet, add some from the Platforms button in the
+              top bar.
+            </p>
+          ) : (
+            <DonutChart
+              className="h-64"
+              data={distribution}
+              category="count"
+              index="platform"
+              valueFormatter={(v: number) => v.toLocaleString()}
+            />
+          ))}
+
+        {view === "velocity" &&
+          (velocity.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Not enough platform history yet, this view needs at least two different
+              weeks of logged counts.
+            </p>
+          ) : (
+            <BarChart
+              className="h-64"
+              data={velocity}
+              index="week"
+              categories={["Net Change"]}
+              colors={["blue"]}
+            />
+          ))}
+
+        {view === "output" && <OutputVsMilestoneChart data={outputVsMilestone} />}
+      </div>
+    </div>
+  );
+}

@@ -51,9 +51,9 @@ When "Phase N" comes up, always confirm which one is meant:
   redesign below; the Services panel's live status checks and "Check
   Alternatives" research (Section 5.3) are not yet built.
 - **Redesign phases** (`docs/dashboard-redesign.md`): Phase 1 (Command
-  Center layout) and Phase 2 (Platforms data model) are built. Phase 3
-  (Command Center graphs) and Phase 4 (full visual treatment) are
-  specified in that doc but not yet built.
+  Center layout), Phase 2 (Platforms data model), and Phase 3 (Command
+  Center graphs) are built. Phase 4 (full visual treatment) is specified
+  in that doc but not yet built.
 
 Don't build ahead of whichever phase is actually in progress even if a
 later item would be easy to add alongside it, flag it as noted-for-later

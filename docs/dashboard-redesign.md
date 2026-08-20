@@ -4,8 +4,8 @@ Redesign of the Today page (`src/app/(app)/page.tsx`) into a "Command
 Center" layout, plus an app-wide visual treatment pass. This is a
 separate track from `builder-brief.md`'s own Phase 1/2/3 build phases,
 see the naming note in `CLAUDE.md` for how to tell the two apart when
-either is mentioned as just "Phase N". Phases 1 and 2 below are already
-built; 3 and 4 are specified but not yet built.
+either is mentioned as just "Phase N". Phases 1 through 3 below are
+already built; 4 is specified but not yet built.
 
 ## Phase 1 — Command Center layout (built)
 
@@ -52,25 +52,39 @@ pre-fills the form) and writes through
 (`src/app/actions/platforms.ts`). Re-saving the same day upserts that
 day's row instead of creating a duplicate.
 
-## Phase 3 — Command Center graphs (not yet built)
+## Phase 3 — Command Center graphs (built)
 
-Two graphs in the Command Center main area, bottom, replacing the old
-large single content box:
+Two graphs in the Command Center main area, bottom
+(`src/app/(app)/page.tsx`), computed by `src/lib/audience-growth.ts`:
 
-- **Graph 1, Total Audience Growth**: line graph aggregating total
-  followers/subscribers across all platforms over time, sourced from
-  Phase 2's `platform_snapshots` data.
-- **Graph 2, toggleable between three views**:
-  - **Audience Distribution** — doughnut, percentage by platform.
-  - **Growth Velocity** — bar graph, week-over-week change.
-  - **Output vs Milestone** — dual-axis line, content output volume
-    (reuse `src/lib/content-output.ts`'s existing counts) against
-    audience growth.
+- **Graph 1, Total Audience Growth**
+  (`src/components/charts/audience-growth-chart.tsx`): Tremor
+  `AreaChart`, aggregating total followers/subscribers across all
+  platforms over time from Phase 2's `platform_snapshots` data. Each
+  platform's count carries forward from its own last snapshot between
+  entries (manual entry means not every platform gets updated the same
+  day).
+- **Graph 2, toggleable between three views**
+  (`src/components/charts/audience-secondary-chart.tsx`):
+  - **Audience Distribution** — Tremor `DonutChart`, each platform's
+    latest snapshot.
+  - **Growth Velocity** — Tremor `BarChart`, week-over-week change in
+    the Graph 1 total, Monday-start weeks (`src/lib/date.ts`'s
+    `startOfWeek`).
+  - **Output vs Milestone** — dual-axis line/bar
+    (`src/components/charts/output-vs-milestone-chart.tsx`), content
+    output volume (`src/lib/content-output.ts`'s `publishedDatesOf`)
+    against audience growth, same weekly buckets. Tremor 3.18 has no
+    dual-y-axis chart, this one view is built directly on Recharts
+    (Tremor's own underlying engine, now also a direct dependency in
+    `package.json`) instead of through Tremor.
 
-Both graphs will show sparse or empty data until real snapshot history
-accumulates. Flag that plainly in the UI (e.g. "not enough history yet")
-rather than rendering a chart that just looks broken or misleadingly
-flat.
+Both graphs flag sparse data plainly instead of rendering a
+misleadingly-flat or broken-looking chart: Graph 1 needs at least two
+snapshot dates, Growth Velocity needs at least two distinct weeks,
+Output vs Milestone needs at least two weeks of either kind of data.
+Audience Distribution just shows whatever's been logged, empty is a
+valid, clearly-labeled state for it.
 
 ## Phase 4 — Full visual treatment (not yet built)
 

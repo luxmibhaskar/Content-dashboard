@@ -11,8 +11,17 @@ import { ServicesPanel } from "@/components/services-panel";
 import { QuickAccessCards } from "@/components/quick-access-cards";
 import { JourneyLogWidget } from "@/components/journey-log-widget";
 import { ContentOutputTracker } from "@/components/content-output-tracker";
-import { computeOutputCounts, computeFormatBreakdown, type OutputRow } from "@/lib/content-output";
+import { computeOutputCounts, computeFormatBreakdown, publishedDatesOf, type OutputRow } from "@/lib/content-output";
 import { getBackupStatuses } from "@/lib/backup-status";
+import { AudienceGrowthChart } from "@/components/charts/audience-growth-chart";
+import { AudienceSecondaryChart } from "@/components/charts/audience-secondary-chart";
+import {
+  computeAudienceGrowth,
+  computeAudienceDistribution,
+  computeGrowthVelocity,
+  computeOutputVsMilestone,
+  type PlatformSnapshotRow,
+} from "@/lib/audience-growth";
 import type { Goal, JourneyEntry } from "@/lib/types";
 
 export default async function TodayPage() {
@@ -43,7 +52,7 @@ export default async function TodayPage() {
   // goals (the one metric this app already tracks), everything else
   // (Subscribers, Revenue, Community Members, Custom) has no tracked
   // source yet, so it stays manual entry.
-  const [{ data: goalRows }, { data: viewRows }, { data: journeyRows }, { data: outputRows }] =
+  const [{ data: goalRows }, { data: viewRows }, { data: journeyRows }, { data: outputRows }, { data: snapshotRows }] =
     await Promise.all([
       supabase
         .from("goals")
@@ -60,14 +69,24 @@ export default async function TodayPage() {
         .eq("brand", brand)
         .order("entry_date", { ascending: false })
         .limit(6),
-      // Content Output Tracker: 30 days covers all three windows it
-      // displays (Last 30 Days / This Month / This Week).
+      // 26 weeks covers both the Content Output Tracker's own three
+      // windows (Last 30 Days / This Month / This Week, each computed by
+      // filtering this same set further) and Redesign Phase 3's Output vs
+      // Milestone graph, which needs enough weekly history to be worth
+      // charting at all.
       supabase
         .from("content_calendar")
         .select("production_status, publish_date, format")
         .eq("brand", brand)
         .eq("production_status", "Published / Scheduled")
-        .gte("publish_date", localDateKey(addDays(startOfToday(), -29))),
+        .gte("publish_date", localDateKey(addDays(startOfToday(), -181))),
+      // Redesign Phase 3's audience-growth graphs. Unbounded: at most 4
+      // rows/day (one per platform in src/lib/platforms.ts), this table
+      // stays small for a very long time.
+      supabase
+        .from("platform_snapshots")
+        .select("platform, follower_count, snapshot_date")
+        .eq("brand", brand),
     ]);
   const totalViews = (viewRows ?? []).reduce((sum, r) => sum + (r.views ?? 0), 0);
   const goals: Goal[] = (goalRows ?? []).map((g) =>
@@ -76,6 +95,14 @@ export default async function TodayPage() {
 
   const outputCounts = computeOutputCounts((outputRows ?? []) as OutputRow[]);
   const outputBreakdown = computeFormatBreakdown((outputRows ?? []) as OutputRow[]);
+
+  const audienceGrowth = computeAudienceGrowth((snapshotRows ?? []) as PlatformSnapshotRow[]);
+  const audienceDistribution = computeAudienceDistribution((snapshotRows ?? []) as PlatformSnapshotRow[]);
+  const growthVelocity = computeGrowthVelocity(audienceGrowth);
+  const outputVsMilestone = computeOutputVsMilestone(
+    audienceGrowth,
+    publishedDatesOf((outputRows ?? []) as OutputRow[]),
+  );
 
   // Section 5.1/12: Weekly Review surfaces automatically in Today on
   // Sundays, for the week that just concluded (today).
@@ -167,6 +194,27 @@ export default async function TodayPage() {
             The next-up suggestion (the real hero of this screen) is coming once
             Journey Log and the Content Calendar have enough to suggest from.
           </p>
+
+          {/* Redesign Phase 3: Command Center graphs, main area, bottom. */}
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <section>
+              <h2 className="text-sm font-medium text-muted-foreground">Total Audience Growth</h2>
+              <div className="mt-2 rounded-lg border border-border p-4">
+                <AudienceGrowthChart data={audienceGrowth} />
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-sm font-medium text-muted-foreground">Audience &amp; Output</h2>
+              <div className="mt-2 rounded-lg border border-border p-4">
+                <AudienceSecondaryChart
+                  distribution={audienceDistribution}
+                  velocity={growthVelocity}
+                  outputVsMilestone={outputVsMilestone}
+                />
+              </div>
+            </section>
+          </div>
         </div>
       </div>
 
