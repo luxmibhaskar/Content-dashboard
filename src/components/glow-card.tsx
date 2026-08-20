@@ -26,10 +26,20 @@ export function GlowCard({
   children,
   className,
   glow = 1,
+  fill = false,
 }: {
   children: React.ReactNode;
   className?: string;
   glow?: GlowIndex;
+  // The inner content wrapper is a plain block div by default, sized to
+  // its own content, so a child relying on h-full (e.g. a fixed-height
+  // sidebar card with its own internal flex-col + a flex-1
+  // overflow-y-auto scroll region, see JourneyLogWidget) gets nothing
+  // to actually fill, height:100% resolves against an auto-height
+  // parent as auto. fill switches that wrapper to flex h-full flex-col
+  // so the card's own resolved height (from flex-1 in a fixed-height
+  // flex column, or a grid cell, etc.) actually propagates down.
+  fill?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -69,7 +79,7 @@ export function GlowCard({
       className={cn("glow-card group rounded-lg", className)}
     >
       <motion.div aria-hidden="true" className="glow-card-sheen" style={{ background: sheenBackground }} />
-      <div className="relative">{children}</div>
+      <div className={cn("relative", fill && "flex h-full flex-col")}>{children}</div>
     </motion.div>
   );
 }

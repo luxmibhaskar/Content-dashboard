@@ -126,10 +126,10 @@ export default async function TodayPage() {
             Log on top (moved here from its old nav position), Content
             Output Tracker below it. */}
         <div className="flex flex-col gap-6 lg:h-[640px]">
-          <GlowCard glow={2} className="min-h-0 flex-1 p-4">
+          <GlowCard glow={2} fill className="min-h-0 flex-1 p-4">
             <JourneyLogWidget entries={(journeyRows ?? []) as JourneyEntry[]} />
           </GlowCard>
-          <GlowCard glow={3} className="min-h-0 flex-1 p-4">
+          <GlowCard glow={3} fill className="min-h-0 flex-1 p-4">
             <ContentOutputTracker counts={outputCounts} breakdown={outputBreakdown} />
           </GlowCard>
         </div>
