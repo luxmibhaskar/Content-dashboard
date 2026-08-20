@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { GlowCard } from "@/components/glow-card";
 import { createContentItem } from "../actions";
 
 // docs/topic-page-redesign.md Section 1: condensed to three fields only,
@@ -20,10 +21,8 @@ export default function NewContentItemPage() {
           </p>
         </div>
 
-        <form
-          action={createContentItem}
-          className="space-y-4 rounded-xl border border-border p-6"
-        >
+        <form action={createContentItem}>
+        <GlowCard glow={1} className="space-y-4 rounded-xl p-6">
           <div className="space-y-1.5">
             <Label htmlFor="title">Title</Label>
             <Input id="title" name="title" placeholder="What's this about?" required autoFocus />
@@ -47,6 +46,7 @@ export default function NewContentItemPage() {
           <Button type="submit" className="w-full">
             Run
           </Button>
+        </GlowCard>
         </form>
 
         <Link

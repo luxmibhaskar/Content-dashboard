@@ -5,6 +5,7 @@ import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { pillarsFor } from "@/lib/pillars";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GlowCard } from "@/components/glow-card";
 import { cn } from "@/lib/utils";
 import {
   QUICK_CAPTURE_CONTENT_TYPES,
@@ -63,7 +64,8 @@ export default async function QuickCapturePage({
         link now, sort it out during Weekly Review or topic planning.
       </p>
 
-      <form action={addQuickCapture} className="mt-6 space-y-2 rounded-lg border border-border p-4">
+      <form action={addQuickCapture} className="mt-6">
+        <GlowCard glow={1} className="space-y-2 p-4">
         <Input name="url" type="url" required placeholder="Paste a TikTok/IG/YouTube link..." />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Input name="pillar" list="pillar-options" placeholder="Pillar (loose tag)" />
@@ -85,6 +87,7 @@ export default async function QuickCapturePage({
         <Button type="submit" size="sm">
           + Capture
         </Button>
+        </GlowCard>
       </form>
 
       <div className="mt-6 flex items-center gap-2">
@@ -102,9 +105,9 @@ export default async function QuickCapturePage({
         ))}
       </div>
 
-      <ul className="mt-4 space-y-3">
-        {rows.map((c) => (
-          <li key={c.id} className="rounded-lg border border-border p-3">
+      <div className="mt-4 space-y-3">
+        {rows.map((c, i) => (
+          <GlowCard key={c.id} glow={((i % 3) + 1) as 1 | 2 | 3} className="p-3">
             <div className="flex items-center justify-between gap-2">
               <a href={c.url} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium hover:underline">
                 {c.url}
@@ -190,14 +193,14 @@ export default async function QuickCapturePage({
                 )}
               </div>
             )}
-          </li>
+          </GlowCard>
         ))}
         {rows.length === 0 && (
-          <li className="rounded-lg border border-border px-3 py-6 text-center text-sm text-muted-foreground">
+          <GlowCard glow={1} className="px-3 py-6 text-center text-sm text-muted-foreground">
             Nothing in {status}.
-          </li>
+          </GlowCard>
         )}
-      </ul>
+      </div>
     </div>
   );
 }

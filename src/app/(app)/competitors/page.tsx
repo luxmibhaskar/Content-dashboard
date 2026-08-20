@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SubTopicMultiSelect } from "@/components/sub-topic-multiselect";
+import { GlowCard } from "@/components/glow-card";
 import { PLATFORMS } from "@/lib/types";
 import { createCompetitor } from "./actions";
 
@@ -96,10 +97,8 @@ export default async function CompetitorsPage({
         on each Content Calendar item.
       </p>
 
-      <form
-        action={createCompetitor}
-        className="mt-6 space-y-3 rounded-lg border border-border p-4"
-      >
+      <form action={createCompetitor} className="mt-6">
+        <GlowCard glow={1} className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
@@ -150,6 +149,7 @@ export default async function CompetitorsPage({
         <Button type="submit" size="sm">
           + Add Competitor
         </Button>
+        </GlowCard>
       </form>
 
       <form method="get" action="/competitors" className="mt-6 flex flex-wrap items-end gap-2">
@@ -199,12 +199,12 @@ export default async function CompetitorsPage({
         )}
       </form>
 
-      <ul className="mt-3 divide-y divide-border rounded-lg border border-border">
+      <GlowCard glow={2} className="mt-3 divide-y divide-border">
         {visibleCompetitors.map((c) => (
-          <li key={c.id}>
+          <div key={c.id}>
             <Link
               href={`/competitors/${c.id}`}
-              className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/50"
+              className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -233,19 +233,19 @@ export default async function CompetitorsPage({
                 )}
               </div>
             </Link>
-          </li>
+          </div>
         ))}
         {visibleCompetitors.length === 0 && (competitors?.length ?? 0) === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
             No competitors yet. Add your first one above.
-          </li>
+          </div>
         )}
         {visibleCompetitors.length === 0 && (competitors?.length ?? 0) > 0 && (
-          <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
             No competitors match this filter.
-          </li>
+          </div>
         )}
-      </ul>
+      </GlowCard>
     </div>
   );
 }

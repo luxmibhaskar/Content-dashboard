@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { GlowCard } from "@/components/glow-card";
 import { quickCaptureToJourneyLog, type QuickEntryState } from "@/app/(app)/journey/actions";
 
 const initialState: QuickEntryState = { error: null };
@@ -32,25 +33,26 @@ export function TodayQuickEntry() {
         onSubmit={() => {
           submittedRef.current = true;
         }}
-        className="space-y-2 rounded-lg border border-border p-4"
       >
-        <Textarea
-          name="entry"
-          placeholder="What happened today, worth remembering?"
-          rows={3}
-          className="resize-none"
-        />
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">Saves straight to My Journey Log.</p>
-          <Button type="submit" size="sm" loading={isPending}>
-            Save
-          </Button>
-        </div>
-        {state.error && (
-          <p className="text-sm text-destructive" role="alert">
-            {state.error}
-          </p>
-        )}
+        <GlowCard glow={1} className="space-y-2 p-4">
+          <Textarea
+            name="entry"
+            placeholder="What happened today, worth remembering?"
+            rows={3}
+            className="resize-none"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Saves straight to My Journey Log.</p>
+            <Button type="submit" size="sm" loading={isPending}>
+              Save
+            </Button>
+          </div>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+        </GlowCard>
       </form>
     </div>
   );

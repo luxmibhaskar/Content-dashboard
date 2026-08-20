@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
+import { GlowCard } from "@/components/glow-card";
 import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
 
 export default async function IdeaPage({
@@ -52,7 +53,7 @@ export default async function IdeaPage({
           creating a duplicate. Also the action that assigns the item's
           first real production_status and makes it first appear as a
           card on the Calendar view. */}
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-border p-3.5">
+      <GlowCard glow={1} className="mt-3 flex items-center justify-between gap-3 p-3.5">
         <div>
           <p className="text-sm font-medium">Transfer to Calendar</p>
           <p className="text-xs text-muted-foreground">
@@ -66,9 +67,10 @@ export default async function IdeaPage({
             Transfer to Calendar
           </Button>
         </form>
-      </div>
+      </GlowCard>
 
-      <form action={boundUpdate} className="mt-4 space-y-5">
+      <form action={boundUpdate} className="mt-4">
+        <GlowCard glow={2} className="space-y-5 p-4">
         <div className="space-y-1.5">
           <Label htmlFor="idea_title">Idea title</Label>
           <Input id="idea_title" name="idea_title" defaultValue={idea.idea_title} required />
@@ -168,6 +170,7 @@ export default async function IdeaPage({
         <div className="flex items-center justify-between pt-2">
           <Button type="submit">Save</Button>
         </div>
+        </GlowCard>
       </form>
 
       <form action={boundDelete} className="mt-6">

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { Calendar, Sparkles, Users, BarChart3 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { GlowCard } from "@/components/glow-card";
 
-const CARDS: { href: string; label: string; description: string; icon: LucideIcon }[] = [
-  { href: "/calendar", label: "Content Calendar", description: "Plan and manage topics", icon: Calendar },
-  { href: "/hook-library", label: "Hook Library", description: "Swipe file and live patterns", icon: Sparkles },
-  { href: "/competitors", label: "Competitors", description: "Track and benchmark", icon: Users },
-  { href: "/analytics", label: "Analytics Overview", description: "Performance at a glance", icon: BarChart3 },
+const CARDS: { href: string; label: string; description: string; icon: LucideIcon; glow: 1 | 2 | 3 }[] = [
+  { href: "/calendar", label: "Content Calendar", description: "Plan and manage topics", icon: Calendar, glow: 1 },
+  { href: "/hook-library", label: "Hook Library", description: "Swipe file and live patterns", icon: Sparkles, glow: 2 },
+  { href: "/competitors", label: "Competitors", description: "Track and benchmark", icon: Users, glow: 3 },
+  { href: "/analytics", label: "Analytics Overview", description: "Performance at a glance", icon: BarChart3, glow: 1 },
 ];
 
 // docs/topic-page-redesign.md Command Center redesign: Content Calendar,
@@ -16,15 +17,13 @@ const CARDS: { href: string; label: string; description: string; icon: LucideIco
 export function QuickAccessCards() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {CARDS.map(({ href, label, description, icon: Icon }) => (
-        <Link
-          key={href}
-          href={href}
-          className="rounded-lg border border-border p-3 transition-colors duration-150 hover:bg-muted/50"
-        >
-          <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
-          <p className="mt-2 text-sm font-medium">{label}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
+      {CARDS.map(({ href, label, description, icon: Icon, glow }) => (
+        <Link key={href} href={href}>
+          <GlowCard glow={glow} className="p-3 transition-colors duration-150 hover:bg-muted/30">
+            <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+            <p className="mt-2 text-sm font-medium">{label}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </GlowCard>
         </Link>
       ))}
     </div>

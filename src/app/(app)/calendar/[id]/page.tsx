@@ -11,6 +11,7 @@ import { ExpandCollapseAll } from "@/components/expand-collapse-all";
 import { CopyButton } from "@/components/copy-button";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { CompetitorBenchmarksSection } from "@/components/competitor-benchmarks-section";
+import { GlowCard } from "@/components/glow-card";
 import {
   EARNED_THE_CLICK_OPTIONS,
   FORMATS,
@@ -185,7 +186,7 @@ export default async function TopicPage({
           />
         </div>
 
-        <div className="space-y-4 rounded-lg border border-border p-4">
+        <GlowCard glow={1} className="space-y-4 p-4">
           <div>
             <p className="text-sm font-medium">Copy-Ready</p>
             <p className="text-xs text-muted-foreground">
@@ -234,7 +235,7 @@ export default async function TopicPage({
               rows={2}
             />
           </div>
-        </div>
+        </GlowCard>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">

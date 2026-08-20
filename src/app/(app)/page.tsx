@@ -13,6 +13,7 @@ import { JourneyLogWidget } from "@/components/journey-log-widget";
 import { ContentOutputTracker } from "@/components/content-output-tracker";
 import { computeOutputCounts, computeFormatBreakdown, publishedDatesOf, type OutputRow } from "@/lib/content-output";
 import { getBackupStatuses } from "@/lib/backup-status";
+import { GlowCard } from "@/components/glow-card";
 import { AudienceGrowthChart } from "@/components/charts/audience-growth-chart";
 import { AudienceSecondaryChart } from "@/components/charts/audience-secondary-chart";
 import {
@@ -126,12 +127,12 @@ export default async function TodayPage() {
             Log on top (moved here from its old nav position), Content
             Output Tracker below it. */}
         <div className="flex flex-col gap-6 lg:h-[640px]">
-          <div className="min-h-0 flex-1 rounded-lg border border-border p-4">
+          <GlowCard glow={2} className="min-h-0 flex-1 p-4">
             <JourneyLogWidget entries={(journeyRows ?? []) as JourneyEntry[]} />
-          </div>
-          <div className="min-h-0 flex-1 rounded-lg border border-border p-4">
+          </GlowCard>
+          <GlowCard glow={3} className="min-h-0 flex-1 p-4">
             <ContentOutputTracker counts={outputCounts} breakdown={outputBreakdown} />
-          </div>
+          </GlowCard>
         </div>
 
         {/* Command Center main area */}
@@ -178,15 +179,14 @@ export default async function TodayPage() {
                 Weekly Review done for this week. &#10003;
               </p>
             ) : (
-              <Link
-                href="/review"
-                className="mt-2 block rounded-lg border border-border p-4 hover:bg-muted/50"
-              >
-                <p className="text-sm font-medium">It&apos;s Sunday - Weekly Review time</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  15-20 minutes: scan the week, check pillar balance, glance at retention notes,
-                  scan the Hook Library, update earned-the-click and non-YouTube numbers.
-                </p>
+              <Link href="/review" className="mt-2 block">
+                <GlowCard glow={1} className="p-4 transition-colors hover:bg-muted/30">
+                  <p className="text-sm font-medium">It&apos;s Sunday - Weekly Review time</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    15-20 minutes: scan the week, check pillar balance, glance at retention notes,
+                    scan the Hook Library, update earned-the-click and non-YouTube numbers.
+                  </p>
+                </GlowCard>
               </Link>
             ))}
 
@@ -199,20 +199,20 @@ export default async function TodayPage() {
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <section>
               <h2 className="text-sm font-medium text-muted-foreground">Total Audience Growth</h2>
-              <div className="mt-2 rounded-lg border border-border p-4">
+              <GlowCard glow={2} className="mt-2 p-4">
                 <AudienceGrowthChart data={audienceGrowth} />
-              </div>
+              </GlowCard>
             </section>
 
             <section>
               <h2 className="text-sm font-medium text-muted-foreground">Audience &amp; Output</h2>
-              <div className="mt-2 rounded-lg border border-border p-4">
+              <GlowCard glow={1} className="mt-2 p-4">
                 <AudienceSecondaryChart
                   distribution={audienceDistribution}
                   velocity={growthVelocity}
                   outputVsMilestone={outputVsMilestone}
                 />
-              </div>
+              </GlowCard>
             </section>
           </div>
         </div>

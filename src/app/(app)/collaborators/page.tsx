@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { COLLABORATOR_STATUSES, PLATFORMS } from "@/lib/types";
+import { GlowCard } from "@/components/glow-card";
 import { createCollaborator } from "./actions";
 
 type CollaboratorListRow = {
@@ -45,10 +46,8 @@ export default async function CollaboratorsPage() {
         partnerships instead of benchmarking.
       </p>
 
-      <form
-        action={createCollaborator}
-        className="mt-6 space-y-3 rounded-lg border border-border p-4"
-      >
+      <form action={createCollaborator} className="mt-6">
+        <GlowCard glow={1} className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
@@ -85,6 +84,7 @@ export default async function CollaboratorsPage() {
         <Button type="submit" size="sm">
           + Add Collaborator
         </Button>
+        </GlowCard>
       </form>
 
       {COLLABORATOR_STATUSES.map((status) => (
@@ -95,12 +95,12 @@ export default async function CollaboratorsPage() {
           {grouped[status].length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Nothing here yet.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+            <GlowCard glow={2} className="mt-2 divide-y divide-border">
               {grouped[status].map((c) => (
-                <li key={c.id}>
+                <div key={c.id}>
                   <Link
                     href={`/collaborators/${c.id}`}
-                    className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/50"
+                    className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
                   >
                     <span className="truncate text-sm font-medium">{c.name}</span>
                     {c.platform && (
@@ -109,9 +109,9 @@ export default async function CollaboratorsPage() {
                       </span>
                     )}
                   </Link>
-                </li>
+                </div>
               ))}
-            </ul>
+            </GlowCard>
           )}
         </section>
       ))}

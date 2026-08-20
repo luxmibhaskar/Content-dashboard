@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { pillarsFor, subTopicsFor } from "@/lib/pillars";
 import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/glow-card";
 import { createJourneyEntry } from "./actions";
 import type { JourneyEntry } from "@/lib/types";
 
@@ -156,12 +157,12 @@ export default async function JourneyLogPage({
         )}
       </form>
 
-      <ul className="mt-6 divide-y divide-border rounded-lg border border-border">
+      <GlowCard glow={1} className="mt-6 divide-y divide-border">
         {(entries as JourneyEntry[] | null)?.map((entry) => (
-          <li key={entry.id}>
+          <div key={entry.id}>
             <Link
               href={`/journey/${entry.id}`}
-              className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/50"
+              className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -180,14 +181,14 @@ export default async function JourneyLogPage({
                 </p>
               </div>
             </Link>
-          </li>
+          </div>
         ))}
         {(entries?.length ?? 0) === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+          <div className="px-3 py-6 text-center text-sm text-muted-foreground">
             No entries yet. Add your first one with + New Entry.
-          </li>
+          </div>
         )}
-      </ul>
+      </GlowCard>
     </div>
   );
 }

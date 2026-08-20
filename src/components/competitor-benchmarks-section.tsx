@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/glow-card";
 import { PLATFORMS, type CompetitorBenchmark } from "@/lib/types";
 import {
   addCompetitorBenchmark,
@@ -16,7 +17,7 @@ export function CompetitorBenchmarksSection({
   competitors: { id: string; name: string }[];
 }) {
   return (
-    <div className="rounded-lg border border-border p-4">
+    <GlowCard glow={3} className="p-4">
       <p className="text-sm font-medium">Competitor Benchmarks</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Per-topic competitor references. The high-level map across all topics lives on the
@@ -102,6 +103,6 @@ export function CompetitorBenchmarksSection({
           Add benchmark
         </Button>
       </form>
-    </div>
+    </GlowCard>
   );
 }

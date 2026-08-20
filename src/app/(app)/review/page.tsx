@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { WeeklyReview } from "@/lib/types";
+import { GlowCard } from "@/components/glow-card";
 import { saveWeeklyReview } from "./actions";
 
 export default async function ReviewPage({
@@ -55,9 +56,10 @@ export default async function ReviewPage({
         Week of {weekStart} to {weekEnd}
       </p>
 
-      <form action={saveWeeklyReview} className="mt-4 space-y-5">
+      <form action={saveWeeklyReview} className="mt-4">
         <input type="hidden" name="week_start_date" value={weekStart} />
         <input type="hidden" name="week_end_date" value={weekEnd} />
+        <GlowCard glow={1} className="space-y-5 p-4">
 
         <div className="space-y-1.5">
           <Label htmlFor="posted_as_planned">
@@ -146,6 +148,7 @@ export default async function ReviewPage({
         </div>
 
         <Button type="submit">Save this week&apos;s review</Button>
+        </GlowCard>
       </form>
 
       {(pastReviews?.length ?? 0) > 0 && (

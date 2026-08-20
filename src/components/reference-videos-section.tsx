@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/glow-card";
 import type { ReferenceVideo } from "@/lib/types";
 import {
   addReferenceVideo,
@@ -33,8 +34,8 @@ export function ReferenceVideosSection({
       </form>
 
       <div className="mt-4 space-y-3">
-        {videos.map((v) => (
-          <div key={v.id} className="rounded-lg border border-border p-3">
+        {videos.map((v, i) => (
+          <GlowCard key={v.id} glow={((i % 3) + 1) as 1 | 2 | 3} className="p-3">
             <div className="flex items-center justify-between gap-2">
               <a
                 href={v.url}
@@ -72,7 +73,7 @@ export function ReferenceVideosSection({
                 Save notes
               </Button>
             </form>
-          </div>
+          </GlowCard>
         ))}
         {videos.length === 0 && (
           <p className="text-sm text-muted-foreground">No reference videos yet.</p>

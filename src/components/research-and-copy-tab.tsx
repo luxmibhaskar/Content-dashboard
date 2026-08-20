@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CollapsibleSection } from "@/components/collapsible-section";
+import { GlowCard } from "@/components/glow-card";
 import type {
   ResearchCopyContainer,
   ResearchCopyResult,
@@ -94,7 +95,7 @@ function TagContainer({
   const action = kind === "keyword" ? useResearchKeywordTags : useResearchQuestionTags;
   const boundAction = action.bind(null, contentId, tags);
   return (
-    <div className="space-y-2 rounded-lg border border-border p-4">
+    <GlowCard glow={1} className="space-y-2 p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{label}</p>
         <form action={boundAction}>
@@ -117,13 +118,13 @@ function TagContainer({
           ))
         )}
       </div>
-    </div>
+    </GlowCard>
   );
 }
 
 function SourceContainer({ container }: { container: ResearchCopyContainer }) {
   return (
-    <div className="space-y-3 rounded-lg border border-border p-4">
+    <GlowCard glow={2} className="space-y-3 p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{container.sourceName}</p>
         <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -148,7 +149,7 @@ function SourceContainer({ container }: { container: ResearchCopyContainer }) {
       <CollapsibleSection title={`Sources (${container.sources.length})`}>
         <SourceLinks sources={container.sources} />
       </CollapsibleSection>
-    </div>
+    </GlowCard>
   );
 }
 
@@ -223,7 +224,7 @@ export function ResearchAndCopyTab({
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3 rounded-lg border border-border p-4">
+      <GlowCard glow={1} className="space-y-3 p-4">
         {/* Two sibling forms, not nested, HTML doesn't allow nesting
             forms (same reasoning as the Use This actions further down):
             Save persists Brief Description/Keywords, Run kicks off the
@@ -263,7 +264,7 @@ export function ResearchAndCopyTab({
             {runState.error}
           </p>
         )}
-      </div>
+      </GlowCard>
 
       {!researchCopy && (
         <p className="text-sm text-muted-foreground">
@@ -274,16 +275,16 @@ export function ResearchAndCopyTab({
 
       {researchCopy && (
         <>
-          <div className="space-y-3 rounded-lg border border-border p-4">
+          <GlowCard glow={2} className="space-y-3 p-4">
             <p className="text-sm font-medium">Summary</p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{researchCopy.summary}</p>
-          </div>
+          </GlowCard>
 
           <CollapsibleSection title={`Sources (${researchCopy.globalSources.length})`}>
             <SourceLinks sources={researchCopy.globalSources} />
           </CollapsibleSection>
 
-          <div className="space-y-3 rounded-lg border border-border p-4">
+          <GlowCard glow={3} className="space-y-3 p-4">
             <p className="text-sm font-medium">Titles</p>
             <div className="space-y-2">
               {researchCopy.titles.map((t, i) => (
@@ -301,9 +302,9 @@ export function ResearchAndCopyTab({
                 </div>
               ))}
             </div>
-          </div>
+          </GlowCard>
 
-          <div className="space-y-2 rounded-lg border border-border p-4">
+          <GlowCard glow={1} className="space-y-2 p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Description</p>
               <form action={boundUseDescription}>
@@ -314,7 +315,7 @@ export function ResearchAndCopyTab({
               </form>
             </div>
             <p className="text-sm">{researchCopy.description}</p>
-          </div>
+          </GlowCard>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <TagContainer

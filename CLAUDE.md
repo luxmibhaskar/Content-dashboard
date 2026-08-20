@@ -35,8 +35,10 @@ than letting it live only in that session's transcript.
 ## Tech stack
 
 Next.js (React) + Vercel hosting + Supabase (Postgres + Auth) + Tailwind
-CSS + Tremor (KPI/dashboard components) + react-d3-tree + Framer Motion
-(Pillar Tree) + shadcn/ui.
+CSS + Tremor (KPI/dashboard components) + Recharts (dual-axis charts
+Tremor can't do, see `docs/dashboard-redesign.md` Phase 3) + Framer
+Motion (`GlowCard`'s hover glow and tilt, see Phase 4 of the same doc)
++ shadcn/ui.
 
 ## Current build phase
 
@@ -50,10 +52,9 @@ When "Phase N" comes up, always confirm which one is meant:
   (Section 15.1) was built then removed as part of the dashboard
   redesign below; the Services panel's live status checks and "Check
   Alternatives" research (Section 5.3) are not yet built.
-- **Redesign phases** (`docs/dashboard-redesign.md`): Phase 1 (Command
-  Center layout), Phase 2 (Platforms data model), and Phase 3 (Command
-  Center graphs) are built. Phase 4 (full visual treatment) is specified
-  in that doc but not yet built.
+- **Redesign phases** (`docs/dashboard-redesign.md`): all four phases
+  are built (Command Center layout, Platforms data model, Command
+  Center graphs, full visual treatment).
 
 Don't build ahead of whichever phase is actually in progress even if a
 later item would be easy to add alongside it, flag it as noted-for-later

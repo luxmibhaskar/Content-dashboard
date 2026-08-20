@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/glow-card";
 import type { AtomizedShort, ResearchCopyResult, ScriptPointer, ScriptsResult } from "@/lib/types";
 import { runScripts, type RunScriptsState } from "@/app/(app)/calendar/[id]/scripts-actions";
 
@@ -20,12 +21,12 @@ function PointerList({ points }: { points: ScriptPointer[] }) {
 
 function AtomizedShortCard({ short, index }: { short: AtomizedShort; index: number }) {
   return (
-    <div className="space-y-2 rounded-lg border border-border p-4">
+    <GlowCard glow={((index % 3) + 1) as 1 | 2 | 3} className="space-y-2 p-4">
       <p className="text-sm font-medium">
         Short {index + 1}: {short.title}
       </p>
       <PointerList points={short.pointerScript} />
-    </div>
+    </GlowCard>
   );
 }
 
@@ -65,7 +66,7 @@ export function ScriptsTab({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-border p-4">
+      <GlowCard glow={1} className="flex items-center justify-between gap-2 p-4">
         <p className="text-sm text-muted-foreground">
           {researchCopy
             ? "Draws its main points from the research and pain points already found in Research & Copy."
@@ -85,7 +86,7 @@ export function ScriptsTab({
             {scripts ? "Run Again" : "Run"}
           </Button>
         </form>
-      </div>
+      </GlowCard>
       {runState.error && (
         <p className="text-sm text-destructive" role="alert">
           {runState.error}
@@ -98,7 +99,7 @@ export function ScriptsTab({
 
       {scripts && (
         <>
-          <div className="space-y-4 rounded-lg border border-border p-4">
+          <GlowCard glow={2} className="space-y-4 p-4">
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">Opening hooks</p>
               <div className="space-y-2">
@@ -134,12 +135,12 @@ export function ScriptsTab({
                 ))}
               </div>
             </div>
-          </div>
+          </GlowCard>
 
-          <div className="space-y-2 rounded-lg border border-border p-4">
+          <GlowCard glow={3} className="space-y-2 p-4">
             <p className="text-sm font-medium">Short-form pass (same topic, condensed)</p>
             <PointerList points={scripts.shortFormPointers} />
-          </div>
+          </GlowCard>
 
           <div className="space-y-3">
             <p className="text-sm font-medium">

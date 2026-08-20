@@ -228,6 +228,14 @@ html[data-brand="lbstransformation"] {
   --primary-foreground: #ffffff;
   --ring: #1f2937;
   --font-sans: var(--font-manrope);
+  /* Redesign Phase 4 (docs/dashboard-redesign.md): the three glow
+     accents GlowCard (src/components/glow-card.tsx) picks from, so
+     different cards can carry different colors the way
+     design-reference/dashboard-reference.jpg does, using real brand
+     colors instead of its generic neon. */
+  --glow-1: #c26d4c; /* Clay Terracotta */
+  --glow-2: #0f766e; /* Deep Teal */
+  --glow-3: #1f2937; /* Iron Charcoal */
 }
 
 html[data-brand="lbsworks"] {
@@ -235,6 +243,9 @@ html[data-brand="lbsworks"] {
   --primary-foreground: #ffffff;
   --ring: #4f46e5;
   --font-sans: var(--font-inter);
+  --glow-1: #4f46e5; /* Build Indigo */
+  --glow-2: #f59e0b; /* Sell Amber */
+  --glow-3: #10b981; /* Scale Green */
 }
 
 /* "Moving away from flat backgrounds": a subtle warm Mist wash for
@@ -260,4 +271,58 @@ html[data-brand="lbsworks"] body {
   );
   background-size: 22px 22px;
   background-attachment: fixed;
+}
+
+/* Redesign Phase 4 (docs/dashboard-redesign.md): every card/container
+   app-wide routes through GlowCard (src/components/glow-card.tsx),
+   which applies this class. Frosted glass + a brand-colored glowing
+   edge, --glow-color is set inline per instance from one of the three
+   --glow-N tokens above. Cursor-follow glow and the parallax tilt are
+   the two pieces that need real pointer tracking, GlowCard itself owns
+   those; the idle breathing animation doesn't need JS, it lives here. */
+.glow-card {
+  --glow-color: var(--glow-1);
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklch, var(--card) 55%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in oklch, var(--glow-color) 40%, var(--border));
+  animation: card-breathe 6s ease-in-out infinite;
+}
+
+.glow-card-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+  pointer-events: none;
+}
+
+.group:hover > .glow-card-sheen {
+  opacity: 1;
+}
+
+@keyframes card-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
+      0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--glow-color) 50%, transparent),
+      0 10px 34px -12px color-mix(in oklch, var(--glow-color) 65%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-card {
+    animation: none;
+  }
+  .glow-card-sheen {
+    display: none;
+  }
 }

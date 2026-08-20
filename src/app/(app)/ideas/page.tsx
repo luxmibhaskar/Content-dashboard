@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FORMATS, IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
+import { GlowCard } from "@/components/glow-card";
 import { createIdea } from "./actions";
 
 type IdeaListRow = {
@@ -45,7 +46,8 @@ export default async function IdeasPage() {
         there.
       </p>
 
-      <form action={createIdea} className="mt-6 space-y-3 rounded-lg border border-border p-4">
+      <form action={createIdea} className="mt-6">
+        <GlowCard glow={1} className="space-y-3 p-4">
         <div className="space-y-1.5">
           <Label htmlFor="idea_title">Idea title</Label>
           <Input id="idea_title" name="idea_title" required placeholder="What's the idea?" />
@@ -109,6 +111,7 @@ export default async function IdeasPage() {
         <Button type="submit" size="sm">
           + Add Idea
         </Button>
+        </GlowCard>
       </form>
 
       {IDEA_STATUSES.map((status) => (
@@ -119,21 +122,21 @@ export default async function IdeasPage() {
           {grouped[status].length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Nothing here yet.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+            <GlowCard glow={2} className="mt-2 divide-y divide-border">
               {grouped[status].map((idea) => (
-                <li key={idea.id}>
+                <div key={idea.id}>
                   <Link
                     href={`/ideas/${idea.id}`}
-                    className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/50"
+                    className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
                   >
                     <span className="truncate text-sm font-medium">{idea.idea_title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
                       {[idea.pillar, idea.sub_topic].filter(Boolean).join(" / ")}
                     </span>
                   </Link>
-                </li>
+                </div>
               ))}
-            </ul>
+            </GlowCard>
           )}
         </section>
       ))}

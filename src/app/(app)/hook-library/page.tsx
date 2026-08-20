@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { CollapsibleSection } from "@/components/collapsible-section";
+import { GlowCard } from "@/components/glow-card";
 import { HookLibraryEntryCard } from "@/components/hook-library-entry";
 import { HookLibraryImport } from "@/components/hook-library-import";
 import { HookLibraryExport } from "@/components/hook-library-export";
@@ -89,9 +90,9 @@ function GroupList({ groups, emptyLabel }: { groups: Group[]; emptyLabel: string
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
   return (
-    <ul className="space-y-2">
-      {groups.map((g) => (
-        <li key={g.key} className="rounded-lg border border-border p-3">
+    <div className="space-y-2">
+      {groups.map((g, i) => (
+        <GlowCard key={g.key} glow={((i % 3) + 1) as 1 | 2 | 3} className="p-3">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-medium">{g.key}</p>
             <span className="shrink-0 text-xs text-muted-foreground">
@@ -110,9 +111,9 @@ function GroupList({ groups, emptyLabel }: { groups: Group[]; emptyLabel: string
               </Link>
             ))}
           </div>
-        </li>
+        </GlowCard>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -181,8 +182,8 @@ export default async function HookLibraryPage() {
         </p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {HOOK_LIBRARY_TYPES.map((type) => (
-            <div key={type} className="space-y-3 rounded-lg border border-border p-4">
+          {HOOK_LIBRARY_TYPES.map((type, i) => (
+            <GlowCard key={type} glow={((i % 3) + 1) as 1 | 2 | 3} className="space-y-3 p-4">
               <p className="text-sm font-medium capitalize">
                 {type} ({entriesByType[type].length})
               </p>
@@ -194,7 +195,7 @@ export default async function HookLibraryPage() {
                   <p className="text-sm text-muted-foreground">No {type} hooks yet.</p>
                 )}
               </div>
-            </div>
+            </GlowCard>
           ))}
         </div>
 

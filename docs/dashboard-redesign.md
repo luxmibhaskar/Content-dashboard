@@ -4,8 +4,7 @@ Redesign of the Today page (`src/app/(app)/page.tsx`) into a "Command
 Center" layout, plus an app-wide visual treatment pass. This is a
 separate track from `builder-brief.md`'s own Phase 1/2/3 build phases,
 see the naming note in `CLAUDE.md` for how to tell the two apart when
-either is mentioned as just "Phase N". Phases 1 through 3 below are
-already built; 4 is specified but not yet built.
+either is mentioned as just "Phase N". All four phases below are built.
 
 ## Phase 1 — Command Center layout (built)
 
@@ -86,7 +85,7 @@ Output vs Milestone needs at least two weeks of either kind of data.
 Audience Distribution just shows whatever's been logged, empty is a
 valid, clearly-labeled state for it.
 
-## Phase 4 — Full visual treatment (not yet built)
+## Phase 4 — Full visual treatment (built)
 
 App-wide "AAA-game" visual pass, using each brand's own token colors
 (`docs/brand-tokens.md`) instead of generic neon:
@@ -96,16 +95,44 @@ App-wide "AAA-game" visual pass, using each brand's own token colors
 - LBsWorks: Build Indigo `#4F46E5`, Sell Amber `#F59E0B`, Scale Green
   `#10B981`.
 
-Extends the existing light/dark toggle (already built, not replaced)
-with frosted glassmorphism containers and glowing edges in each brand's
-colors, matching `design-reference/dashboard-reference.jpg`'s
+`GlowCard` (`src/components/glow-card.tsx`) is the one shared container
+primitive every real card/panel in the app routes through. Extends the
+existing light/dark toggle (unchanged, not replaced) with frosted
+glassmorphism (`.glow-card` in `src/app/globals.css`: translucent
+background, `backdrop-filter: blur`) and a glowing edge in one of the
+brand's three `--glow-1`/`--glow-2`/`--glow-3` tokens (also defined
+there, per brand, alongside the existing `--primary`/`--ring`
+overrides), matching `design-reference/dashboard-reference.jpg`'s
 glassmorphism style but re-colored to brand tokens instead of its
-generic neon.
+generic neon:
 
-Applies to every container and card across the entire app, no scoped-down
-exceptions, including text-heavy work surfaces like the Research & Copy
-summary and Scripts content:
+- **Idle breathing** — a CSS `@keyframes` animation on `.glow-card`
+  itself, no JS needed for the static/idle state.
+- **Reactive hover glow** and **parallax 3D tilt** — `GlowCard` owns
+  these, both driven by Framer Motion `useMotionValue`/`useSpring` off
+  real pointer position, the only two effects that need pointer
+  tracking. Both are disabled for `prefers-reduced-motion` users, purely
+  by never moving those motion values in the pointer handler (see the
+  comment in `glow-card.tsx`: an earlier version used
+  `useReducedMotion()` to branch render output, which caused a real
+  server/client hydration mismatch, since that hook's first client-side
+  value can differ from its SSR value).
 
-- Slow idle floating/breathing animation.
-- A reactive hover glow that follows cursor position.
-- A parallax 3D tilt that tracks the cursor.
+Applied to every genuine standalone card/panel across the app: KPI
+tiles, the Content Calendar grid, list panels (Journey Log, Ideas,
+Collaborators, Competitors, Quick Capture, Hook Library groups,
+Reference Videos), the Command Center graphs, and every distinct
+form/section panel on the topic page (Copy-Ready, Research & Copy,
+Scripts, Competitor Benchmarks) including the text-heavy work surfaces
+named in the original ask. Deliberately *not* applied to: tiny nested
+form-field wrappers and inline edit rows (e.g. a single goal's inline
+edit form, the streak-log popover), tab/nav chrome (the pill toggles,
+top bar), and modal dialogs (Platforms) — scoped down from "every
+bordered box" to "real standalone cards" per an explicit follow-up
+decision, since breathing/tilt on button-sized micro-UI reads as jitter
+rather than polish. `<details>`-based `CollapsibleSection` gets the same
+`.glow-card` CSS class directly (no pointer tracking, a native
+disclosure widget's own semantics aren't worth trading for the tilt
+effect). Nested content inside an already-glowing panel (e.g. a
+Collapsible Section inside a GlowCard) stays plain, to avoid glow-in-
+glow visual clutter.
