@@ -13,8 +13,7 @@ import { ContentOutputTracker } from "@/components/content-output-tracker";
 import { computeOutputCounts, computeFormatBreakdown, publishedDatesOf, type OutputRow } from "@/lib/content-output";
 import { getBackupStatuses } from "@/lib/backup-status";
 import { GlowCard } from "@/components/glow-card";
-import { AudienceGrowthChart } from "@/components/charts/audience-growth-chart";
-import { AudienceSecondaryChart } from "@/components/charts/audience-secondary-chart";
+import { AudienceGraphsPanel } from "@/components/audience-graphs-panel";
 import {
   computeAudienceGrowth,
   computeAudienceDistribution,
@@ -143,29 +142,16 @@ export default async function TodayPage() {
               cards). Total Audience Growth stays permanently visible on
               one side; the toggle sits alongside it, so exactly two
               graphs are ever visible together, Total Audience Growth
-              plus whichever of the toggle's three views is selected. */}
+              plus whichever of the toggle's three views is selected.
+              Relative width is user-adjustable and persists, see
+              AudienceGraphsPanel. */}
           <div className="mt-8">
-            <GlowCard glow={2} className="p-4">
-              <div className="grid gap-6 md:grid-cols-2">
-                <section>
-                  <h2 className="text-sm font-medium text-muted-foreground">Total Audience Growth</h2>
-                  <div className="mt-2">
-                    <AudienceGrowthChart data={audienceGrowth} />
-                  </div>
-                </section>
-
-                <section className="md:border-l md:border-border md:pl-6">
-                  <h2 className="text-sm font-medium text-muted-foreground">Audience &amp; Output</h2>
-                  <div className="mt-2">
-                    <AudienceSecondaryChart
-                      distribution={audienceDistribution}
-                      velocity={growthVelocity}
-                      outputVsMilestone={outputVsMilestone}
-                    />
-                  </div>
-                </section>
-              </div>
-            </GlowCard>
+            <AudienceGraphsPanel
+              audienceGrowth={audienceGrowth}
+              distribution={audienceDistribution}
+              velocity={growthVelocity}
+              outputVsMilestone={outputVsMilestone}
+            />
           </div>
 
           {/* Layout follow-up: the Dashboard heading/status column sits

@@ -165,13 +165,30 @@ order:
 - **Command Center graphs, placement and grouping**: moved from the
   bottom of the page to directly below the Quick Access cards, then
   merged from two separate cards into one shared `GlowCard` (two
-  sections side by side inside it, a `md:border-l` divider between
-  them). Total Audience Growth is always visible on one side; the
-  Audience & Output toggle sits on the other, switching between its
-  three views as before. Exactly two graphs are ever visible at once:
-  Total Audience Growth plus whichever toggle view is selected. The
-  Content Output Tracker's own donut chart was never part of this, it
-  stays in the sidebar.
+  sections side by side inside it, a border between them). Total
+  Audience Growth is always visible on one side; the Audience & Output
+  toggle sits on the other, switching between its three views as
+  before. Exactly two graphs are ever visible at once: Total Audience
+  Growth plus whichever toggle view is selected. The Content Output
+  Tracker's own donut chart was never part of this, it stays in the
+  sidebar.
+- **Command Center graphs, resizable split**
+  (`src/components/audience-graphs-panel.tsx`, a new client component
+  that now owns rendering both graph sections and the `GlowCard`
+  wrapping them, extracted out of `page.tsx`): a draggable handle on the
+  border between the two sections adjusts their relative width (desktop
+  only, `md:` and up, the two stack full-width on mobile with no
+  handle). Persists across visits the same way the dark/light theme does
+  (`src/components/theme-toggle.tsx`): a `localStorage`-backed
+  `useSyncExternalStore`, not `useState` + `useEffect`, since this
+  codebase's `react-hooks/set-state-in-effect` lint rule blocks setting
+  state synchronously on mount, and `useSyncExternalStore`'s
+  `getServerSnapshot` handles the SSR/hydration split correctly without
+  it. Defaults to an even 50/50 split when nothing's stored, clamped to
+  20–80% either way so neither side can be dragged down to nothing.
+  Keyboard-operable too (arrow keys nudge it, Home/End jump to the
+  clamp bounds), verified alongside the drag gesture and the
+  reload-persists behavior.
 - **Dashboard heading beside streak/goal**: the heading, the Sunday
   weekly-review callout, and the next-up-suggestion paragraph now sit in
   a column beside (not stacked above) the streak strip and goal area, a
