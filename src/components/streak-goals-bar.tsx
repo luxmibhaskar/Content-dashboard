@@ -14,17 +14,23 @@ function progressLabel(goal: Goal) {
 }
 
 // Layout follow-up: streak/goals moved out of Dashboard's scrollable
-// content into this compact, always-visible top-bar row (item 2 of the
-// redesign). Display only, no editing here, that lives in the Streak &
-// Goals modal now (src/components/streak-goals-modal.tsx, opened via
-// onOpenGoalsModal, same consolidation that removed the old Platforms
-// modal). Always expanded, never collapsible (confirmed). With more
-// than one goal, shuffles through them one at a time rather than
+// content into this compact, always-visible top-bar display (item 2 of
+// the redesign). Display only, no editing here, that lives in the
+// Streak & Goals modal now (src/components/streak-goals-modal.tsx,
+// opened via onOpenGoalsModal, same consolidation that removed the old
+// Platforms modal). Always expanded, never collapsible (confirmed). With
+// more than one goal, shuffles through them one at a time rather than
 // cramming every platform into the bar at once (confirmed, ~4s per
 // platform). Walk streak, Posting streak, and the platform shuffle each
 // have their own independent visibility toggle in the Streak & Goals
 // modal (src/lib/shuffle-visibility.ts), hiding one never affects the
 // others.
+//
+// Second layout follow-up: no longer its own bordered row, this now
+// renders as inline content on the left side of the main top-bar row
+// (src/components/top-bar.tsx), alongside the repositioned nav on the
+// right. No wrapping border/centering of its own anymore, the parent
+// row's own layout (justify-between) handles that.
 export function StreakGoalsBar({
   walkStreak,
   postStreak,
@@ -66,7 +72,7 @@ export function StreakGoalsBar({
   const iconEntry = current ? findPlatformIcon(current.icon_slug) : undefined;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4 border-b border-border px-4 py-2 text-sm text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
       {walkStreakVisible && (
         <span>
           Walk streak: <span className="font-medium text-foreground">{walkStreak}</span>

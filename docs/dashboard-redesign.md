@@ -449,6 +449,23 @@ every platform goal's current count, not just those 4:
   Verified live: unchecking just Walk streak removes only that element
   from the top bar, Posting streak and the platform shuffle stay put;
   the default (no stored preference) is visible for all three.
+- **Top-bar row consolidation**: the streak/goals display
+  (`streak-goals-bar.tsx`) is no longer its own bordered row below the
+  brand switcher, it renders inline now on the left side of the main
+  top-bar row (`top-bar.tsx`). The nav links (Dashboard, Idea Panel,
+  Review) and the More dropdown moved out of that row's left side into
+  its right side, between the day/night toggle and Sign out, with `|`
+  dividers between each so they read as distinct items. One row below
+  the brand switcher now instead of two, `justify-between` puts
+  streak/goals on the left and toggle+nav+email+Sign out on the right.
+  The More dropdown's `align` changed from `start` to `end` to match its
+  new position on the right edge. Mobile behavior (nav hidden below
+  `md`, replaced by the existing hamburger menu) is unchanged, only the
+  desktop-width positioning moved. Verified live: single row, `Walk
+  streak: N · Posting streak: N · <platform shuffle>` on the left,
+  `☀ Dashboard | Idea Panel | Review | More  email  Sign out` on the
+  right, the More dropdown still opens fully on-screen, and Streak and
+  Goals still opens the modal correctly from its new position.
 - **System & Services restructuring**: "Check Alternatives" (the
   per-service check button and stored verdict, backed by
   `service_alternative_checks` and the `checkAlternatives` action) is

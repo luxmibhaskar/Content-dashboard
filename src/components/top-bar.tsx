@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
 import { ChevronDown, Menu, X } from "lucide-react";
@@ -78,68 +78,78 @@ export function TopBar({
         <BrandSwitcher brand={brand} />
       </div>
 
-      {/* Layout follow-up: streak/goals display, centered, directly
-          below the brand switcher, compact and always-visible, no
-          longer living in Dashboard's scrollable content. */}
-      <StreakGoalsBar
-        walkStreak={walkStreak}
-        postStreak={postStreak}
-        goals={goals}
-        onOpenGoalsModal={() => setGoalsModalOpen(true)}
-      />
-
+      {/* Layout follow-up: nav links + More dropdown moved from the left
+          side of this row to the right, between the day/night toggle
+          and Sign out, "|" dividers between each so they read as
+          distinct items rather than crammed together. Streak/goals
+          display moved into the now-open left side, no longer its own
+          separate row (see StreakGoalsBar, its own wrapping row/border
+          is gone, it renders inline content only now). */}
       <div className="flex items-center justify-between gap-4 px-4 py-3">
-        <nav className="hidden items-center gap-4 md:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-0.5 text-sm text-muted-foreground outline-none hover:text-foreground aria-expanded:text-foreground"
-              >
-                More
-                <ChevronDown className="size-3.5" aria-hidden="true" />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                align="start"
-                sideOffset={10}
-                className="z-50 min-w-40 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
-              >
-                {MORE_LINKS.map((link) => (
-                  <DropdownMenu.Item key={link.href} asChild>
-                    <Link
-                      href={link.href}
-                      className={DROPDOWN_ITEM_CLASSNAME}
-                    >
-                      {link.label}
-                    </Link>
-                  </DropdownMenu.Item>
-                ))}
-                <DropdownMenu.Item asChild>
-                  <button
-                    type="button"
-                    onClick={() => setGoalsModalOpen(true)}
-                    className={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`}
-                  >
-                    Streak and Goals
-                  </button>
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        </nav>
+        <StreakGoalsBar
+          walkStreak={walkStreak}
+          postStreak={postStreak}
+          goals={goals}
+          onOpenGoalsModal={() => setGoalsModalOpen(true)}
+        />
+
         <div className="flex items-center gap-3">
           <ThemeToggle />
+          <nav className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+            {NAV_LINKS.map((link, i) => (
+              <Fragment key={link.href}>
+                {i > 0 && (
+                  <span aria-hidden="true" className="text-border">
+                    |
+                  </span>
+                )}
+                <Link href={link.href} className="hover:text-foreground">
+                  {link.label}
+                </Link>
+              </Fragment>
+            ))}
+            <span aria-hidden="true" className="text-border">
+              |
+            </span>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-0.5 outline-none hover:text-foreground aria-expanded:text-foreground"
+                >
+                  More
+                  <ChevronDown className="size-3.5" aria-hidden="true" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={10}
+                  className="z-50 min-w-40 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
+                >
+                  {MORE_LINKS.map((link) => (
+                    <DropdownMenu.Item key={link.href} asChild>
+                      <Link
+                        href={link.href}
+                        className={DROPDOWN_ITEM_CLASSNAME}
+                      >
+                        {link.label}
+                      </Link>
+                    </DropdownMenu.Item>
+                  ))}
+                  <DropdownMenu.Item asChild>
+                    <button
+                      type="button"
+                      onClick={() => setGoalsModalOpen(true)}
+                      className={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`}
+                    >
+                      Streak and Goals
+                    </button>
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
+          </nav>
           {userEmail && (
             <span className="hidden text-sm text-muted-foreground md:inline">{userEmail}</span>
           )}
