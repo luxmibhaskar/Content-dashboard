@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { findPlatformIcon } from "@/lib/platform-icons";
 import type { Goal } from "@/lib/types";
 
@@ -15,19 +14,23 @@ function progressLabel(goal: Goal) {
 
 // Layout follow-up: streak/goals moved out of Dashboard's scrollable
 // content into this compact, always-visible top-bar row (item 2 of the
-// redesign). Display only, no editing here, that's all on
-// /streaks-goals now (item 3). Always expanded, never collapsible
-// (confirmed). With more than one goal, shuffles through them one at a
-// time rather than cramming every platform into the bar at once
-// (confirmed, ~4s per platform).
+// redesign). Display only, no editing here, that lives in the Streak &
+// Goals modal now (src/components/streak-goals-modal.tsx, opened via
+// onOpenGoalsModal, same consolidation that removed the old Platforms
+// modal). Always expanded, never collapsible (confirmed). With more
+// than one goal, shuffles through them one at a time rather than
+// cramming every platform into the bar at once (confirmed, ~4s per
+// platform).
 export function StreakGoalsBar({
   walkStreak,
   postStreak,
   goals,
+  onOpenGoalsModal,
 }: {
   walkStreak: number;
   postStreak: number;
   goals: Goal[];
+  onOpenGoalsModal: () => void;
 }) {
   const withProgress = goals.filter((g) => progressLabel(g) !== null);
   const [index, setIndex] = useState(0);
@@ -58,9 +61,9 @@ export function StreakGoalsBar({
           {progressLabel(current)}
         </span>
       ) : (
-        <Link href="/streaks-goals" className="hover:text-foreground hover:underline">
+        <button type="button" onClick={onOpenGoalsModal} className="hover:text-foreground hover:underline">
           Add a platform goal &rarr;
-        </Link>
+        </button>
       )}
     </div>
   );

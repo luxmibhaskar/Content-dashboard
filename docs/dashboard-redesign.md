@@ -41,11 +41,17 @@ force-fit into Long or Short.
 
 ## Phase 2 — Platform data model (built)
 
+**⚠ Partially superseded, see the Platforms/Streak & Goals
+consolidation section at the end.** The `platform_snapshots` table
+itself and its role feeding the Command Center graphs are accurate
+below. The Platforms modal described here is gone, and the table no
+longer accepts only 4 fixed platform names, it accepts any.
+
 `platform_snapshots` table (`supabase/migrations/0012_platform_snapshots.sql`):
 one row per brand/platform/day, manually entered, for the platforms with
-no auto-syncing API (`src/lib/platforms.ts`: Instagram, TikTok, Threads,
-Facebook; YouTube stays excluded, its stats already pull live via the
-YouTube Data API elsewhere in the app). Timestamped snapshots rather than
+no auto-syncing API (originally Instagram, TikTok, Threads, Facebook;
+YouTube stays excluded, its stats already pull live via the YouTube
+Data API elsewhere in the app). Timestamped snapshots rather than
 a single mutable row, so count-over-time history is preserved for
 Phase 3's graphs.
 
@@ -234,6 +240,13 @@ order:
 
 ## Streak & Goals redesign (built)
 
+**⚠ Partially superseded, see the Platforms/Streak & Goals
+consolidation section at the end.** The data model here (per-platform
+goals, plain-count progress, Simple Icons) is accurate. The dedicated
+`/streaks-goals` page and the top-bar shuffle display's `current_value`
+auto-pull logic described below are gone/changed, superseded by the
+pop-out modal and a single-source-of-truth rewrite.
+
 **Requires running `supabase/migrations/0013_platform_goals.sql`
 manually before goal creation/editing works** (no CLI wired up here,
 same as every prior migration, see the SQL editor instructions this
@@ -332,3 +345,69 @@ already allowed elsewhere in this app, e.g.
 `platform-icon-picker.tsx`; `src/lib/platform-icons.ts`'s
 `findPlatformIcon` returns the whole matched entry rather than just its
 `Icon` for exactly this reason.
+
+## Platforms/Streak & Goals consolidation (built)
+
+**Requires running
+`supabase/migrations/0014_platform_snapshots_any_platform.sql`
+manually** (drops `platform_snapshots`' old 4-platform CHECK
+constraint). Verified directly in the browser: before this ran, saving
+a goal's current count for a platform name that didn't exactly match
+the old 4 (case-sensitive) failed; after, it wrote cleanly and the
+Audience Distribution graph's total updated in the same page load,
+confirming the shared table end-to-end, not just by reading the code.
+
+One connected set of changes, triggered by a real question: does
+`goals.current_value` and `platform_snapshots` ever disagree? They did,
+partially. The old auto-pull only reconciled two cases (a goal named
+"views", or matching one of 4 fixed platform names); any other
+platform name (which "any platform, freeform" already allowed) got a
+`current_value` with no connection to `platform_snapshots` at all, two
+numbers that could drift apart with nothing keeping them in sync.
+Resolved by making `platform_snapshots` the single source of truth for
+every platform goal's current count, not just those 4:
+
+- **Platforms modal removed entirely**
+  (`src/components/platforms-modal.tsx`, `src/lib/platforms.ts` both
+  deleted). Its 4-platform bulk form is gone; current-count entry moved
+  into each platform goal's own edit form instead, one platform at a
+  time. `src/lib/types.ts`'s own separate, differently-scoped
+  `PLATFORMS` constant (autocomplete suggestions on Collaborators/
+  Competitors platform fields, unrelated to audience tracking) is
+  untouched.
+- **The dedicated `/streaks-goals` page is gone**, replaced entirely by
+  a pop-out modal (`src/components/streak-goals-modal.tsx`), opened
+  from the exact spot Platforms used to occupy: the "More" menu (both
+  desktop and mobile) and the top-bar shuffle display's empty-state
+  prompt. Fully externally controlled (`open`/`onOpenChange`, no
+  `Dialog.Trigger` of its own), since it needs to open from more than
+  one place, the open state lives in `TopBar` and gets passed down.
+  Two tabs inside, "Log Streak" (today + backfill, unchanged) and
+  "Goals" (full CRUD), not one long flat scroll, this genuinely didn't
+  fit as a single continuous form.
+- **Current and target sit side by side on every goal card**
+  (`src/components/streak-goals/platform-goal-card.tsx` and
+  `add-platform-goal-form.tsx`), both editable for any platform name
+  now. Only "views" stays disabled (that number comes from Analytics,
+  not something to snapshot). Submitting a current value writes a
+  `platform_snapshots` row (`maybeLogCurrentValue` in
+  `src/app/actions/goals.ts`, calling the new
+  `logPlatformSnapshot` in `src/app/actions/platforms.ts`, an upsert on
+  `(brand, platform, snapshot_date)`, same as the old modal's write).
+  `goals.current_value` itself is never written for a platform goal
+  anymore, for any platform, not just the previously-special 4, it
+  stays in the schema for old rows only, fully superseded.
+  `src/lib/goals.ts`'s `resolveGoalCurrentValues` always resolves live:
+  "views" from Analytics, everything else from
+  `getLatestPlatformSnapshots` (renamed from `getLatestPlatformCounts`,
+  now `Record<string, number>` keyed by whatever platform names exist
+  for the brand, not a fixed union type).
+- **Confirmed single source of truth everywhere platform numbers
+  show**: the top-bar shuffle display, and all four Command Center
+  graphs (Total Audience Growth, Audience Distribution, Growth
+  Velocity, Output vs Milestone, `src/lib/audience-growth.ts`) already
+  read `platform_snapshots` with `platform` typed as plain `string`,
+  not the old fixed union, so they needed no changes at all to support
+  arbitrary platform names, they were already general. Only the write
+  side (the removed modal, now the goal card) and the CHECK constraint
+  were actually scoped to 4 platforms.

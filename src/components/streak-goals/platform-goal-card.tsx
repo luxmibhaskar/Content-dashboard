@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PlatformIconPicker } from "@/components/streak-goals/platform-icon-picker";
 import { findPlatformIcon } from "@/lib/platform-icons";
-import { matchedAutoPullPlatform, isViewsGoal } from "@/lib/goals";
+import { isViewsGoal } from "@/lib/goals";
 import { updateGoal, deleteGoal } from "@/app/actions/goals";
 import { GOAL_STATUSES, type Goal } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,11 @@ export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 
   const boundUpdate = updateGoal.bind(null, goal.id);
   const boundDelete = deleteGoal.bind(null, goal.id);
   const iconEntry = findPlatformIcon(goal.icon_slug);
-  const isAutoPull = isViewsGoal(goal.platform_name) || matchedAutoPullPlatform(goal.platform_name) !== null;
+  // Views is the one distinct case, that number comes from Analytics,
+  // not something to manually log here. Every other platform's current
+  // count is editable and writes a platform_snapshots row on save
+  // (src/app/actions/goals.ts), the single source of truth for it now.
+  const isViews = isViewsGoal(goal.platform_name);
   const label = progressLabel(goal);
 
   return (
@@ -64,8 +68,8 @@ export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 
               name="current_value"
               type="number"
               defaultValue={goal.current_value ?? ""}
-              disabled={isAutoPull}
-              title={isAutoPull ? "Pulled automatically, logged elsewhere in the app" : undefined}
+              disabled={isViews}
+              title={isViews ? "Pulled automatically from Analytics" : undefined}
               className="h-8 text-sm"
             />
           </div>

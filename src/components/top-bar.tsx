@@ -7,11 +7,10 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandSwitcher } from "@/components/brand-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { PlatformsModal } from "@/components/platforms-modal";
 import { StreakGoalsBar } from "@/components/streak-goals-bar";
+import { StreakGoalsModal } from "@/components/streak-goals-modal";
 import { signOut } from "@/app/actions/auth";
 import type { Brand } from "@/lib/brand";
-import type { Platform } from "@/lib/platforms";
 import type { Goal } from "@/lib/types";
 
 // docs/topic-page-redesign.md Section 3: Personal Angle Bank is gone as
@@ -35,13 +34,15 @@ const NAV_LINKS = [
 ];
 
 // Section 3: "the main top bar has gotten crowded", these move into a
-// "More" overflow menu instead of sitting flat in the row. Platforms
-// joined them per a later layout follow-up, it's a Dialog trigger, not
-// a Link, rendered separately below rather than folded into this array.
+// "More" overflow menu instead of sitting flat in the row. Platforms/
+// Streak & Goals consolidation: "Streak and Goals" used to be a plain
+// Link here to its own page, now it opens the pop-out modal instead
+// (src/components/streak-goals-modal.tsx), rendered separately below in
+// the same spot the old Platforms modal occupied, not folded into this
+// array of plain Links.
 const MORE_LINKS = [
   { href: "/journey", label: "My Journey Log" },
   { href: "/collaborators", label: "Collaborators" },
-  { href: "/streaks-goals", label: "Streak and Goals" },
 ];
 
 const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted";
@@ -49,19 +50,27 @@ const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-no
 export function TopBar({
   brand,
   userEmail,
-  platformCounts,
   walkStreak,
   postStreak,
+  todayWalked,
+  todayPosted,
   goals,
 }: {
   brand: Brand;
   userEmail: string | null;
-  platformCounts: Partial<Record<Platform, number>>;
   walkStreak: number;
   postStreak: number;
+  todayWalked: boolean;
+  todayPosted: boolean;
   goals: Goal[];
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Lifted here (not inside StreakGoalsModal) because it needs to open
+  // from more than one place: the "More" menu item below, the mobile
+  // menu's equivalent, and the top-bar shuffle display's empty-state
+  // prompt (src/components/streak-goals-bar.tsx). One controlled Dialog
+  // instance, several external triggers.
+  const [goalsModalOpen, setGoalsModalOpen] = useState(false);
 
   return (
     <header className="border-b border-border">
@@ -72,7 +81,12 @@ export function TopBar({
       {/* Layout follow-up: streak/goals display, centered, directly
           below the brand switcher, compact and always-visible, no
           longer living in Dashboard's scrollable content. */}
-      <StreakGoalsBar walkStreak={walkStreak} postStreak={postStreak} goals={goals} />
+      <StreakGoalsBar
+        walkStreak={walkStreak}
+        postStreak={postStreak}
+        goals={goals}
+        onOpenGoalsModal={() => setGoalsModalOpen(true)}
+      />
 
       <div className="flex items-center justify-between gap-4 px-4 py-3">
         <nav className="hidden items-center gap-4 md:flex">
@@ -111,12 +125,15 @@ export function TopBar({
                     </Link>
                   </DropdownMenu.Item>
                 ))}
-                {/* Not a DropdownMenu.Item: it opens a separate Dialog
-                    (src/components/platforms-modal.tsx) rather than
-                    navigating, asChild would merge the Item's own
-                    trigger props onto Dialog.Root, which doesn't
-                    forward them anywhere meaningful. */}
-                <PlatformsModal initialCounts={platformCounts} triggerClassName={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`} />
+                <DropdownMenu.Item asChild>
+                  <button
+                    type="button"
+                    onClick={() => setGoalsModalOpen(true)}
+                    className={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`}
+                  >
+                    Streak and Goals
+                  </button>
+                </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
@@ -155,10 +172,16 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
-          <PlatformsModal
-            initialCounts={platformCounts}
-            triggerClassName="block w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-          />
+          <button
+            type="button"
+            onClick={() => {
+              setMobileOpen(false);
+              setGoalsModalOpen(true);
+            }}
+            className="block w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            Streak and Goals
+          </button>
           <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
             {userEmail && <span className="truncate text-xs text-muted-foreground">{userEmail}</span>}
             <form action={signOut}>
@@ -169,6 +192,16 @@ export function TopBar({
           </div>
         </nav>
       )}
+
+      <StreakGoalsModal
+        open={goalsModalOpen}
+        onOpenChange={setGoalsModalOpen}
+        walkStreak={walkStreak}
+        postStreak={postStreak}
+        todayWalked={todayWalked}
+        todayPosted={todayPosted}
+        goals={goals}
+      />
     </header>
   );
 }

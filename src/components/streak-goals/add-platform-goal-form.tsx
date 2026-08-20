@@ -9,10 +9,11 @@ import { addGoal } from "@/app/actions/goals";
 
 // Streak & Goals redesign: any platform, freeform name, "add new
 // platforms freely" rather than choosing from TARGET_METRIC_OPTIONS.
-// current_value isn't collected here even for a custom platform, it
-// starts unset and gets filled in via the Current field on the card
-// itself once it exists (src/components/streak-goals/platform-goal-card.tsx),
-// keeping this form to just what's needed to create the goal.
+// Platforms consolidation: current and target side by side here too,
+// setting a starting count is part of creating the goal now, not a
+// separate step. A submitted current value writes a platform_snapshots
+// row (src/app/actions/goals.ts), the same downstream effect the old
+// Platforms modal had.
 export function AddPlatformGoalForm() {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -34,9 +35,19 @@ export function AddPlatformGoalForm() {
           <PlatformIconPicker name="icon_slug" />
           <Input name="platform_name" placeholder="Platform name (e.g. Instagram, Newsletter...)" required />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Input name="target_value" type="number" placeholder="Target" />
-          <Input name="target_date" type="date" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <label className="text-xs text-muted-foreground">Target</label>
+            <Input name="target_value" type="number" placeholder="Target" className="h-8 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Current</label>
+            <Input name="current_value" type="number" placeholder="Current" className="h-8 text-sm" />
+          </div>
+          <div className="col-span-2">
+            <label className="text-xs text-muted-foreground">Target date</label>
+            <Input name="target_date" type="date" className="h-8 text-sm" />
+          </div>
         </div>
         <Button type="submit" size="sm" loading={isPending}>
           + Add Goal
