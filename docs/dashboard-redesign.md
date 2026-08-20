@@ -422,3 +422,28 @@ every platform goal's current count, not just those 4:
   browser: backfilling one past date for a platform with no prior
   history took Total Audience Growth from its "not enough history"
   placeholder to an actual two-point line.
+- **Full graph-wiring audit** (Total Audience Growth, Audience
+  Distribution, Growth Velocity, Output vs Milestone, and the sidebar's
+  Content Output Tracker): confirmed live, not just at the code level,
+  that each reads from the table/fields it's supposed to
+  (`platform_snapshots` for the four audience graphs,
+  `content_calendar`'s `production_status`/`publish_date`/`format` for
+  Output vs Milestone and Content Output Tracker) and updates correctly
+  when that underlying data changes. One real finding: a calendar item
+  can carry `production_status = "Published / Scheduled"` with an empty
+  `publish_date`, which `isPublished` (`src/lib/content-output.ts`)
+  correctly excludes from both Content Output Tracker and Output vs
+  Milestone, but nothing in the calendar UI flags this combination, so
+  it silently reads as zero output for that item. Worth a UI warning
+  later; not built now, out of scope for this follow-up.
+- **Top-bar shuffle visibility toggle**: a checkbox in the Streak &
+  Goals modal ("Show platform shuffle in top bar"), controlling only the
+  rotating platform-goal element in `streak-goals-bar.tsx` (icon, name,
+  progress). Walk streak and Posting streak stay visible in the top bar
+  regardless of this setting, only the shuffle itself is affected.
+  localStorage-backed `useSyncExternalStore`
+  (`src/lib/shuffle-visibility.ts`), same pattern as the theme toggle
+  and the audience-graphs split, a visibility preference only, no data
+  changes. Verified live: unchecking it removes the shuffle from the top
+  bar immediately and across a fresh navigation, while streak counts
+  stay put; the default (no stored preference) is visible.

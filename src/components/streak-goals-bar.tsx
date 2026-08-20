@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { findPlatformIcon } from "@/lib/platform-icons";
+import {
+  getServerShuffleVisibleSnapshot,
+  getShuffleVisibleSnapshot,
+  subscribeToShuffleVisible,
+} from "@/lib/shuffle-visibility";
 import type { Goal } from "@/lib/types";
 
 const ROTATE_MS = 4000;
@@ -32,6 +37,11 @@ export function StreakGoalsBar({
   goals: Goal[];
   onOpenGoalsModal: () => void;
 }) {
+  const shuffleVisible = useSyncExternalStore(
+    subscribeToShuffleVisible,
+    getShuffleVisibleSnapshot,
+    getServerShuffleVisibleSnapshot,
+  );
   const withProgress = goals.filter((g) => progressLabel(g) !== null);
   const [index, setIndex] = useState(0);
 
@@ -54,17 +64,18 @@ export function StreakGoalsBar({
       <span>
         Posting streak: <span className="font-medium text-foreground">{postStreak}</span>
       </span>
-      {current ? (
-        <span className="flex items-center gap-1.5">
-          {iconEntry && <iconEntry.Icon className="size-3.5" aria-hidden="true" />}
-          <span className="font-medium text-foreground">{current.platform_name}</span>
-          {progressLabel(current)}
-        </span>
-      ) : (
-        <button type="button" onClick={onOpenGoalsModal} className="hover:text-foreground hover:underline">
-          Add a platform goal &rarr;
-        </button>
-      )}
+      {shuffleVisible &&
+        (current ? (
+          <span className="flex items-center gap-1.5">
+            {iconEntry && <iconEntry.Icon className="size-3.5" aria-hidden="true" />}
+            <span className="font-medium text-foreground">{current.platform_name}</span>
+            {progressLabel(current)}
+          </span>
+        ) : (
+          <button type="button" onClick={onOpenGoalsModal} className="hover:text-foreground hover:underline">
+            Add a platform goal &rarr;
+          </button>
+        ))}
     </div>
   );
 }

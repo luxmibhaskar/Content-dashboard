@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Dialog } from "radix-ui";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StreakLogForm } from "@/components/streak-goals/streak-log-form";
 import { PlatformGoalCard } from "@/components/streak-goals/platform-goal-card";
 import { AddPlatformGoalForm } from "@/components/streak-goals/add-platform-goal-form";
+import {
+  getServerShuffleVisibleSnapshot,
+  getShuffleVisibleSnapshot,
+  setShuffleVisible,
+  subscribeToShuffleVisible,
+} from "@/lib/shuffle-visibility";
 import type { Goal } from "@/lib/types";
 
 type Tab = "streak" | "goals";
@@ -40,6 +46,11 @@ export function StreakGoalsModal({
   goals: Goal[];
 }) {
   const [tab, setTab] = useState<Tab>("streak");
+  const shuffleVisible = useSyncExternalStore(
+    subscribeToShuffleVisible,
+    getShuffleVisibleSnapshot,
+    getServerShuffleVisibleSnapshot,
+  );
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -58,6 +69,20 @@ export function StreakGoalsModal({
             Walk streak: <span className="font-medium text-foreground">{walkStreak}</span>{" "}
             &middot; Posting streak: <span className="font-medium text-foreground">{postStreak}</span>
           </Dialog.Description>
+
+          {/* Follow-up item 1: a visibility preference for the top-bar's
+              rotating platform-goal display, not a data change. Walk
+              streak and Posting streak always stay in the top bar,
+              only the shuffle itself is affected. */}
+          <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={shuffleVisible}
+              onChange={(e) => setShuffleVisible(e.target.checked)}
+              className="size-4 rounded border-input"
+            />
+            Show platform shuffle in top bar
+          </label>
 
           <div className="mt-4 inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
             <Button
