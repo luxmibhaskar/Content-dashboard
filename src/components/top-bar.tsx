@@ -35,6 +35,7 @@ const NAV_LINKS = [
 
 const MORE_LINKS = [
   { href: "/journey", label: "My Journey Log" },
+  { href: "/topic-map", label: "Topic Map" },
   { href: "/collaborators", label: "Collaborators" },
 ];
 
