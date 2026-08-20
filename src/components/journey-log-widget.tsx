@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { TodayQuickEntry } from "@/components/today-quick-entry";
 import { createJourneyEntry } from "@/app/(app)/journey/actions";
 import type { JourneyEntry } from "@/lib/types";
 
 // Command Center redesign: a condensed, recent-entries view of the full
 // filterable /journey page, moved into Today's sidebar. The full page
 // (filters, complete history) stays intact and reachable via "View all".
+// Layout follow-up: the actual quick-entry writing box (previously its
+// own block in the main column) now lives here too, "+New" stays as the
+// separate blank-entry-then-edit-full-fields flow, a different action
+// from a fast one-line capture.
 export function JourneyLogWidget({ entries }: { entries: JourneyEntry[] }) {
   return (
     <div className="flex h-full flex-col">
@@ -16,6 +21,10 @@ export function JourneyLogWidget({ entries }: { entries: JourneyEntry[] }) {
             + New
           </Button>
         </form>
+      </div>
+
+      <div className="mt-3">
+        <TodayQuickEntry embedded />
       </div>
 
       <ul className="mt-3 flex-1 space-y-1 overflow-y-auto">
