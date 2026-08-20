@@ -33,13 +33,6 @@ const NAV_LINKS = [
   { href: "/review", label: "Review" },
 ];
 
-// Section 3: "the main top bar has gotten crowded", these move into a
-// "More" overflow menu instead of sitting flat in the row. Platforms/
-// Streak & Goals consolidation: "Streak and Goals" used to be a plain
-// Link here to its own page, now it opens the pop-out modal instead
-// (src/components/streak-goals-modal.tsx), rendered separately below in
-// the same spot the old Platforms modal occupied, not folded into this
-// array of plain Links.
 const MORE_LINKS = [
   { href: "/journey", label: "My Journey Log" },
   { href: "/collaborators", label: "Collaborators" },
@@ -47,9 +40,68 @@ const MORE_LINKS = [
 
 const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted";
 
+// Responsive follow-up: replaces a single flex row that wrapped onto a
+// second line once nav links + the streak/goals shuffle no longer fit
+// side by side, with actual progressive disclosure across 3 tiers,
+// never wrapping at any width:
+// - Desktop (lg+): everything inline, nav links with "|" dividers plus
+//   a small More dropdown (My Journey Log/Collaborators/Streak and
+//   Goals).
+// - Tablet (md-lg): the nav links row folds into that same More
+//   dropdown, one unified menu instead of a row that no longer fits.
+// - Mobile (<md): everything folds behind the hamburger, including the
+//   streak/goals shuffle and the theme toggle, only the brand switcher
+//   row and the hamburger itself stay visible in the header.
+// One MoreMenu component, reused with a different link set per tier,
+// rather than two hand-duplicated dropdowns.
+function MoreMenu({
+  links,
+  onOpenGoalsModal,
+}: {
+  links: { href: string; label: string }[];
+  onOpenGoalsModal: () => void;
+}) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-0.5 outline-none hover:text-foreground aria-expanded:text-foreground"
+        >
+          More
+          <ChevronDown className="size-3.5" aria-hidden="true" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="end"
+          sideOffset={10}
+          className="z-50 min-w-40 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        >
+          {links.map((link) => (
+            <DropdownMenu.Item key={link.href} asChild>
+              <Link href={link.href} className={DROPDOWN_ITEM_CLASSNAME}>
+                {link.label}
+              </Link>
+            </DropdownMenu.Item>
+          ))}
+          <DropdownMenu.Item asChild>
+            <button
+              type="button"
+              onClick={onOpenGoalsModal}
+              className={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`}
+            >
+              Streak and Goals
+            </button>
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
 export function TopBar({
   brand,
-  userEmail,
   walkStreak,
   postStreak,
   todayWalked,
@@ -57,7 +109,6 @@ export function TopBar({
   goals,
 }: {
   brand: Brand;
-  userEmail: string | null;
   walkStreak: number;
   postStreak: number;
   todayWalked: boolean;
@@ -66,11 +117,12 @@ export function TopBar({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   // Lifted here (not inside StreakGoalsModal) because it needs to open
-  // from more than one place: the "More" menu item below, the mobile
-  // menu's equivalent, and the top-bar shuffle display's empty-state
+  // from more than one place: the desktop/tablet More menu, the mobile
+  // panel's equivalent, and the top-bar shuffle display's empty-state
   // prompt (src/components/streak-goals-bar.tsx). One controlled Dialog
   // instance, several external triggers.
   const [goalsModalOpen, setGoalsModalOpen] = useState(false);
+  const openGoalsModal = () => setGoalsModalOpen(true);
 
   return (
     <header className="border-b border-border">
@@ -78,24 +130,30 @@ export function TopBar({
         <BrandSwitcher brand={brand} />
       </div>
 
-      {/* Layout follow-up: nav links + More dropdown moved from the left
-          side of this row to the right, between the day/night toggle
-          and Sign out, "|" dividers between each so they read as
-          distinct items rather than crammed together. Streak/goals
-          display moved into the now-open left side, no longer its own
-          separate row (see StreakGoalsBar, its own wrapping row/border
-          is gone, it renders inline content only now). */}
       <div className="flex items-center justify-between gap-4 px-4 py-3">
-        <StreakGoalsBar
-          walkStreak={walkStreak}
-          postStreak={postStreak}
-          goals={goals}
-          onOpenGoalsModal={() => setGoalsModalOpen(true)}
-        />
+        {/* Tablet and up only, folds behind the hamburger at mobile
+            along with everything else on the right (the mobileOpen
+            panel below). min-w-0 lets this shrink instead of forcing
+            the row wider than the viewport, StreakGoalsBar's own
+            flex-wrap stays a defensive fallback, not the primary
+            responsive mechanism, there's real room at this tier. */}
+        <div className="hidden min-w-0 md:flex">
+          <StreakGoalsBar
+            walkStreak={walkStreak}
+            postStreak={postStreak}
+            goals={goals}
+            onOpenGoalsModal={openGoalsModal}
+          />
+        </div>
 
         <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <nav className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+          {/* Desktop only, folds into the mobile panel below. */}
+          <div className="hidden lg:block">
+            <ThemeToggle />
+          </div>
+
+          {/* Desktop only: nav links inline, the rest in a small More. */}
+          <nav className="hidden items-center gap-2 text-sm text-muted-foreground lg:flex">
             {NAV_LINKS.map((link, i) => (
               <Fragment key={link.href}>
                 {i > 0 && (
@@ -111,53 +169,22 @@ export function TopBar({
             <span aria-hidden="true" className="text-border">
               |
             </span>
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-0.5 outline-none hover:text-foreground aria-expanded:text-foreground"
-                >
-                  More
-                  <ChevronDown className="size-3.5" aria-hidden="true" />
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  align="end"
-                  sideOffset={10}
-                  className="z-50 min-w-40 rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
-                >
-                  {MORE_LINKS.map((link) => (
-                    <DropdownMenu.Item key={link.href} asChild>
-                      <Link
-                        href={link.href}
-                        className={DROPDOWN_ITEM_CLASSNAME}
-                      >
-                        {link.label}
-                      </Link>
-                    </DropdownMenu.Item>
-                  ))}
-                  <DropdownMenu.Item asChild>
-                    <button
-                      type="button"
-                      onClick={() => setGoalsModalOpen(true)}
-                      className={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`}
-                    >
-                      Streak and Goals
-                    </button>
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+            <MoreMenu links={MORE_LINKS} onOpenGoalsModal={openGoalsModal} />
           </nav>
-          {userEmail && (
-            <span className="hidden text-sm text-muted-foreground md:inline">{userEmail}</span>
-          )}
+
+          {/* Tablet only: nav links folded into the same More dropdown
+              instead of a row that no longer fits at this width. */}
+          <div className="hidden text-sm text-muted-foreground md:block lg:hidden">
+            <MoreMenu links={[...NAV_LINKS, ...MORE_LINKS]} onOpenGoalsModal={openGoalsModal} />
+          </div>
+
+          {/* Tablet and up, folds into the mobile panel below. */}
           <form action={signOut} className="hidden md:block">
             <Button type="submit" variant="outline" size="sm">
               Sign out
             </Button>
           </form>
+
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
@@ -170,37 +197,52 @@ export function TopBar({
         </div>
       </div>
 
+      {/* Mobile only: everything the tiers above show inline collapses
+          in here, including the streak/goals shuffle and the theme
+          toggle, so the header itself never has more than the brand
+          switcher row and this trigger to wrap. */}
       {mobileOpen && (
-        <nav className="flex flex-col gap-1 border-t border-border px-4 py-3 md:hidden">
-          {[...NAV_LINKS, ...MORE_LINKS].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
+        <div className="flex flex-col gap-4 border-t border-border px-4 py-3 md:hidden">
+          <StreakGoalsBar
+            walkStreak={walkStreak}
+            postStreak={postStreak}
+            goals={goals}
+            onOpenGoalsModal={() => {
               setMobileOpen(false);
-              setGoalsModalOpen(true);
+              openGoalsModal();
             }}
-            className="block w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            Streak and Goals
-          </button>
-          <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
-            {userEmail && <span className="truncate text-xs text-muted-foreground">{userEmail}</span>}
+          />
+          <nav className="flex flex-col gap-1">
+            {[...NAV_LINKS, ...MORE_LINKS].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                openGoalsModal();
+              }}
+              className="block w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              Streak and Goals
+            </button>
+          </nav>
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            <ThemeToggle />
             <form action={signOut}>
               <Button type="submit" variant="outline" size="sm">
                 Sign out
               </Button>
             </form>
           </div>
-        </nav>
+        </div>
       )}
 
       <StreakGoalsModal

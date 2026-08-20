@@ -494,3 +494,51 @@ every platform goal's current count, not just those 4:
   live: System & Services' table has no Check Alternatives column left;
   the new container expands to show Live Status (still fetching real
   usage numbers on demand) and Backup together.
+- **Email removed next to Sign out, top bar rebuilt as real progressive
+  disclosure instead of a single row that wrapped**: an earlier
+  instruction to remove the `userEmail` display had never actually
+  reached this component (confirmed by reading the live code, not
+  memory, before touching anything: it was still there, unchanged,
+  every prior top-bar turn this session left it alone). Removed now,
+  `TopBar` no longer takes a `userEmail` prop at all, and
+  `src/app/(app)/layout.tsx` no longer passes one (the `user` fetch
+  itself stays, still needed for the auth-guard redirect).
+  Separately, the single `flex items-center justify-between` row
+  (brand switcher's row aside) that held the streak/goals shuffle on
+  the left and toggle+nav+Sign out on the right had no responsive
+  strategy of its own beyond `hidden md:flex`/`md:hidden`, so it wrapped
+  onto a second line once that combined content didn't fit, rather than
+  degrading gracefully. Rebuilt as genuine 3-tier progressive
+  disclosure, never wrapping at any width:
+  - **Desktop (`lg:` and up)**: everything inline, streak/goals shuffle
+    on the left, theme toggle + nav links with `|` dividers + a small
+    `MoreMenu` (My Journey Log/Collaborators/Streak and Goals) + Sign
+    out on the right.
+  - **Tablet (`md`-`lg`)**: the nav links row folds into the same
+    `MoreMenu` component (now given `[...NAV_LINKS, ...MORE_LINKS]`
+    instead of just `MORE_LINKS`), one unified dropdown instead of a
+    row that no longer fits. Streak/goals shuffle, theme toggle, and
+    Sign out stay inline.
+  - **Mobile (below `md`)**: everything folds behind the hamburger,
+    including the streak/goals shuffle and the theme toggle this time
+    (previously only nav did), only the brand switcher row and the
+    hamburger itself stay visible in the header. The expandable panel
+    gets its own `StreakGoalsBar` and `ThemeToggle` instances (same
+    underlying shared stores, both stay in sync automatically) rather
+    than trying to relocate the desktop ones via CSS.
+  `MoreMenu` is one shared component taking a `links` prop, reused for
+  both the desktop and tablet dropdowns rather than two hand-duplicated
+  ones. Verified live (this session's `resize_window` limitation still
+  applies, true viewport-width screenshots aren't reliable here, so
+  verification is via a mix of live interaction at the actual desktop
+  width plus direct DOM/class inspection for the other two tiers):
+  desktop renders on one line with the email gone and the correct
+  3-item More dropdown; the tablet `MoreMenu` instance carries the
+  correct merged `lg:hidden` wrapper class and the exact
+  `[...NAV_LINKS, ...MORE_LINKS]` props (confirmed via source, a
+  `display:none` Radix trigger can't be force-opened to visually
+  re-confirm its content, this is a known limitation of the trigger
+  itself, not something specific to this build); forcing `mobileOpen`
+  true at desktop width confirmed the mobile panel actually contains
+  the streak/goals shuffle, all 5 nav+more links, the Streak and Goals
+  trigger, its own independent theme toggle, and Sign out, all together.

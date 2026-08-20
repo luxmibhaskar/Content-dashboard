@@ -66,7 +66,6 @@ export default async function AppLayout({
     <div className="flex min-h-svh flex-col">
       <TopBar
         brand={brand}
-        userEmail={user.email ?? null}
         walkStreak={walkStreak}
         postStreak={postStreak}
         todayWalked={todayRow?.walked ?? false}
