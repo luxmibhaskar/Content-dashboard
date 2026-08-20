@@ -231,3 +231,104 @@ order:
   the same percentage of a saturated color would not), calibrated in the
   browser at both a subjective "barely noticeable" bar, side by side, so
   LBsWorks doesn't read more prominent for being newly built.
+
+## Streak & Goals redesign (built)
+
+**Requires running `supabase/migrations/0013_platform_goals.sql`
+manually before goal creation/editing works** (no CLI wired up here,
+same as every prior migration, see the SQL editor instructions this
+shipped with). Reads degrade gracefully without it (an unmigrated
+`goals` table just shows "no goals yet"), but `addGoal`/`updateGoal`
+throw a real error until it's applied, verified directly in the browser
+during this build.
+
+Three related changes, treated as one connected piece:
+
+- **"Dashboard · Brand" heading and the next-up-suggestion placeholder
+  are gone entirely** (`src/app/(app)/page.tsx`), not relocated. The
+  weekly-review Sunday callout and the backup-failure warning that used
+  to sit alongside them stayed, now as plain full-width blocks (the
+  two-column "heading beside streak/goal" row from the previous layout
+  follow-up doesn't exist anymore either, streak/goal left this page).
+- **Streak/goals moved into the top bar**
+  (`src/components/streak-goals-bar.tsx`, rendered from
+  `src/components/top-bar.tsx` directly below the brand-switcher row):
+  compact, centered, always expanded, never collapsible (confirmed).
+  Walk/posting streak counts show plainly; with 2+ platform goals it
+  shuffles through them one at a time, ~4s each (confirmed), a plain
+  `setInterval` + `useState`, not the `useSyncExternalStore` pattern
+  used elsewhere in this app, that pattern is for syncing an external
+  store on mount/change, this is a genuinely time-driven animation, a
+  different problem. Display only, no editing, no expand/collapse
+  interaction.
+- **New `/streaks-goals` page** ("Streak and Goals" in the "More" menu,
+  `src/app/(app)/streaks-goals/page.tsx`) holds all the actual editing:
+  a "Log today" form (`src/components/streak-goals/streak-log-form.tsx`)
+  and a "Log a past day" toggle exposing a real date input for
+  backfilling a forgotten day, both hitting the same
+  `logStreakEntry` action (`src/app/actions/streaks.ts`, generalized
+  from the old `logTodayStreak`, which hardcoded today's date; the
+  `daily_streaks` schema and `computeStreak()` already supported an
+  arbitrary `streak_date`, that hardcoded action was the only real gap).
+  Goal add/edit reuses the exact CRUD interaction the old
+  GoalProgressStrip already had (`src/components/streak-goals/platform-goal-card.tsx`,
+  `add-platform-goal-form.tsx`), just relocated, not a new pattern
+  (confirmed). `StreakStrip` and `GoalProgressStrip` (the old
+  always-quiet-strip components) are deleted, superseded by the top-bar
+  display plus this page.
+
+**Goals are per-platform now**, not the old fixed `target_metric` list
+(`Subscribers/Followers | Views | Revenue | Community Members |
+Custom`): any platform, a freeform name, plus an icon
+(`supabase/migrations/0013_platform_goals.sql` adds `platform_name`,
+`icon_slug`, `icon_url` to `goals`; `target_metric`/`goal_text` stay in
+the schema for old rows, superseded, no UI reads or writes them
+directly anymore, `goal_text` just mirrors `platform_name` on
+save/update to satisfy its existing not-null constraint). Progress
+displays as a plain count, "3,747/10,000 reached"
+(`src/components/streak-goals/platform-goal-card.tsx`'s
+`progressLabel`), not a percentage or bar.
+
+- **Icon source**: "pick from a set" only for now, real upload deferred
+  (`icon_url` sits unused in the schema, ready for it later without
+  another migration). The set is Simple Icons
+  (`react-icons/si`, a new dependency), not this app's usual Lucide,
+  per explicit direction, real brand logos read better for "which
+  platform is this" than a generic icon set would, Lucide stays the
+  system everywhere else. Curated to ~26 creator-relevant platforms in
+  `src/lib/platform-icons.ts`; LinkedIn isn't in the set, Simple Icons
+  itself doesn't ship it (verified against the installed package, not
+  an oversight here). `PlatformIconPicker`
+  (`src/components/streak-goals/platform-icon-picker.tsx`) is a Radix
+  Popover grid writing the chosen slug into a hidden form field.
+- **Current-value auto-pull, generalized** (`src/lib/goals.ts`):
+  the old Views-only special case (pulled from Analytics'
+  summed `content_calendar.views`) now applies to any goal named
+  exactly "views" (case-insensitive), plus a new case, a goal whose
+  platform name exactly matches one of `src/lib/platforms.ts`'s
+  `PLATFORMS` (Instagram/TikTok/Threads/Facebook) pulls from that
+  platform's latest `platform_snapshots` row instead of asking for the
+  same number twice. Both cases store `current_value` as `null` and
+  resolve it live at render time
+  (`resolveGoalCurrentValues`, called from both `layout.tsx` for the
+  top-bar display and the `/streaks-goals` page); anything else is a
+  genuinely custom platform, `current_value` stays manual entry, and
+  its input field is only ever disabled on the two auto-pull cases.
+
+**A real lint pattern worth remembering**: rendering one of several
+possible icon components picked by a runtime lookup
+(`const Icon = lookupFn(x); <Icon />`) trips this project's
+`react-hooks/static-components` rule, "component created during
+render", even though the returned component is always one of a small,
+stable, statically-imported set. The fix isn't `useMemo`, wrapping the
+same `<Icon />` JSX in a memo callback still trips it, the callback
+still runs during render. What actually avoids it: never bind the
+component reference to its own bare identifier, keep it as a property
+access instead, `<match.Icon />` off the found object (or destructure
+it inline in a `.map()` callback's parameters, which the same rule
+already allowed elsewhere in this app, e.g.
+`src/components/quick-access-cards.tsx`). Applied in
+`streak-goals-bar.tsx`, `platform-goal-card.tsx`, and
+`platform-icon-picker.tsx`; `src/lib/platform-icons.ts`'s
+`findPlatformIcon` returns the whole matched entry rather than just its
+`Icon` for exactly this reason.

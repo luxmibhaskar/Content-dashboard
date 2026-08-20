@@ -38,6 +38,9 @@ Next.js (React) + Vercel hosting + Supabase (Postgres + Auth) + Tailwind
 CSS + Tremor (KPI/dashboard components) + Recharts (dual-axis charts
 Tremor can't do, see `docs/dashboard-redesign.md` Phase 3) + Framer
 Motion (`GlowCard`'s hover glow and tilt, see Phase 4 of the same doc)
++ react-icons (Simple Icons brand logos for the platform-goal icon
+picker specifically, see the Streak & Goals section of the same doc;
+Lucide, not react-icons, stays the icon system everywhere else)
 + shadcn/ui.
 
 ## Current build phase

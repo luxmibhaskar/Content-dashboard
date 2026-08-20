@@ -499,6 +499,12 @@ export const TARGET_METRIC_OPTIONS = [
 
 export const GOAL_STATUSES = ["On Track", "Behind", "Achieved", "Abandoned"] as const;
 
+// Streak & Goals redesign: platform_name (freeform, any platform, not
+// TARGET_METRIC_OPTIONS above) is the new display label going forward.
+// target_metric stays for old rows only, superseded, no UI reads or
+// writes it anymore, see supabase/migrations/0013_platform_goals.sql.
+// icon_slug is a src/lib/platform-icons.ts Simple Icons slug; icon_url
+// is unused for now, schema-ready for an upload path added later.
 export type Goal = {
   id: string;
   brand: Brand;
@@ -508,6 +514,9 @@ export type Goal = {
   current_value: number | null;
   target_date: string | null;
   status: string;
+  platform_name: string | null;
+  icon_slug: string | null;
+  icon_url: string | null;
 };
 
 // Section 13: Quick Capture

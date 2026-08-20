@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { BrandSwitcher } from "@/components/brand-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PlatformsModal } from "@/components/platforms-modal";
+import { StreakGoalsBar } from "@/components/streak-goals-bar";
 import { signOut } from "@/app/actions/auth";
 import type { Brand } from "@/lib/brand";
 import type { Platform } from "@/lib/platforms";
+import type { Goal } from "@/lib/types";
 
 // docs/topic-page-redesign.md Section 3: Personal Angle Bank is gone as
 // a separate nav item, it's a toggle inside My Journey Log now (see
@@ -39,6 +41,7 @@ const NAV_LINKS = [
 const MORE_LINKS = [
   { href: "/journey", label: "My Journey Log" },
   { href: "/collaborators", label: "Collaborators" },
+  { href: "/streaks-goals", label: "Streak and Goals" },
 ];
 
 const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted";
@@ -47,10 +50,16 @@ export function TopBar({
   brand,
   userEmail,
   platformCounts,
+  walkStreak,
+  postStreak,
+  goals,
 }: {
   brand: Brand;
   userEmail: string | null;
   platformCounts: Partial<Record<Platform, number>>;
+  walkStreak: number;
+  postStreak: number;
+  goals: Goal[];
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -59,6 +68,11 @@ export function TopBar({
       <div className="flex justify-center border-b border-border px-4 py-3">
         <BrandSwitcher brand={brand} />
       </div>
+
+      {/* Layout follow-up: streak/goals display, centered, directly
+          below the brand switcher, compact and always-visible, no
+          longer living in Dashboard's scrollable content. */}
+      <StreakGoalsBar walkStreak={walkStreak} postStreak={postStreak} goals={goals} />
 
       <div className="flex items-center justify-between gap-4 px-4 py-3">
         <nav className="hidden items-center gap-4 md:flex">
