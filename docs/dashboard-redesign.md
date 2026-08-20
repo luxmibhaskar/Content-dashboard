@@ -1,3 +1,4 @@
+
 # Command Center Redesign
 
 Redesign of the Dashboard page (`src/app/(app)/page.tsx`, top-bar label
@@ -447,3 +448,16 @@ every platform goal's current count, not just those 4:
   changes. Verified live: unchecking it removes the shuffle from the top
   bar immediately and across a fresh navigation, while streak counts
   stay put; the default (no stored preference) is visible.
+- **System & Services restructuring**: "Check Alternatives" (the
+  per-service check button and stored verdict, backed by
+  `service_alternative_checks` and the `checkAlternatives` action) is
+  removed from the UI entirely, not hidden, per explicit instruction.
+  "Swap alternatives" (static reference text from `SERVICES`) stays,
+  that's a different, unrelated column. Live Status and Backup moved out
+  of System & Services into their own new collapsible container ("Live
+  Status & Backup"), positioned directly below it, both together in that
+  one container rather than two. `src/components/services-panel.tsx` now
+  renders two sibling `CollapsibleSection`s instead of one. Verified
+  live: System & Services' table has no Check Alternatives column left;
+  the new container expands to show Live Status (still fetching real
+  usage numbers on demand) and Backup together.

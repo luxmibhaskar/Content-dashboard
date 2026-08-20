@@ -31,7 +31,7 @@ export function LiveStatusSection() {
   }
 
   return (
-    <div className="border-t border-border pt-3">
+    <div>
       <Button
         type="button"
         variant="ghost"
