@@ -125,9 +125,9 @@ function GoalCard({ goal }: { goal: Goal }) {
 }
 
 // Section 6.5: 2-3 active goals at a time is the realistic use case, so
-// this stays a small strip on Today rather than a dashboard of its own,
-// quiet by default (mirrors StreakStrip), expands on click for the
-// inline add/edit/delete forms. Achieved goals drop out of the active
+// this stays a small strip on Dashboard rather than a dedicated screen
+// of its own, quiet by default (mirrors StreakStrip), expands on click
+// for the inline add/edit/delete forms. Achieved goals drop out of the active
 // list into a collapsed History underneath, so the strip stays focused
 // on what's still in progress.
 export function GoalProgressStrip({ goals }: { goals: Goal[] }) {

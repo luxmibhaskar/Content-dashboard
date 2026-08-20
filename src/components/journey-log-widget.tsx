@@ -5,8 +5,9 @@ import { createJourneyEntry } from "@/app/(app)/journey/actions";
 import type { JourneyEntry } from "@/lib/types";
 
 // Command Center redesign: a condensed, recent-entries view of the full
-// filterable /journey page, moved into Today's sidebar. The full page
-// (filters, complete history) stays intact and reachable via "View all".
+// filterable /journey page, moved into Dashboard's sidebar. The full
+// page (filters, complete history) stays intact and reachable via
+// "View all".
 // Layout follow-up: the actual quick-entry writing box (previously its
 // own block in the main column) now lives here too, "+New" stays as the
 // separate blank-entry-then-edit-full-fields flow, a different action

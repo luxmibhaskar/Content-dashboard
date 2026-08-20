@@ -102,19 +102,31 @@ containers in Tab 1.
 
 ## 3. Navigation cleanup
 
+**⚠ Partially superseded, see `docs/dashboard-redesign.md`.** The top
+bar itself is accurate below, but the Command Center redesign moved
+Journey Log out of "More" and into its own sidebar widget on the
+renamed Dashboard page, and later added Platforms to "More" alongside
+Collaborators.
+
 - Personal Angle Bank: not a separate nav item, it's a toggle inside
   Journey Log.
-- Quick Capture: not a separate nav item, replaced by the Today-page
+- Quick Capture: not a separate nav item, replaced by the Dashboard-page
   quick-entry box (below).
 - Journey Log and Collaborators: move into a "More" overflow menu, the
   main top bar has gotten crowded.
 
-## 4. Today page quick-entry box
+## 4. Dashboard page quick-entry box
 
-A text-entry area on the Today page, below the streak/goals section,
-centered, clean inviting UI. Whatever gets typed and saved here goes
-automatically and directly into Journey Log, no destination picker, no
-migration step.
+**⚠ Superseded, see `docs/dashboard-redesign.md`.** No longer its own
+centered block below streak/goals, a later layout follow-up moved it
+into the Journey Log sidebar widget itself (fixed at the top of that
+card, above the scrollable entry list). Also renamed from "Today" to
+"Dashboard" (top-bar label and page heading only, same route and
+content).
+
+A text-entry area on the Dashboard page. Whatever gets typed and saved
+here goes automatically and directly into Journey Log, no destination
+picker, no migration step.
 
 ## 5. Competitors auto-population
 

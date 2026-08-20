@@ -7,21 +7,29 @@ import { Button } from "@/components/ui/button";
 import { PLATFORMS, type Platform } from "@/lib/platforms";
 import { savePlatformCounts } from "@/app/actions/platforms";
 
+const DEFAULT_TRIGGER_CLASSNAME = "text-sm text-muted-foreground outline-none hover:text-foreground";
+
 // Redesign Phase 2 of the Command Center redesign: wired to
 // platform_snapshots (supabase/migrations/0012_platform_snapshots.sql).
 // initialCounts is each platform's latest saved snapshot (fetched in
 // the (app) layout), pre-filling the form instead of opening blank.
-export function PlatformsModal({ initialCounts }: { initialCounts: Partial<Record<Platform, number>> }) {
+// triggerClassName lets callers restyle the trigger for wherever it's
+// placed (top-bar row vs. the "More" dropdown's menu-item look,
+// src/components/top-bar.tsx) without duplicating the Dialog itself.
+export function PlatformsModal({
+  initialCounts,
+  triggerClassName = DEFAULT_TRIGGER_CLASSNAME,
+}: {
+  initialCounts: Partial<Record<Platform, number>>;
+  triggerClassName?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button
-          type="button"
-          className="text-sm text-muted-foreground outline-none hover:text-foreground"
-        >
+        <button type="button" className={triggerClassName}>
           Platforms
         </button>
       </Dialog.Trigger>

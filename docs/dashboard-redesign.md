@@ -1,15 +1,19 @@
 # Command Center Redesign
 
-Redesign of the Today page (`src/app/(app)/page.tsx`) into a "Command
-Center" layout, plus an app-wide visual treatment pass. This is a
-separate track from `builder-brief.md`'s own Phase 1/2/3 build phases,
-see the naming note in `CLAUDE.md` for how to tell the two apart when
-either is mentioned as just "Phase N". All four phases below are built.
+Redesign of the Dashboard page (`src/app/(app)/page.tsx`, top-bar label
+and page heading renamed from "Today", same route and content, see
+Layout follow-ups) into a "Command Center" layout, plus an app-wide
+visual treatment pass. This is a separate track from `builder-brief.md`'s
+own Phase 1/2/3 build phases, see the naming note in `CLAUDE.md` for how
+to tell the two apart when either is mentioned as just "Phase N". All
+four phases below are built; several Layout follow-ups landed after,
+see that section at the end for the current, accurate state of anything
+it touches.
 
 ## Phase 1 — Command Center layout (built)
 
 Replaces the Pillar Tree (`docs/builder-brief.md` Section 15.1, removed
-from Today, its component and action deleted) with a two-column layout:
+from Dashboard, its component and action deleted) with a two-column layout:
 
 - **Sidebar** (`src/components/journey-log-widget.tsx`,
   `src/components/content-output-tracker.tsx`): a condensed, most-recent
@@ -24,10 +28,11 @@ from Today, its component and action deleted) with a two-column layout:
   follower/subscriber counts. "My Journey Log" and "Collaborators" moved
   into a "More" overflow menu (`src/components/top-bar.tsx`).
 
-Unchanged, explicitly confirmed as correct and not part of this redesign:
-Quick Entry (`src/components/today-quick-entry.tsx`), the Sunday
-weekly-review reminder, and the collapsed Services panel
-(`docs/builder-brief.md` Section 5.3).
+Unchanged, explicitly confirmed as correct and not part of this
+redesign: the Sunday weekly-review reminder, and the collapsed Services
+panel (`docs/builder-brief.md` Section 5.3). Quick Entry
+(`src/components/today-quick-entry.tsx`) was unchanged at this point
+too, it moved later, see Layout follow-ups.
 
 Format bucketing (`src/lib/content-output.ts`): only formats
 unambiguously long-form or short-form roll into those buckets. Post,
@@ -53,8 +58,9 @@ day's row instead of creating a duplicate.
 
 ## Phase 3 — Command Center graphs (built)
 
-Two graphs in the Command Center main area, bottom
-(`src/app/(app)/page.tsx`), computed by `src/lib/audience-growth.ts`:
+Two graphs in the Command Center main area (`src/app/(app)/page.tsx`,
+positioning updated by Layout follow-ups below), computed by
+`src/lib/audience-growth.ts`:
 
 - **Graph 1, Total Audience Growth**
   (`src/components/charts/audience-growth-chart.tsx`): Tremor
@@ -136,3 +142,61 @@ disclosure widget's own semantics aren't worth trading for the tilt
 effect). Nested content inside an already-glowing panel (e.g. a
 Collapsible Section inside a GlowCard) stays plain, to avoid glow-in-
 glow visual clutter.
+
+## Layout follow-ups (built)
+
+A series of precise layout corrections after the four phases above, in
+order:
+
+- **Quick Entry moved into the Journey Log sidebar card**
+  (`src/components/today-quick-entry.tsx` gained an `embedded` prop,
+  rendered from `src/components/journey-log-widget.tsx`), no longer its
+  own centered block in the main column. Within that card the writing
+  box stays fixed at the top; the entry list below it is its own
+  independently scrolling region, contained within the card's own fixed
+  height, never pushing the writing box out of view. This exposed a real
+  bug in `GlowCard`: its inner content wrapper had no height of its own,
+  so a child relying on `h-full` (this fixed-top/scrollable-list split,
+  and the sidebar's two cards being equal height) had nothing to
+  actually fill. Fixed with an opt-in `fill` prop on `GlowCard`
+  (`flex h-full flex-col` on the wrapper when set), enabled on both
+  sidebar cards. Confirmed via grep this is the only place in the app
+  that relies on this fixed-height/internal-scroll pattern.
+- **Command Center graphs, placement and grouping**: moved from the
+  bottom of the page to directly below the Quick Access cards, then
+  merged from two separate cards into one shared `GlowCard` (two
+  sections side by side inside it, a `md:border-l` divider between
+  them). Total Audience Growth is always visible on one side; the
+  Audience & Output toggle sits on the other, switching between its
+  three views as before. Exactly two graphs are ever visible at once:
+  Total Audience Growth plus whichever toggle view is selected. The
+  Content Output Tracker's own donut chart was never part of this, it
+  stays in the sidebar.
+- **Dashboard heading beside streak/goal**: the heading, the Sunday
+  weekly-review callout, and the next-up-suggestion paragraph now sit in
+  a column beside (not stacked above) the streak strip and goal area, a
+  two-column row.
+- **Renamed "Today" to "Dashboard"**: top-bar label
+  (`src/components/top-bar.tsx`) and the page's own `<h1>`
+  (`src/app/(app)/page.tsx`). Same route (`/`) and content, label only,
+  every other file referencing "the Today page" in a comment was updated
+  to "Dashboard" too for consistency; literal calendar-day usages of the
+  word ("today's snapshot", the Analytics range filter's "Today" option,
+  streak-log "Walked today?") are unrelated and untouched. Component and
+  action names (`TodayPage`, `TodayQuickEntry`, `logTodayStreak`,
+  `todayDateKey`) stay as-is, an internal identifier rename wasn't part
+  of this ask and would be disproportionate for a label-only change.
+  `docs/builder-brief.md`'s own "Section 5. Today View" heading and
+  changelog prose are intentionally untouched too, that document is the
+  original historical spec, already established as superseded piecemeal
+  by newer docs (this one included) rather than edited in place.
+- **Platforms moved into the "More" overflow menu**
+  (`src/components/top-bar.tsx`), alongside My Journey Log and
+  Collaborators, off the main row. `PlatformsModal` gained a
+  `triggerClassName` prop so its trigger can be restyled per placement
+  (top-bar row vs. dropdown-menu-item look) without duplicating the
+  Dialog itself. Rendered directly inside `DropdownMenu.Content` rather
+  than through a `DropdownMenu.Item`, since it opens a separate Dialog
+  rather than navigating and `asChild` would merge the Item's trigger
+  props onto `Dialog.Root`, which doesn't forward them anywhere
+  meaningful.

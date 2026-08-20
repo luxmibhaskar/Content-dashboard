@@ -7,8 +7,8 @@ import { searchGeneral } from "@/lib/serpapi";
 import { synthesizeServiceAlternatives } from "@/lib/anthropic";
 
 // Section 5.3: fetched only when the Live Status disclosure is actually
-// opened, not on every Today load, "one tap away" rather than constant
-// monitoring.
+// opened, not on every Dashboard load, "one tap away" rather than
+// constant monitoring.
 export async function getLiveServiceStatuses(): Promise<Record<string, LiveStatus>> {
   const supabase = await createClient();
   const [supabaseStatus, serpapiStatus, driveStatus] = await Promise.all([

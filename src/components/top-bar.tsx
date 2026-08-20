@@ -15,26 +15,33 @@ import type { Platform } from "@/lib/platforms";
 // docs/topic-page-redesign.md Section 3: Personal Angle Bank is gone as
 // a separate nav item, it's a toggle inside My Journey Log now (see
 // src/app/(app)/journey/page.tsx). Quick Capture is gone as a nav item,
-// replaced by the Today page's own quick-entry box (see
+// replaced by the Dashboard page's own quick-entry box (see
 // src/app/(app)/page.tsx), the underlying /quick-capture page and its
 // migrate-to-X actions stay intact, just unlinked from nav, nothing in
 // the spec asked for that data path itself to be removed.
 //
 // Command Center redesign: Analytics Overview, Content Calendar, Hook
 // Library, and Competitors are also gone from here, relocated to the
-// Quick Access cards on Today (still one click away, not removed).
+// Quick Access cards on Dashboard (still one click away, not removed).
+//
+// Layout follow-up: label changed from "Today" to "Dashboard", same
+// page (/) and content, label only.
 const NAV_LINKS = [
-  { href: "/", label: "Today" },
+  { href: "/", label: "Dashboard" },
   { href: "/ideas", label: "Idea Panel" },
   { href: "/review", label: "Review" },
 ];
 
-// Section 3: "the main top bar has gotten crowded", these two move into
-// a "More" overflow menu instead of sitting flat in the row.
+// Section 3: "the main top bar has gotten crowded", these move into a
+// "More" overflow menu instead of sitting flat in the row. Platforms
+// joined them per a later layout follow-up, it's a Dialog trigger, not
+// a Link, rendered separately below rather than folded into this array.
 const MORE_LINKS = [
   { href: "/journey", label: "My Journey Log" },
   { href: "/collaborators", label: "Collaborators" },
 ];
+
+const DROPDOWN_ITEM_CLASSNAME = "block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted";
 
 export function TopBar({
   brand,
@@ -64,7 +71,6 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
-          <PlatformsModal initialCounts={platformCounts} />
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button
@@ -85,12 +91,18 @@ export function TopBar({
                   <DropdownMenu.Item key={link.href} asChild>
                     <Link
                       href={link.href}
-                      className="block rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted focus:bg-muted"
+                      className={DROPDOWN_ITEM_CLASSNAME}
                     >
                       {link.label}
                     </Link>
                   </DropdownMenu.Item>
                 ))}
+                {/* Not a DropdownMenu.Item: it opens a separate Dialog
+                    (src/components/platforms-modal.tsx) rather than
+                    navigating, asChild would merge the Item's own
+                    trigger props onto Dialog.Root, which doesn't
+                    forward them anywhere meaningful. */}
+                <PlatformsModal initialCounts={platformCounts} triggerClassName={`${DROPDOWN_ITEM_CLASSNAME} w-full text-left`} />
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
@@ -129,9 +141,10 @@ export function TopBar({
               {link.label}
             </Link>
           ))}
-          <div className="px-2 py-2">
-            <PlatformsModal initialCounts={platformCounts} />
-          </div>
+          <PlatformsModal
+            initialCounts={platformCounts}
+            triggerClassName="block w-full rounded-md px-2 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          />
           <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
             {userEmail && <span className="truncate text-xs text-muted-foreground">{userEmail}</span>}
             <form action={signOut}>

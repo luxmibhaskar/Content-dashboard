@@ -18,7 +18,7 @@ function num(formData: FormData, key: string) {
 
 // Section 6.5: 2-3 active goals at a time is the realistic use case, so
 // this is deliberately CRUD-in-a-strip rather than a separate management
-// page, add/edit/delete all live inline on the Today progress strip.
+// page, add/edit/delete all live inline on the Dashboard progress strip.
 export async function addGoal(formData: FormData) {
   const goalText = str(formData, "goal_text");
   if (!goalText) return;

@@ -13,7 +13,7 @@ const CARDS: { href: string; label: string; description: string; icon: LucideIco
 // docs/topic-page-redesign.md Command Center redesign: Content Calendar,
 // Hook Library, Competitors, and Analytics Overview moved off the top-bar
 // nav and relocated here, a row of compact cards rather than a menu item,
-// still one click away from Today.
+// still one click away from Dashboard.
 export function QuickAccessCards() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

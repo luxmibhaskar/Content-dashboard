@@ -104,8 +104,8 @@ export default async function TodayPage() {
     publishedDatesOf((outputRows ?? []) as OutputRow[]),
   );
 
-  // Section 5.1/12: Weekly Review surfaces automatically in Today on
-  // Sundays, for the week that just concluded (today).
+  // Section 5.1/12: Weekly Review surfaces automatically on Dashboard
+  // on Sundays, for the week that just concluded (today).
   const isSunday = new Date().getDay() === 0;
   const reviewWeek = currentReviewWeek();
   let weeklyReviewDone = false;
@@ -138,35 +138,42 @@ export default async function TodayPage() {
         <div>
           <QuickAccessCards />
 
-          {/* Layout follow-up: the Command Center graphs fill the area
-              directly below the Quick Access cards now, instead of
-              sitting at the very bottom of the page. */}
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <section>
-              <h2 className="text-sm font-medium text-muted-foreground">Total Audience Growth</h2>
-              <GlowCard glow={2} className="mt-2 p-4">
-                <AudienceGrowthChart data={audienceGrowth} />
-              </GlowCard>
-            </section>
+          {/* Layout follow-up: one merged graphs container directly
+              below the Quick Access cards (previously two separate
+              cards). Total Audience Growth stays permanently visible on
+              one side; the toggle sits alongside it, so exactly two
+              graphs are ever visible together, Total Audience Growth
+              plus whichever of the toggle's three views is selected. */}
+          <div className="mt-8">
+            <GlowCard glow={2} className="p-4">
+              <div className="grid gap-6 md:grid-cols-2">
+                <section>
+                  <h2 className="text-sm font-medium text-muted-foreground">Total Audience Growth</h2>
+                  <div className="mt-2">
+                    <AudienceGrowthChart data={audienceGrowth} />
+                  </div>
+                </section>
 
-            <section>
-              <h2 className="text-sm font-medium text-muted-foreground">Audience &amp; Output</h2>
-              <GlowCard glow={1} className="mt-2 p-4">
-                <AudienceSecondaryChart
-                  distribution={audienceDistribution}
-                  velocity={growthVelocity}
-                  outputVsMilestone={outputVsMilestone}
-                />
-              </GlowCard>
-            </section>
+                <section className="md:border-l md:border-border md:pl-6">
+                  <h2 className="text-sm font-medium text-muted-foreground">Audience &amp; Output</h2>
+                  <div className="mt-2">
+                    <AudienceSecondaryChart
+                      distribution={audienceDistribution}
+                      velocity={growthVelocity}
+                      outputVsMilestone={outputVsMilestone}
+                    />
+                  </div>
+                </section>
+              </div>
+            </GlowCard>
           </div>
 
-          {/* Layout follow-up: the Today heading/status column sits
+          {/* Layout follow-up: the Dashboard heading/status column sits
               beside the streak/goal column now, instead of stacked
               above it. */}
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <div>
-              <h1 className="text-3xl font-bold">Today &middot; {BRAND_LABELS[brand]}</h1>
+              <h1 className="text-3xl font-bold">Dashboard &middot; {BRAND_LABELS[brand]}</h1>
 
               {failingBackups.length > 0 && (
                 <p className="mt-3 text-sm text-destructive">
@@ -226,7 +233,7 @@ export default async function TodayPage() {
       </div>
 
       {/* Section 5.3: collapsed by default, infrastructure stays out of
-          sight until deliberately sought, at the very bottom of Today. */}
+          sight until deliberately sought, at the very bottom of Dashboard. */}
       <div className="mt-12">
         <ServicesPanel backupStatuses={backupStatuses} />
       </div>

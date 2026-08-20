@@ -28,11 +28,11 @@ export async function createJourneyEntry() {
 
 export type QuickEntryState = { error: string | null };
 
-// docs/topic-page-redesign.md Section 4: the Today page's quick-entry
-// box. Whatever gets typed here goes straight into journey_log's own
-// free-text field, no destination picker, no separate migration step,
-// no redirect either, stays on Today so it reads as "captured", not
-// "now go somewhere else and finish this."
+// docs/topic-page-redesign.md Section 4: the Dashboard page's
+// quick-entry box. Whatever gets typed here goes straight into
+// journey_log's own free-text field, no destination picker, no
+// separate migration step, no redirect either, stays on Dashboard so
+// it reads as "captured", not "now go somewhere else and finish this."
 export async function quickCaptureToJourneyLog(
   _prevState: QuickEntryState,
   formData: FormData,

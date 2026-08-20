@@ -10,9 +10,9 @@ const initialState: QuickEntryState = { error: null };
 
 // docs/topic-page-redesign.md Section 4: whatever gets typed and saved
 // here goes straight into Journey Log, no destination picker, no
-// migration step. Stays on Today after saving (no redirect to Journey
-// Log), that's what makes this "quick capture" rather than "go finish
-// this entry elsewhere."
+// migration step. Stays on Dashboard after saving (no redirect to
+// Journey Log), that's what makes this "quick capture" rather than "go
+// finish this entry elsewhere."
 //
 // Layout follow-up: lives inside the Journey Log sidebar card now
 // (embedded=true, src/components/journey-log-widget.tsx), not as its

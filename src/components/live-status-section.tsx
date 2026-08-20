@@ -9,7 +9,7 @@ import type { LiveStatus } from "@/lib/services-live";
 
 const LIVE_SERVICES = SERVICES.filter((s) => s.hasLiveStatus);
 
-// Section 5.3: "pull that number in on expand", not on every Today
+// Section 5.3: "pull that number in on expand", not on every Dashboard
 // load, only these three services expose a usage number that's
 // actually reachable with the credentials already configured.
 export function LiveStatusSection() {
