@@ -170,3 +170,128 @@ manually added after the fact.
   genuinely premium product, not default flat light UI, real depth and
   intentional restraint, applied consistently to every container, button,
   and interactive element, not just a color swap.
+
+## 7. "Paste from AI chat" import
+
+Confirmed spec, real feature that was discussed and approved but never
+made it into a doc file until now, a gap deliberately closed here so it
+can't happen a second time. Free, pattern-based text parsing against the
+templates below, genuinely no Claude API call either way, matching the
+existing "Run" pipeline's field structure
+(`ResearchCopyResult`/`ScriptsResult`, `src/lib/types.ts`) exactly, so a
+paste-imported topic is indistinguishable from a Run-produced one once
+saved.
+
+**Where it lives**: a collapsed "Paste from AI chat +" toggle inside the
+existing Run card on both Tab 1 (Research & Copy) and Tab 2 (Scripts),
+next to Run/Run Again, not a separate section.
+
+**Parser**: `src/lib/paste-import.ts`, `parseResearchCopyPaste` and
+`parseScriptsPaste`. Pure functions, no server-only imports, splits the
+pasted text on known header lines (case-insensitive, optional `#`/`##`/
+`###` prefix, optional trailing colon, each on its own line) and
+sub-parses each section's content.
+
+Research & Copy template, headers in this order:
+```
+SUMMARY
+<prose>
+
+SOURCES
+Title - https://...
+Title - https://...
+
+TITLES
+1. Title option
+2. Title option
+
+DESCRIPTION
+<prose>
+
+KEYWORD TAGS
+tag one
+tag two
+
+QUESTION TAGS
+question one
+question two
+
+SOURCE FINDINGS          (optional)
+### Source Name (Discussion)
+bullet point
+bullet point
+Links:
+Title - https://...
+
+### Source Name (Article)
+<prose summary>
+Links:
+Title - https://...
+```
+The nested per-container link list is deliberately labeled `Links:`,
+not `Sources:` — a same-named nested marker would falsely re-trigger the
+top-level `SOURCES` header match anywhere it appeared in the document
+(this was a real bug caught in testing: it silently truncated and
+overwrote the real global sources list with just the fragment collected
+after the last nested `Sources:` line).
+
+Scripts template, headers in this order:
+```
+HOOKS
+1. Hook
+2. Hook
+
+PAIN-POINT ANSWER
+<one line/paragraph>
+
+LONG-FORM SCRIPT
+<prose>
+
+CTA OPTIONS
+1. CTA
+2. CTA
+
+SHORT-FORM POINTERS
+Point: <text> | Explanation: <text>
+Point: <text> | Explanation: <text>
+
+ATOMIZED SHORTS          (optional)
+### Short 1: <title>
+Point: <text> | Explanation: <text>
+
+### Short 2: <title>
+Point: <text> | Explanation: <text>
+```
+
+**Confidence gate, no partial guessing**: each parser requires every
+core header present (SOURCE FINDINGS and ATOMIZED SHORTS are the only
+optional ones) and requires the primary fields to be non-empty (summary/
+titles/description for research, hooks/pain-point answer/long-form
+script/CTA options/short-form pointers for scripts). Missing any of
+these returns `null` rather than saving a partial or misrouted result.
+On `null`, the tab shows the exact raw pasted text back in an editable
+textarea with an inline message ("Couldn't confidently match the
+template structure...") instead of auto-filling anything, so the
+creator can fix formatting and retry or copy pieces out manually.
+
+**Textarea reset behavior**: the textarea is keyed off the action's
+returned `fallbackRaw` value (`src/components/paste-import-section.tsx`)
+rather than left as a bare uncontrolled field. React automatically
+resets uncontrolled fields inside an action-bound `<form>` once the
+action settles, success or failure alike, so a naive uncontrolled
+textarea would lose exactly the raw text the fallback path is supposed
+to preserve. This was also caught and fixed in testing.
+
+**Save path, shared with Run**: parsing happens server-side
+(`importResearchCopyPaste`/`importScriptsPaste`,
+`src/app/(app)/calendar/[id]/research-copy-actions.ts` and
+`scripts-actions.ts`), and on a confident parse both actions call the
+exact same shared save function the real AI-calling Run uses
+(`saveResearchCopyResult`/`saveScriptsResult`, extracted from the
+previously-inlined Run logic specifically for this). For Research &
+Copy, that means Competitor auto-population (Section 5) and
+`research_progress` being marked done fire identically whether the
+research came from a paid Run or a free paste, no separate path that
+could silently skip either. Verified live: a well-formed paste with a
+known competitor's name in the summary correctly surfaced an
+auto-populated Competitor Benchmark, exactly as a real Run would.

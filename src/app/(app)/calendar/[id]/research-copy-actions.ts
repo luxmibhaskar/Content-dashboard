@@ -4,9 +4,47 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { synthesizeResearchAndCopy } from "@/lib/anthropic";
 import { autoPopulateCompetitorBenchmarks } from "@/lib/competitor-auto-populate";
-import type { ResearchProgress, ResearchStep, StepStatus } from "@/lib/types";
+import { parseResearchCopyPaste } from "@/lib/paste-import";
+import type { ResearchCopyResult, ResearchProgress, ResearchStep, StepStatus } from "@/lib/types";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 export type RunResearchState = { error: string | null };
+
+// Shared by both the real AI-calling Run (below) and the free
+// "Paste from AI chat" import (importResearchCopyPaste, further down):
+// the actual write + every downstream effect currently tied to
+// research_copy landing, so paste-import can never silently skip one.
+// Currently: the research_copy column itself, Competitor
+// auto-population (Section 5, no API cost, matches against
+// already-known competitors), research_progress marked done (so the
+// tab's own polling/step UI reads a normal completed state either way,
+// not stuck mid-progress from a Run that never actually ran), and the
+// page revalidation that makes any of this visible.
+async function saveResearchCopyResult(
+  supabase: SupabaseServerClient,
+  contentId: string,
+  brand: string,
+  researchCopy: ResearchCopyResult,
+) {
+  const { error } = await supabase
+    .from("content_calendar")
+    .update({ research_copy: researchCopy })
+    .eq("id", contentId);
+  if (error) throw new Error(error.message);
+
+  await autoPopulateCompetitorBenchmarks(supabase, { contentId, brand, researchCopy }).catch(() => {});
+
+  const progress: ResearchProgress = {
+    status: "done",
+    steps: { summary: "done", sources: "done", copy: "done" },
+    error: null,
+    updatedAt: new Date().toISOString(),
+  };
+  await supabase.from("content_calendar").update({ research_progress: progress }).eq("id", contentId);
+
+  revalidatePath(`/calendar/${contentId}`);
+}
 
 // docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy": one
 // Run, full depth from the start, replaces the old shallow Run Research
@@ -69,31 +107,52 @@ export async function runResearchAndCopy(
       },
     });
 
-    const { error } = await supabase
-      .from("content_calendar")
-      .update({ research_copy: researchCopy })
-      .eq("id", contentId);
-    if (error) throw new Error(error.message);
-
-    // Section 5: no research spend of its own, matches against
-    // already-known competitors on data already in hand, never blocks
-    // the Run on failure, this is a nice-to-have side effect not the
-    // point of Research & Copy.
-    await autoPopulateCompetitorBenchmarks(supabase, {
-      contentId,
-      brand: item.brand,
-      researchCopy,
-    }).catch(() => {});
-
-    await writeProgress("done");
+    await saveResearchCopyResult(supabase, contentId, item.brand, researchCopy);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong, try again?";
     await writeProgress("error", message).catch(() => {});
     return { error: message };
   }
 
-  revalidatePath(`/calendar/${contentId}`);
   return { error: null };
+}
+
+export type ImportResearchCopyState = { fallbackRaw: string | null };
+
+// "Paste from AI chat", docs/topic-page-redesign.md Section 7: free,
+// pattern-based parsing (src/lib/paste-import.ts), no Claude API call.
+// Parsing happens here, not just client-side, so the save path below
+// only ever runs against something this server actually validated.
+// On a confident parse, goes through the exact same
+// saveResearchCopyResult as a real Run, so Competitor auto-population
+// and everything else tied to research_copy landing fires identically
+// either way. On a low-confidence parse, returns the raw pasted text
+// unchanged rather than guessing, the tab shows it back in an editable
+// area instead of auto-filling anything.
+export async function importResearchCopyPaste(
+  contentId: string,
+  _prevState: ImportResearchCopyState,
+  formData: FormData,
+): Promise<ImportResearchCopyState> {
+  const pastedText = String(formData.get("pasted_text") ?? "");
+  const parsed = parseResearchCopyPaste(pastedText);
+  if (!parsed) {
+    return { fallbackRaw: pastedText };
+  }
+
+  const supabase = await createClient();
+  const { data: item, error: itemError } = await supabase
+    .from("content_calendar")
+    .select("brand")
+    .eq("id", contentId)
+    .single();
+  if (itemError || !item) {
+    return { fallbackRaw: pastedText };
+  }
+
+  const researchCopy: ResearchCopyResult = { ...parsed, generatedAt: new Date().toISOString() };
+  await saveResearchCopyResult(supabase, contentId, item.brand, researchCopy);
+  return { fallbackRaw: null };
 }
 
 // Plain read for the poll loop in ResearchAndCopyTab, called imperatively

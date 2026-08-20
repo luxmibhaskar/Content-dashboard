@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GlowCard } from "@/components/glow-card";
+import { PasteImportSection } from "@/components/paste-import-section";
 import type {
   ResearchCopyContainer,
   ResearchCopyResult,
@@ -23,8 +24,16 @@ import {
   useResearchDescription,
   useResearchKeywordTags,
   useResearchQuestionTags,
+  importResearchCopyPaste,
   type RunResearchState,
 } from "@/app/(app)/calendar/[id]/research-copy-actions";
+
+const RESEARCH_PASTE_TEMPLATE_HINT = `Expects these headers, each on its own line, in this order:
+SUMMARY / SOURCES / TITLES / DESCRIPTION / KEYWORD TAGS / QUESTION TAGS / SOURCE FINDINGS (optional).
+Sources as "Title - https://...", one per line. Titles as a numbered or bulleted list.
+Source findings as "### Source Name (Discussion)" or "### Source Name (Article)" blocks, each with
+its own content and an optional "Links:" sub-list underneath (not "Sources:", that collides with the
+top-level SOURCES header). See docs/topic-page-redesign.md Section 7.`;
 
 const STEP_LABELS: Record<ResearchStep, string> = {
   summary: "Summary",
@@ -172,6 +181,7 @@ export function ResearchAndCopyTab({
   const boundUpdateInput = updateResearchInput.bind(null, contentId);
   const boundUseTitle = useResearchTitle.bind(null, contentId);
   const boundUseDescription = useResearchDescription.bind(null, contentId);
+  const boundImportPaste = importResearchCopyPaste.bind(null, contentId);
 
   // useActionState instead of a plain bound action: this call can take
   // minutes (real web search) and can now time out client-side (see
@@ -264,6 +274,7 @@ export function ResearchAndCopyTab({
             {runState.error}
           </p>
         )}
+        <PasteImportSection action={boundImportPaste} templateHint={RESEARCH_PASTE_TEMPLATE_HINT} />
       </GlowCard>
 
       {!researchCopy && (
