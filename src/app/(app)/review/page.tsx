@@ -52,11 +52,11 @@ export default async function ReviewPage({
         weeks into one session.
       </p>
 
-      <p className="mt-4 text-sm font-medium">
+      <p className="mt-5 text-sm font-medium">
         Week of {weekStart} to {weekEnd}
       </p>
 
-      <form action={saveWeeklyReview} className="mt-4">
+      <form action={saveWeeklyReview} className="mt-6">
         <input type="hidden" name="week_start_date" value={weekStart} />
         <input type="hidden" name="week_end_date" value={weekEnd} />
         <GlowCard glow={1} className="space-y-6 p-5">
