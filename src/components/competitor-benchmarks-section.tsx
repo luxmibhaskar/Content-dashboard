@@ -72,7 +72,7 @@ export function CompetitorBenchmarksSection({
           <select
             name="competitor_id"
             defaultValue=""
-            className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           >
             <option value="">Type a new name instead...</option>
             {competitors.map((c) => (
@@ -88,7 +88,7 @@ export function CompetitorBenchmarksSection({
             name="platform"
             list="benchmark-platform-options"
             placeholder="Platform"
-            className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           />
           <datalist id="benchmark-platform-options">
             {PLATFORMS.map((p) => (

@@ -91,7 +91,7 @@ export default async function JourneyEntryPage({
               id="mood_energy"
               name="mood_energy"
               defaultValue={entry.mood_energy ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
               {MOOD_ENERGY_OPTIONS.map((m) => (

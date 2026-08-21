@@ -20,7 +20,7 @@ export function HookLibraryExport() {
       <select
         value={selection}
         onChange={(e) => setSelection(e.target.value as ExportSelection)}
-        className="h-8 rounded-md border border-input bg-background px-2 text-sm capitalize"
+        className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm capitalize"
       >
         <option value="all">All</option>
         {HOOK_LIBRARY_TYPES.map((t) => (

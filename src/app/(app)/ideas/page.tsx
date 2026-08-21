@@ -65,7 +65,7 @@ export default async function IdeasPage() {
               id="format"
               name="format"
               defaultValue=""
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
               {FORMATS.map((f) => (
@@ -81,7 +81,7 @@ export default async function IdeasPage() {
               id="idea_source"
               name="idea_source"
               defaultValue=""
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
               {IDEA_SOURCES.map((s) => (

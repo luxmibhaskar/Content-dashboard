@@ -86,7 +86,7 @@ export default async function IdeaPage({
             id="status"
             name="status"
             defaultValue={idea.status}
-            className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           >
             {IDEA_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -119,7 +119,7 @@ export default async function IdeaPage({
               id="format"
               name="format"
               defaultValue={idea.format ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
               {FORMATS.map((f) => (
@@ -135,7 +135,7 @@ export default async function IdeaPage({
               id="idea_source"
               name="idea_source"
               defaultValue={idea.idea_source ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
               {IDEA_SOURCES.map((s) => (

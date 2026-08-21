@@ -220,7 +220,7 @@ export default async function TopicPage({
               id="production_status"
               name="production_status"
               defaultValue={item.production_status ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">No status yet</option>
               {PRODUCTION_STATUSES.map((s) => (
@@ -237,7 +237,7 @@ export default async function TopicPage({
               id="viability_status"
               name="viability_status"
               defaultValue={item.viability_status}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               {VIABILITY_STATUSES.map((s) => (
                 <option key={s} value={s}>
@@ -272,7 +272,7 @@ export default async function TopicPage({
               id="format"
               name="format"
               defaultValue={item.format ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
               {FORMATS.map((f) => (

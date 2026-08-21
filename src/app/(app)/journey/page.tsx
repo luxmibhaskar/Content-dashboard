@@ -72,7 +72,7 @@ export default async function JourneyLogPage({
             name="from"
             type="date"
             defaultValue={params.from}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -84,7 +84,7 @@ export default async function JourneyLogPage({
             name="to"
             type="date"
             defaultValue={params.to}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -95,7 +95,7 @@ export default async function JourneyLogPage({
             id="pillar"
             name="pillar"
             defaultValue={params.pillar ?? ""}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           >
             <option value="">All</option>
             {pillarsFor(brand).map((p) => (
@@ -113,7 +113,7 @@ export default async function JourneyLogPage({
             id="sub_topic"
             name="sub_topic"
             defaultValue={params.sub_topic ?? ""}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           >
             <option value="">All</option>
             {Object.values(structure).flat().map((s) => (
@@ -133,7 +133,7 @@ export default async function JourneyLogPage({
             type="text"
             defaultValue={params.q}
             placeholder="search..."
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           />
         </div>
         {/* docs/topic-page-redesign.md Section 3: Personal Angle Bank is

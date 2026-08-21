@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import type { PillarStructure } from "@/lib/pillars";
 
-const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 text-sm";
+const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
 
 // Real, confirmed bug: Pillar and Sub-topic were plain text entry, no
 // connection at all to PILLAR_STRUCTURE (src/lib/pillars.ts), the same

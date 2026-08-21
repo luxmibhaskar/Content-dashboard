@@ -38,7 +38,7 @@ export function HookLibraryImport() {
         name="type"
         value={type}
         onChange={(e) => setType(e.target.value as HookLibraryType)}
-        className="h-8 rounded-md border border-input bg-background px-2 text-sm capitalize"
+        className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm capitalize"
       >
         {HOOK_LIBRARY_TYPES.map((t) => (
           <option key={t} value={t} className="capitalize">

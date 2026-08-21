@@ -144,7 +144,7 @@ function CustomRangeForm({ from, to }: { from?: string; to?: string }) {
           name="from"
           type="date"
           defaultValue={from}
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -156,7 +156,7 @@ function CustomRangeForm({ from, to }: { from?: string; to?: string }) {
           name="to"
           type="date"
           defaultValue={to}
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+          className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
         />
       </div>
       <Button type="submit" size="sm" variant="outline">

@@ -64,7 +64,7 @@ export function StreakLogForm({
               name="streak_date"
               max={todayDateKey()}
               required
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             />
             <label className="flex items-center gap-1.5 text-sm">
               <input type="checkbox" name="walked" className="size-3.5" />

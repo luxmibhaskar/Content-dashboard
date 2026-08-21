@@ -74,7 +74,7 @@ export default async function QuickCapturePage({
               <option key={p} value={p} />
             ))}
           </datalist>
-          <select name="content_type" defaultValue="" className="h-8 rounded-md border border-input bg-background px-2 text-sm">
+          <select name="content_type" defaultValue="" className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm">
             <option value="">Type...</option>
             {QUICK_CAPTURE_CONTENT_TYPES.map((t) => (
               <option key={t} value={t}>

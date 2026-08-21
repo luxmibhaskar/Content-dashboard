@@ -47,7 +47,7 @@ export default async function CollaboratorPage({
             id="status"
             name="status"
             defaultValue={collaborator.status}
-            className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
           >
             {COLLABORATOR_STATUSES.map((s) => (
               <option key={s} value={s}>

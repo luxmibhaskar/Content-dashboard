@@ -88,7 +88,7 @@ export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 
               name="status"
               defaultValue={goal.status}
               className={cn(
-                "h-8 w-full rounded-md border border-input bg-background px-2 text-sm",
+                "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm",
                 STATUS_COLOR[goal.status],
               )}
             >
@@ -143,7 +143,7 @@ export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 
                 name="snapshot_date"
                 max={todayDateKey()}
                 required
-                className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
               />
               <Input name="count" type="number" min={0} placeholder="Count" className="h-8 w-28 text-sm" />
               <Button type="submit" size="xs" variant="outline" loading={isBackfillPending}>
