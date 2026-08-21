@@ -6,6 +6,40 @@ import { cn } from "@/lib/utils";
 
 type GlowIndex = 1 | 2 | 3;
 
+// Real bug, root-caused here rather than patched per call site: the
+// outer motion.div below is a two-child box (the decorative sheen, then
+// one content wrapper), so a caller's className landing on it only ever
+// reaches those two children, never the actual content (form fields,
+// list rows, a card's own flex layout) one level further in. Utilities
+// that need to see the real children directly (space-y-*, divide-y,
+// flex/grid + gap) silently did nothing, e.g. a "space-y-5" meant to
+// gap a form's fields from its submit button instead put one unused
+// margin on the sole wrapper div, leaving the button touching the field
+// above it, the recurring gap reported on Topic Map/Collaborators/
+// Weekly Review/Idea Panel forms, and the same class of bug also
+// affecting `divide-y` list separators and `flex ...gap-*` row layouts
+// elsewhere. Margin utilities (mt-, mx-, etc.) are the one exception:
+// they position the card itself against whatever precedes it on the
+// page, and only work from the outer box, since .glow-card's own border
+// (globals.css) blocks margin-collapsing, an inner margin would show up
+// as unwanted space inside the card instead of before it. So the
+// incoming className is split: margin tokens stay on the outer box,
+// everything else moves to the wrapper div that's the real content's
+// direct parent, one fix here rather than 30+ call sites each patched
+// by hand (and silently un-fixed the next time a page copies this
+// pattern).
+const MARGIN_TOKEN = /^(?:[\w-]+:)*-?m[trblxyse]?-/;
+
+function splitOuterAndInnerClasses(className?: string) {
+  if (!className) return { outer: undefined, inner: undefined };
+  const outer: string[] = [];
+  const inner: string[] = [];
+  for (const token of className.split(/\s+/).filter(Boolean)) {
+    (MARGIN_TOKEN.test(token) ? outer : inner).push(token);
+  }
+  return { outer: outer.join(" "), inner: inner.join(" ") };
+}
+
 // Redesign Phase 4 (docs/dashboard-redesign.md): the one shared
 // container primitive every card/box in the app routes through. The
 // static glass look, brand-colored edge, and idle breathing animation
@@ -77,6 +111,8 @@ export function GlowCard({
     if (e.pointerType === "touch") handlePointerLeave();
   }
 
+  const { outer: outerClassName, inner: innerClassName } = splitOuterAndInnerClasses(className);
+
   return (
     <motion.div
       ref={ref}
@@ -90,10 +126,10 @@ export function GlowCard({
         perspective: 800,
         ["--glow-color" as string]: `var(--glow-${glow})`,
       }}
-      className={cn("glow-card group rounded-lg", className)}
+      className={cn("glow-card group rounded-lg", outerClassName)}
     >
       <motion.div aria-hidden="true" className="glow-card-sheen" style={{ background: sheenBackground }} />
-      <div className={cn("relative", fill && "flex h-full flex-col")}>{children}</div>
+      <div className={cn("relative", fill && "flex h-full flex-col", innerClassName)}>{children}</div>
     </motion.div>
   );
 }
