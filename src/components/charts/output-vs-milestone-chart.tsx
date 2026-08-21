@@ -30,7 +30,7 @@ export function OutputVsMilestoneChart({ data }: { data: OutputVsMilestonePoint[
   }
 
   return (
-    <ResponsiveContainer width="100%" height={256}>
+    <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis dataKey="week" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />

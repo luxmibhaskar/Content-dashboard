@@ -34,7 +34,7 @@ export function AudienceSecondaryChart({
   const [view, setView] = useState<View>("distribution");
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       {/* Below sm, a plain flex-wrap left the 3rd button ("Output vs
           Milestone", the longest label) dangling alone on its own row,
           left-aligned with empty space beside it, reading like a layout
@@ -42,7 +42,7 @@ export function AudienceSecondaryChart({
           columns makes the wrap a deliberate full-width row instead.
           sm+ reverts to the original inline row, there's room for all
           three there already. */}
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {VIEW_KEYS.map((key) => (
           <button
             key={key}
@@ -61,7 +61,7 @@ export function AudienceSecondaryChart({
         ))}
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 min-h-0 flex-1">
         {view === "distribution" &&
           (distribution.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -70,7 +70,7 @@ export function AudienceSecondaryChart({
             </p>
           ) : (
             <DonutChart
-              className="h-64"
+              className="h-full"
               data={distribution}
               category="count"
               index="platform"
@@ -86,7 +86,7 @@ export function AudienceSecondaryChart({
             </p>
           ) : (
             <BarChart
-              className="h-64"
+              className="h-full"
               data={velocity}
               index="week"
               categories={["Net Change"]}

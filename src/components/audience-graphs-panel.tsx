@@ -100,19 +100,17 @@ export function AudienceGraphsPanel({
     <GlowCard glow={2} fill className="h-full p-4">
       {/* Layout follow-up: this card now stretches to fill whatever
           height page.tsx gives it (matching the sidebar's height, see
-          the comment there), rather than sizing to its own content and
-          leaving a visible gap below it. Content stays centered in that
-          taller space instead of pinned to the top with dead space
-          underneath, the charts themselves stay their normal h-64, no
-          need to stretch a donut/bar chart to an odd tall shape just to
-          fill the card. */}
-      <div ref={containerRef} className="relative flex h-full flex-col justify-center md:flex-row">
+          the comment there). The two graphs below now stretch to fill
+          that space too (flex-col + flex-1 min-h-0 on each section,
+          h-full on the actual chart), rather than sitting at a fixed
+          h-64 with dead space left below them. */}
+      <div ref={containerRef} className="relative flex h-full flex-col md:flex-row">
         <section
-          className="w-full md:[width:var(--split-left)]"
+          className="flex h-full w-full flex-col md:[width:var(--split-left)]"
           style={{ ["--split-left" as string]: `calc(${split}% - 12px)` }}
         >
           <h2 className="text-sm font-medium text-muted-foreground">Total Audience Growth</h2>
-          <div className="mt-2">
+          <div className="mt-2 min-h-0 flex-1">
             <AudienceGrowthChart data={audienceGrowth} />
           </div>
         </section>
@@ -139,11 +137,11 @@ export function AudienceGraphsPanel({
         </div>
 
         <section
-          className="mt-6 w-full md:mt-0 md:[width:var(--split-right)]"
+          className="mt-6 flex h-full w-full flex-col md:mt-0 md:[width:var(--split-right)]"
           style={{ ["--split-right" as string]: `calc(${100 - split}% - 12px)` }}
         >
           <h2 className="text-sm font-medium text-muted-foreground">Audience &amp; Output</h2>
-          <div className="mt-2">
+          <div className="mt-2 min-h-0 flex-1">
             <AudienceSecondaryChart
               distribution={distribution}
               velocity={velocity}

@@ -17,7 +17,7 @@ export function AudienceGrowthChart({ data }: { data: AudienceGrowthPoint[] }) {
 
   return (
     <AreaChart
-      className="h-64"
+      className="h-full"
       data={data}
       index="date"
       categories={["Total Audience"]}
