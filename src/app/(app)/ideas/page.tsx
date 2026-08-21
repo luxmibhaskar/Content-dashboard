@@ -53,13 +53,13 @@ export default async function IdeasPage() {
 
       <form action={createIdea} className="mt-6">
         <GlowCard glow={1} className="space-y-3 p-4">
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="idea_title">Idea title</Label>
           <Input id="idea_title" name="idea_title" required placeholder="What's the idea?" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <PillarSubTopicSelects structure={structure} initialPillar="" initialSubTopic="" />
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="format">Format</Label>
             <select
               id="format"
@@ -75,7 +75,7 @@ export default async function IdeasPage() {
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="idea_source">Source</Label>
             <select
               id="idea_source"
@@ -92,16 +92,16 @@ export default async function IdeasPage() {
             </select>
           </div>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="brief_description">Brief description (optional)</Label>
           <Textarea id="brief_description" name="brief_description" rows={2} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="reference_url">Reference URL (optional)</Label>
             <Input id="reference_url" name="reference_url" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="source_detail">Source detail (optional)</Label>
             <Input id="source_detail" name="source_detail" placeholder="the actual comment/DM text..." />
           </div>

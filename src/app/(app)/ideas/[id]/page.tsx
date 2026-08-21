@@ -75,12 +75,12 @@ export default async function IdeaPage({
 
       <form action={boundUpdate} className="mt-4">
         <GlowCard glow={2} className="space-y-5 p-4">
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="idea_title">Idea title</Label>
           <Input id="idea_title" name="idea_title" defaultValue={idea.idea_title} required />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="status">Status</Label>
           <select
             id="status"
@@ -113,7 +113,7 @@ export default async function IdeaPage({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="format">Format</Label>
             <select
               id="format"
@@ -129,7 +129,7 @@ export default async function IdeaPage({
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="idea_source">Idea source</Label>
             <select
               id="idea_source"
@@ -147,7 +147,7 @@ export default async function IdeaPage({
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="brief_description">Brief description</Label>
           <Textarea
             id="brief_description"
@@ -158,11 +158,11 @@ export default async function IdeaPage({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="reference_url">Reference URL</Label>
             <Input id="reference_url" name="reference_url" defaultValue={idea.reference_url ?? ""} />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="source_detail">Source detail</Label>
             <Input id="source_detail" name="source_detail" defaultValue={idea.source_detail ?? ""} />
           </div>

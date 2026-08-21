@@ -48,7 +48,7 @@ export function PillarSubTopicSelects({
 
   return (
     <>
-      <div className="space-y-1.5">
+      <div className="space-y-2.5">
         <Label htmlFor="pillar">Pillar</Label>
         <select
           id="pillar"
@@ -65,7 +65,7 @@ export function PillarSubTopicSelects({
           ))}
         </select>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-2.5">
         <Label htmlFor="sub_topic">Sub-topic</Label>
         {/* Keyed on pillar: changing pillar remounts this select fresh
             rather than keeping a now-mismatched sub-topic selected, a
