@@ -362,17 +362,3 @@ html[data-brand="lbsworks"] body {
     0 0 0 1px color-mix(in oklch, var(--glow-1) 30%, transparent),
     0 0 14px -2px color-mix(in oklch, var(--glow-1) 70%, transparent);
 }
-
-/* UI fix: Mind's near-black pillar color (#1F2937, brand-tokens.md)
-   reads near-invisible as text on a dark background. A soft blurred
-   white halo directly behind the glyphs, not a solid background box,
-   restores contrast in dark mode; in light mode the halo blends into
-   the already-light page background and does nothing, so this needs no
-   conditional logic, it's just safe everywhere pillar/sub-topic text
-   renders in its pillar color (PillarTag, Topic Map's hub + sub-topic
-   labels). */
-.pillar-label-glow {
-  text-shadow:
-    0 0 6px color-mix(in oklch, white 75%, transparent),
-    0 0 12px color-mix(in oklch, white 50%, transparent);
-}

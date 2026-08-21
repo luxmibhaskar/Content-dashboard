@@ -38,35 +38,41 @@ export default async function TopicMapPage() {
           (Idea Panel, Production Status, Competitors, Journey Log filters,
           see src/lib/custom-sub-topics.ts). */}
       <form action={addCustomSubTopic} className="mt-6">
-        <GlowCard glow={1} className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <div className="space-y-1.5">
-            <Label htmlFor="pillar">Pillar</Label>
-            {/* w-full + py-1: bare <select>s pick up a global 0.5rem
-                padding-block (globals.css, Phase G's form-control base
-                styling) that clips this element's own text at h-8, py-1
-                overrides it down to the same padding Input uses. Without
-                w-full it also sizes to its own content instead of the
-                field width every sibling input gets. */}
-            <select
-              id="pillar"
-              name="pillar"
-              defaultValue=""
-              required
-              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-            >
-              <option value="" disabled>
-                Choose a pillar
-              </option>
-              {pillars.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+        <GlowCard glow={1} className="space-y-5 p-6">
+          {/* Explicit 50/50 split: Sub-topic on the left, Pillar on the
+              right, each exactly half the row. The Add button sits on
+              its own row below rather than squeezed in as a 3rd column,
+              there's no room left for one at an even 2-way split. */}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="sub_topic">New sub-topic</Label>
+              <Input id="sub_topic" name="sub_topic" required placeholder="e.g. Cold Exposure" className="h-8" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pillar">Pillar</Label>
+              {/* w-full + py-1: bare <select>s pick up a global 0.5rem
+                  padding-block (globals.css, Phase G's form-control base
+                  styling) that clips this element's own text at h-8, py-1
+                  overrides it down to the same padding Input uses. Without
+                  w-full it also sizes to its own content instead of the
+                  field width every sibling input gets. */}
+              <select
+                id="pillar"
+                name="pillar"
+                defaultValue=""
+                required
+                className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+              >
+                <option value="" disabled>
+                  Choose a pillar
                 </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sub_topic">New sub-topic</Label>
-            <Input id="sub_topic" name="sub_topic" required placeholder="e.g. Cold Exposure" className="h-8" />
+                {pillars.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <Button type="submit" size="sm">
             + Add sub-topic
@@ -81,7 +87,7 @@ export default async function TopicMapPage() {
             <div key={pillar} className="flex flex-col items-start gap-4 sm:flex-row sm:gap-8">
               {/* Hub */}
               <div
-                className="pillar-label-glow flex w-full shrink-0 items-center justify-center rounded-xl border-2 px-4 py-5 text-center text-sm font-semibold sm:w-40"
+                className="flex w-full shrink-0 items-center justify-center rounded-xl border-2 px-4 py-5 text-center text-sm font-semibold sm:w-40"
                 style={{
                   borderColor: color,
                   backgroundColor: `${color}22`,
@@ -89,7 +95,9 @@ export default async function TopicMapPage() {
                   boxShadow: `0 0 28px ${color}33`,
                 }}
               >
-                {pillar}
+                <span className="rounded-md bg-white px-2 py-0.5" style={{ color }}>
+                  {pillar}
+                </span>
               </div>
 
               {/* Spokes: a shared vertical spine (the "hub-and-spoke"
@@ -113,10 +121,12 @@ export default async function TopicMapPage() {
                         aria-hidden="true"
                       />
                       <div
-                        className="pillar-label-glow rounded-lg border px-3 py-1.5 text-xs font-medium"
+                        className="rounded-lg border px-3 py-1.5 text-xs font-medium"
                         style={{ borderColor: `${color}66`, backgroundColor: `${color}14`, color }}
                       >
-                        {sub}
+                        <span className="rounded bg-white px-1.5 py-px" style={{ color }}>
+                          {sub}
+                        </span>
                       </div>
                     </div>
                   ))}
