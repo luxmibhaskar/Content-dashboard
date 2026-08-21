@@ -498,3 +498,51 @@ brand) stays selectable as its own extra option instead of the select
 silently falling back to its first option and wiping that value out on
 the next Save, verified live against a genuinely old item carrying
 exactly that kind of legacy value.
+
+## 10. Custom sub-topic removal (Topic Map)
+
+Confirmed spec, corrects an earlier "no removal" instruction given (and
+followed) in conversation before this section existed: custom sub-topics
+turned out to need a real, deliberate way to be taken out of circulation,
+just not an easy, one-tap one.
+
+Two kinds of sub-topic, treated differently:
+
+- **Locked/structural**: the fixed `PILLAR_STRUCTURE` vocabulary
+  (`src/lib/pillars.ts`, the 5-per-pillar LBsTransformation / 6-5-7
+  LBsWorks branches). Permanently non-removable, no UI for it exists or
+  should exist.
+- **Custom**: rows in `custom_sub_topics`
+  (`supabase/migrations/0016_custom_sub_topics.sql`), added from the
+  Topic Map page's own form. Removable, via soft-delete only.
+
+**Soft-delete, never hard-delete.** `custom_sub_topics.is_archived`
+(present in the schema from the start, per this project's "build full
+schemas upfront" convention) is what "removed" actually means here.
+`archiveCustomSubTopic` (`src/app/(app)/topic-map/actions.ts`) sets it
+true; the row is never deleted. `getMergedPillarStructure` and
+`listCustomSubTopics` (`src/lib/custom-sub-topics.ts`) both already
+filter `is_archived = false`, so an archived sub-topic stops being
+offered in every "add a new tag" picker across the app (Idea Panel,
+Production Status, Competitors, Journey Log, Topic Map itself) the
+moment it's archived, with no picker-specific change needed, they all
+already read through one of those two functions.
+
+**Already-tagged content is unaffected.** Every table that carries a
+sub-topic tag (`journey_log.sub_topic`, `content_calendar.sub_topic`,
+`ideas.sub_topic`, `competitors.sub_topics`) stores it as plain text on
+the row itself, not a foreign key into `custom_sub_topics`. Archiving a
+custom sub-topic changes nothing about content already tagged with it,
+that tag keeps rendering exactly as it does today, indefinitely.
+
+**Real friction before removing**, not a one-tap accident:
+`RemovableSubTopicPill` (`src/components/removable-sub-topic-pill.tsx`)
+renders custom pills on the Topic Map with a small × that only opens an
+inline confirm step, showing how many existing items are currently
+tagged with it (`getCustomSubTopicUsageCount`, summed across all four
+tables above, matched by brand + name since those tables don't all keep
+pillar and sub-topic reliably in sync with each other). Removal itself
+only fires on a second, explicit click inside that confirm step. Locked/
+structural pills never render this control at all, `TopicMapPage`
+distinguishes the two by checking each rendered pill against the brand's
+active `custom_sub_topics` rows.

@@ -32,3 +32,22 @@ export async function addCustomSubTopic(formData: FormData) {
 
   revalidatePath("/topic-map");
 }
+
+// Soft-delete only, per docs/topic-page-redesign.md's custom sub-topic
+// removal design. Sets is_archived, never deletes the row: content
+// already tagged with this sub-topic stores the tag as plain text on
+// itself (see getCustomSubTopicUsageCount), not as a live reference to
+// this table, so archiving here can never change or break an existing
+// tag. Locked/structural sub-topics (PILLAR_STRUCTURE) have no row in
+// this table at all, there's nothing for this action to target.
+export async function archiveCustomSubTopic(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("custom_sub_topics")
+    .update({ is_archived: true })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/topic-map");
+}

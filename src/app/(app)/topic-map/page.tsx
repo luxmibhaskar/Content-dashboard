@@ -1,11 +1,16 @@
 import { cookies } from "next/headers";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { pillarColor, pillarsFor } from "@/lib/pillars";
-import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
+import {
+  getMergedPillarStructure,
+  listCustomSubTopics,
+  getCustomSubTopicUsageCount,
+} from "@/lib/custom-sub-topics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlowCard } from "@/components/glow-card";
+import { RemovableSubTopicPill } from "@/components/removable-sub-topic-pill";
 import { addCustomSubTopic } from "./actions";
 
 // Deliberately not named "Pillar Tree", that name is already associated
@@ -25,6 +30,23 @@ export default async function TopicMapPage() {
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
   const structure = await getMergedPillarStructure(brand);
   const pillars = pillarsFor(brand);
+
+  // Custom sub-topics (custom_sub_topics table) are removable; the
+  // locked/structural ones baked into PILLAR_STRUCTURE never are. A
+  // lookup keyed by "pillar::sub_topic" is how the render below tells
+  // which is which for a given pill. Usage counts are fetched upfront,
+  // there are only ever a handful of custom sub-topics at once, so this
+  // stays cheap, and it means the remove confirm step can show a real
+  // count immediately instead of a second round trip.
+  const customSubTopics = await listCustomSubTopics(brand);
+  const customByKey = new Map(customSubTopics.map((c) => [`${c.pillar}::${c.sub_topic}`, c]));
+  const usageCounts = new Map(
+    await Promise.all(
+      customSubTopics.map(
+        async (c) => [c.id, await getCustomSubTopicUsageCount(brand, c.sub_topic)] as const,
+      ),
+    ),
+  );
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
@@ -113,23 +135,37 @@ export default async function TopicMapPage() {
                   aria-hidden="true"
                 />
                 <div className="flex flex-wrap gap-3">
-                  {subTopics.map((sub) => (
-                    <div key={sub} className="relative flex items-center">
-                      <span
-                        className="absolute top-1/2 -left-8 hidden h-px w-8 -translate-y-1/2 sm:block"
-                        style={{ backgroundColor: `${color}66` }}
-                        aria-hidden="true"
-                      />
-                      <div
-                        className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-                        style={{ borderColor: `${color}66`, backgroundColor: `${color}14`, color }}
-                      >
-                        <span className="rounded bg-white px-1.5 py-px" style={{ color }}>
-                          {sub}
-                        </span>
+                  {subTopics.map((sub) => {
+                    const custom = customByKey.get(`${pillar}::${sub}`);
+                    if (custom) {
+                      return (
+                        <RemovableSubTopicPill
+                          key={sub}
+                          id={custom.id}
+                          sub={sub}
+                          color={color}
+                          usageCount={usageCounts.get(custom.id) ?? 0}
+                        />
+                      );
+                    }
+                    return (
+                      <div key={sub} className="relative flex items-center">
+                        <span
+                          className="absolute top-1/2 -left-8 hidden h-px w-8 -translate-y-1/2 sm:block"
+                          style={{ backgroundColor: `${color}66` }}
+                          aria-hidden="true"
+                        />
+                        <div
+                          className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+                          style={{ borderColor: `${color}66`, backgroundColor: `${color}14`, color }}
+                        >
+                          <span className="rounded bg-white px-1.5 py-px" style={{ color }}>
+                            {sub}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
