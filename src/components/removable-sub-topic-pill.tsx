@@ -36,18 +36,16 @@ export function RemovableSubTopicPill({
         aria-hidden="true"
       />
       <div
-        className="flex items-center gap-1.5 rounded-lg border py-1.5 pr-1.5 pl-3 text-xs font-medium"
-        style={{ borderColor: `${color}66`, backgroundColor: `${color}14`, color }}
+        className="flex items-center gap-1.5 rounded-lg py-1.5 pr-1.5 pl-3 text-xs font-bold text-white"
+        style={{ backgroundColor: color }}
       >
-        <span className="rounded bg-white px-1.5 py-px" style={{ color }}>
-          {sub}
-        </span>
+        {sub}
         {!confirming && (
           <button
             type="button"
             onClick={() => setConfirming(true)}
             aria-label={`Remove custom sub-topic ${sub}`}
-            className="rounded p-0.5 text-current opacity-60 hover:opacity-100 hover:bg-black/10"
+            className="rounded p-0.5 text-white opacity-80 hover:opacity-100 hover:bg-black/15"
           >
             <X className="size-3" />
           </button>

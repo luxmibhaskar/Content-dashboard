@@ -107,19 +107,16 @@ export default async function TopicMapPage() {
           const color = pillarColor(pillar);
           return (
             <div key={pillar} className="flex flex-col items-start gap-4 sm:flex-row sm:gap-8">
-              {/* Hub */}
+              {/* Hub: solid pillar-color fill, bold white text directly on
+                  it, no separate white shape layered on top. */}
               <div
-                className="flex w-full shrink-0 items-center justify-center rounded-xl border-2 px-4 py-5 text-center text-sm font-semibold sm:w-40"
+                className="flex w-full shrink-0 items-center justify-center rounded-xl px-4 py-5 text-center text-sm font-bold text-white sm:w-40"
                 style={{
-                  borderColor: color,
-                  backgroundColor: `${color}22`,
-                  color,
+                  backgroundColor: color,
                   boxShadow: `0 0 28px ${color}33`,
                 }}
               >
-                <span className="rounded-md bg-white px-2 py-0.5" style={{ color }}>
-                  {pillar}
-                </span>
+                {pillar}
               </div>
 
               {/* Spokes: a shared vertical spine (the "hub-and-spoke"
@@ -156,12 +153,10 @@ export default async function TopicMapPage() {
                           aria-hidden="true"
                         />
                         <div
-                          className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-                          style={{ borderColor: `${color}66`, backgroundColor: `${color}14`, color }}
+                          className="rounded-lg px-3 py-1.5 text-xs font-bold text-white"
+                          style={{ backgroundColor: color }}
                         >
-                          <span className="rounded bg-white px-1.5 py-px" style={{ color }}>
-                            {sub}
-                          </span>
+                          {sub}
                         </div>
                       </div>
                     );
