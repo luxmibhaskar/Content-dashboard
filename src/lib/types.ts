@@ -359,6 +359,17 @@ export type ReferenceVideo = {
 // Section 17.4: Hot/Cold Archiving. Machine-readable Drive companions to
 // the human-readable .md files, the retrieve path restores from these
 // rather than re-parsing prose Markdown.
+//
+// research_copy_versions/scripts_versions: added as a real backup audit
+// finding, not an archive-lifecycle need, unlike every other field on
+// this type, archiveOneItem never clears these two tables (see
+// archive-lifecycle.ts), they stay live in Supabase regardless of a
+// content item's archived status. They're included here anyway so a
+// structured, machine-readable copy exists somewhere other than
+// Supabase itself, the prose Markdown file carries the human-readable
+// version of the same data (see buildContentCalendarMarkdown). Both
+// Manual and AI versions, whichever exist, is_live marks which one
+// currently feeds downstream consumers.
 export type ContentArchiveCompanion = {
   full_script: string | null;
   main_pointers: MainPoint[];
@@ -366,6 +377,8 @@ export type ContentArchiveCompanion = {
   hook_variants: NonLiveVariant[];
   thumbnail_variants: NonLiveThumbnailVariant[];
   reference_videos: { id: string; hook_note: string | null; rehook_note: string | null; cta_note: string | null }[];
+  research_copy_versions: { source: VersionSource; is_live: boolean; data: ResearchCopyResult }[];
+  scripts_versions: { source: VersionSource; is_live: boolean; data: ScriptsResult }[];
 };
 
 export type NonLiveVariant = {

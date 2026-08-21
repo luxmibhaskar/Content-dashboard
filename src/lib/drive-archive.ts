@@ -84,25 +84,42 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
   // fields ever get cleared from Supabase, so those are the only pieces
   // the retrieve companion needs, live variants and everything else on
   // content_calendar never leaves Supabase in the first place.
-  const [{ data: titleVariants }, { data: hookVariants }, { data: thumbnailVariants }, { data: refVideos }] =
-    await Promise.all([
-      supabase
-        .from("title_variants")
-        .select("content_id, variant_text, rank, source, performance_rating")
-        .eq("brand", brand)
-        .eq("is_live", false),
-      supabase
-        .from("hook_variants")
-        .select("content_id, variant_text, rank, source, performance_rating")
-        .eq("brand", brand)
-        .eq("is_live", false),
-      supabase
-        .from("thumbnail_variants")
-        .select("content_id, concept, main_text_on_image, visual_elements, emotion_vibe, rank, source, performance_rating")
-        .eq("brand", brand)
-        .eq("is_live", false),
-      supabase.from("reference_videos").select("id, content_id, hook_note, rehook_note, cta_note").eq("brand", brand),
-    ]);
+  //
+  // research_copy_versions/scripts_versions are the one exception to
+  // that "only what gets cleared" rule: archiveOneItem never touches
+  // them (they stay live in Supabase regardless of archived status), but
+  // they're the actual core content this whole app produces and, until
+  // now, had zero backup coverage anywhere, real audit finding, not an
+  // archive-lifecycle need. Fetched unfiltered (both sources, live or
+  // not) since unlike variants there's no "non-live means about to be
+  // cleared" relationship here to narrow by.
+  const [
+    { data: titleVariants },
+    { data: hookVariants },
+    { data: thumbnailVariants },
+    { data: refVideos },
+    { data: researchCopyVersions },
+    { data: scriptsVersions },
+  ] = await Promise.all([
+    supabase
+      .from("title_variants")
+      .select("content_id, variant_text, rank, source, performance_rating")
+      .eq("brand", brand)
+      .eq("is_live", false),
+    supabase
+      .from("hook_variants")
+      .select("content_id, variant_text, rank, source, performance_rating")
+      .eq("brand", brand)
+      .eq("is_live", false),
+    supabase
+      .from("thumbnail_variants")
+      .select("content_id, concept, main_text_on_image, visual_elements, emotion_vibe, rank, source, performance_rating")
+      .eq("brand", brand)
+      .eq("is_live", false),
+    supabase.from("reference_videos").select("id, content_id, hook_note, rehook_note, cta_note").eq("brand", brand),
+    supabase.from("research_copy_versions").select("content_id, source, is_live, data").eq("brand", brand),
+    supabase.from("scripts_versions").select("content_id, source, is_live, data").eq("brand", brand),
+  ]);
 
   function groupByContent<T extends { content_id: string }>(rows: T[] | null): Map<string, T[]> {
     const map = new Map<string, T[]>();
@@ -121,14 +138,23 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
   const refVideosByContent = groupByContent(
     refVideos as { content_id: string; id: string; hook_note: string | null; rehook_note: string | null; cta_note: string | null }[],
   );
+  const researchCopyByContent = groupByContent(
+    researchCopyVersions as (ContentArchiveCompanion["research_copy_versions"][number] & { content_id: string })[],
+  );
+  const scriptsByContent = groupByContent(
+    scriptsVersions as (ContentArchiveCompanion["scripts_versions"][number] & { content_id: string })[],
+  );
 
   for (const row of contentRows) {
+    const itemResearchCopy = researchCopyByContent.get(row.id) ?? [];
+    const itemScripts = scriptsByContent.get(row.id) ?? [];
+
     const filename = filenames.get(row.id)!;
     const { webViewLink } = await upsertMarkdownFile(
       drive,
       contentFolderId,
       filename,
-      buildContentCalendarMarkdown(row),
+      buildContentCalendarMarkdown(row, itemResearchCopy, itemScripts),
     );
     contentLinks.set(row.id, webViewLink);
 
@@ -161,6 +187,16 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
         hook_note: r.hook_note,
         rehook_note: r.rehook_note,
         cta_note: r.cta_note,
+      })),
+      research_copy_versions: itemResearchCopy.map((v) => ({
+        source: v.source,
+        is_live: v.is_live,
+        data: v.data,
+      })),
+      scripts_versions: itemScripts.map((v) => ({
+        source: v.source,
+        is_live: v.is_live,
+        data: v.data,
       })),
     };
     await upsertJsonFile(drive, contentFolderId, `${row.id}.json`, companion);

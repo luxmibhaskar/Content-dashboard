@@ -3,6 +3,7 @@ import { writeSheetTabs } from "@/lib/google-sheets";
 import { syncDriveArchive, type DriveLinks } from "@/lib/drive-archive";
 import { archiveIdleContent } from "@/lib/archive-lifecycle";
 import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
+import type { ResearchCopyResult, ScriptsResult } from "@/lib/types";
 
 type Row = (string | number | boolean | null)[];
 type Tab = { title: string; headers: string[]; rows: Row[] };
@@ -149,6 +150,96 @@ async function buildContentCalendarTab(
       "Retention Drop",
       "Earned The Click",
       "Full Detail Link",
+    ],
+    rows,
+  };
+}
+
+// Audit finding, fixed here: research_copy_versions/scripts_versions
+// (docs/topic-page-redesign.md Section 2's real Tab 1/Tab 2 content, one
+// row per source per content item, Manual and AI can coexist) had zero
+// Sheets coverage since the table was created, this is the index; full
+// nested detail (per-container source findings, per-short pointer
+// scripts) lives in the Drive Markdown/JSON archive instead of being
+// flattened into a spreadsheet cell, same division of labor as every
+// other tab here.
+async function buildResearchCopyVersionsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+  const contentTitles = await contentTitleMap(supabase, brand);
+  const { data } = await supabase
+    .from("research_copy_versions")
+    .select("content_id, source, is_live, data")
+    .eq("brand", brand);
+
+  const rows: Row[] = (data ?? []).map((v) => {
+    const d = v.data as ResearchCopyResult;
+    return [
+      contentTitles.get(v.content_id) ?? v.content_id,
+      v.source,
+      v.is_live ? "Yes" : "No",
+      d.summary,
+      (d.titles ?? []).join("; "),
+      d.description,
+      (d.keywordTags ?? []).join(", "),
+      (d.questionTags ?? []).join(", "),
+      (d.containers ?? []).map((c) => `${c.sourceName} (${c.type})`).join(", "),
+      d.generatedAt,
+    ];
+  });
+
+  return {
+    title: "Research & Copy",
+    headers: [
+      "Content Item",
+      "Source",
+      "Is Live",
+      "Summary",
+      "Titles",
+      "Description",
+      "Keyword Tags",
+      "Question Tags",
+      "Source Containers",
+      "Generated At",
+    ],
+    rows,
+  };
+}
+
+async function buildScriptsVersionsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+  const contentTitles = await contentTitleMap(supabase, brand);
+  const { data } = await supabase
+    .from("scripts_versions")
+    .select("content_id, source, is_live, data")
+    .eq("brand", brand);
+
+  const rows: Row[] = (data ?? []).map((v) => {
+    const d = v.data as ScriptsResult;
+    return [
+      contentTitles.get(v.content_id) ?? v.content_id,
+      v.source,
+      v.is_live ? "Yes" : "No",
+      (d.hooks ?? []).join("; "),
+      d.painPointAnswer,
+      d.longFormScript,
+      (d.ctaOptions ?? []).join("; "),
+      (d.shortFormPointers ?? []).map((p) => `${p.point}: ${p.explanation}`).join("; "),
+      (d.atomizedShorts ?? []).map((s) => s.title).join(", "),
+      d.generatedAt,
+    ];
+  });
+
+  return {
+    title: "Scripts",
+    headers: [
+      "Content Item",
+      "Source",
+      "Is Live",
+      "Hooks",
+      "Pain-Point Answer",
+      "Long-Form Script",
+      "CTA Options",
+      "Short-Form Pointers",
+      "Atomized Shorts",
+      "Generated At",
     ],
     rows,
   };
@@ -381,6 +472,8 @@ async function syncSheetsOnce(brand: Brand, links: DriveLinks): Promise<SyncResu
       buildJourneyLogTab(supabase, brand),
       buildIdeasTab(supabase, brand),
       buildContentCalendarTab(supabase, brand, links.contentLinks),
+      buildResearchCopyVersionsTab(supabase, brand),
+      buildScriptsVersionsTab(supabase, brand),
       buildVariantsTab(supabase, brand),
       buildReferenceVideosTab(supabase, brand),
       buildResearchSnapshotsTab(supabase, brand, links.snapshotLinks),

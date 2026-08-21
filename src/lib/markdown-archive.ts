@@ -2,6 +2,9 @@ import type {
   ContentCalendarDetail,
   ResearchSnapshot,
   JourneyEntry,
+  ResearchCopyResult,
+  ScriptsResult,
+  VersionSource,
 } from "@/lib/types";
 
 function section(title: string, lines: (string | null | undefined | false)[]): string {
@@ -20,11 +23,121 @@ function list(label: string, values: string[] | null | undefined): string | null
   return `- **${label}:** ${values.join(", ")}`;
 }
 
+function sourceLabel(source: VersionSource, isLive: boolean): string {
+  return `${source === "manual" ? "Manual" : "AI"}${isLive ? " (Active)" : ""}`;
+}
+
+// docs/topic-page-redesign.md Section 2, Tab 1: the real replacement for
+// the old research_snapshots-driven pipeline this file used to archive
+// under "Creator Input"/"Viewer POV". Both Manual and AI versions,
+// whichever exist, rendered in full (this file is the disaster-recovery
+// copy, not a preview, no truncation).
+function buildResearchCopyBlock(v: { source: VersionSource; is_live: boolean; data: ResearchCopyResult }): string {
+  const d = v.data;
+  const lines: string[] = [`### ${sourceLabel(v.source, v.is_live)}`, ""];
+
+  if (d.summary) lines.push(d.summary, "");
+
+  if (d.globalSources?.length > 0) {
+    lines.push("**Sources:**");
+    d.globalSources.forEach((s) => lines.push(`- [${s.title}](${s.url})`));
+    lines.push("");
+  }
+
+  if (d.titles?.length > 0) {
+    lines.push("**Titles:**");
+    d.titles.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+    lines.push("");
+  }
+
+  if (d.description) lines.push("**Description:**", "", d.description, "");
+
+  if (d.keywordTags?.length > 0) lines.push(`- **Keyword tags:** ${d.keywordTags.join(", ")}`);
+  if (d.questionTags?.length > 0) lines.push(`- **Question tags:** ${d.questionTags.join(", ")}`);
+
+  if (d.containers?.length > 0) {
+    lines.push("", "**Source findings:**", "");
+    d.containers.forEach((c) => {
+      lines.push(`#### ${c.sourceName} (${c.type === "discussion" ? "Discussion" : "Article"})`);
+      if (c.type === "discussion") (c.items ?? []).forEach((item) => lines.push(`- ${item}`));
+      if (c.type === "article" && c.articleSummary) lines.push(c.articleSummary);
+      if (c.sources.length > 0) {
+        lines.push("Links:");
+        c.sources.forEach((s) => lines.push(`- [${s.title}](${s.url})`));
+      }
+      lines.push("");
+    });
+  }
+
+  return lines.join("\n").replace(/\n+$/, "");
+}
+
+function buildResearchCopySection(versions: { source: VersionSource; is_live: boolean; data: ResearchCopyResult }[]): string {
+  if (versions.length === 0) return "";
+  return `## Research & Copy\n\n${versions.map(buildResearchCopyBlock).join("\n\n")}`;
+}
+
+// docs/topic-page-redesign.md Section 2, Tab 2: the real replacement for
+// this file's old "Recording Section" (full_script/main_pointers, the
+// pre-redesign single-script fields, still archived separately below
+// since archiveOneItem still clears them, but they're not what the
+// current Scripts tab actually produces anymore).
+function buildScriptsBlock(v: { source: VersionSource; is_live: boolean; data: ScriptsResult }): string {
+  const d = v.data;
+  const lines: string[] = [`### ${sourceLabel(v.source, v.is_live)}`, ""];
+
+  if (d.hooks?.length > 0) {
+    lines.push("**Hooks:**");
+    d.hooks.forEach((h, i) => lines.push(`${i + 1}. ${h}`));
+    lines.push("");
+  }
+
+  if (d.painPointAnswer) lines.push("**Pain-point answer:**", "", d.painPointAnswer, "");
+  if (d.longFormScript) lines.push("**Long-form script:**", "", d.longFormScript, "");
+
+  if (d.ctaOptions?.length > 0) {
+    lines.push("**CTA options:**");
+    d.ctaOptions.forEach((c, i) => lines.push(`${i + 1}. ${c}`));
+    lines.push("");
+  }
+
+  if (d.shortFormPointers?.length > 0) {
+    lines.push("**Short-form pointers:**");
+    d.shortFormPointers.forEach((p) => lines.push(`- ${p.point}${p.explanation ? `: ${p.explanation}` : ""}`));
+    lines.push("");
+  }
+
+  if (d.atomizedShorts?.length > 0) {
+    lines.push("**Atomized shorts:**", "");
+    d.atomizedShorts.forEach((s, i) => {
+      lines.push(`#### Short ${i + 1}: ${s.title}`);
+      s.pointerScript.forEach((p) => lines.push(`- ${p.point}${p.explanation ? `: ${p.explanation}` : ""}`));
+      lines.push("");
+    });
+  }
+
+  return lines.join("\n").replace(/\n+$/, "");
+}
+
+function buildScriptsSection(versions: { source: VersionSource; is_live: boolean; data: ScriptsResult }[]): string {
+  if (versions.length === 0) return "";
+  return `## Scripts\n\n${versions.map(buildScriptsBlock).join("\n\n")}`;
+}
+
 // Section 17.2: "full brief: viewer problem, promise, angle, full
 // script." One Markdown file per content item, readable directly in
 // Drive, sections mirror the topic page's own grouping so it stays
-// recognizable against the live app.
-export function buildContentCalendarMarkdown(row: ContentCalendarDetail): string {
+// recognizable against the live app. researchCopyVersions/
+// scriptsVersions replace the old Creator Input/Viewer POV/Recording
+// Section blocks this file used to build (docs/topic-page-redesign.md
+// Section 2 removed those from the UI entirely; this file just hadn't
+// caught up), those tables are where the topic page's real Research &
+// Copy and Scripts tab content actually lives now.
+export function buildContentCalendarMarkdown(
+  row: ContentCalendarDetail,
+  researchCopyVersions: { source: VersionSource; is_live: boolean; data: ResearchCopyResult }[],
+  scriptsVersions: { source: VersionSource; is_live: boolean; data: ScriptsResult }[],
+): string {
   const title = row.final_title || row.raw_idea_title || "Untitled";
   const parts: string[] = [`# ${title}`];
 
@@ -41,35 +154,8 @@ export function buildContentCalendarMarkdown(row: ContentCalendarDetail): string
     ]),
   );
 
-  parts.push(
-    section("Creator Input (Internal)", [
-      field("Raw idea title", row.raw_idea_title),
-      field("Raw keywords / topics", row.raw_keywords_topics),
-      field("Brief intent", row.brief_intent),
-      field("Content angle / hook direction", row.content_angle_hook_direction),
-      field("Reference / inspiration", row.reference_inspiration),
-      field("Target stage (viewer journey)", row.target_stage_viewer_journey),
-      field("My angle / unique POV", row.my_angle_unique_pov),
-      field("Proof / credibility", row.proof_credibility),
-      field("Tone / style", row.tone_style),
-      field("Idea source", row.idea_source),
-      field("Source detail", row.source_detail),
-    ]),
-  );
-
-  parts.push(
-    section("Viewer POV (Audience-Facing)", [
-      field("Viewer problem", row.viewer_problem),
-      field("Promise / outcome", row.promise_outcome),
-      field("Final title / hook", row.final_title_hook),
-      field("Viewer keywords / search phrases", row.viewer_keywords_search_phrases),
-      field("Viewer description", row.viewer_description),
-      field("Primary emotion / pain point", row.primary_emotion_pain_point),
-      list("Objections / doubts", row.objections_doubts),
-      field("Desired action / CTA", row.desired_action_cta),
-      field("Format recommendation", row.format_recommendation),
-    ]),
-  );
+  parts.push(buildResearchCopySection(researchCopyVersions));
+  parts.push(buildScriptsSection(scriptsVersions));
 
   parts.push(
     section("Copy-Ready Panel", [
@@ -102,25 +188,6 @@ export function buildContentCalendarMarkdown(row: ContentCalendarDetail): string
     });
     parts.push(`## Publishing Ready\n\n${blocks.join("\n\n")}`);
   }
-
-  const recordingLines: (string | null)[] = [field("Energy tag", row.energy_tag)];
-  if (row.main_pointers && row.main_pointers.length > 0) {
-    recordingLines.push("- **Main pointers:**");
-    row.main_pointers.forEach((p, i) => {
-      recordingLines.push(
-        `  ${i + 1}. ${p.point_text}${p.landing_line ? ` (landing line: ${p.landing_line})` : ""}${
-          p.runtime_estimate_seconds ? ` [~${p.runtime_estimate_seconds}s]` : ""
-        }`,
-      );
-    });
-  }
-  if (row.full_script) {
-    recordingLines.push("", "**Full script:**", "", row.full_script);
-  }
-  if (row.voice_memo_transcript) {
-    recordingLines.push("", "**Voice memo transcript:**", "", row.voice_memo_transcript);
-  }
-  parts.push(section("Recording Section", recordingLines));
 
   parts.push(
     section("System & Production", [
