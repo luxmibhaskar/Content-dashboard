@@ -47,13 +47,13 @@ export default async function CollaboratorsPage() {
       </p>
 
       <form action={createCollaborator} className="mt-6">
-        <GlowCard glow={1} className="space-y-3 p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
+        <GlowCard glow={1} className="space-y-5 p-6">
+        <div className="grid grid-cols-2 gap-5">
+          <div className="space-y-2.5">
             <Label htmlFor="name">Name</Label>
             <Input id="name" name="name" required placeholder="Who are they" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <Label htmlFor="platform">Platform</Label>
             <Input
               id="platform"
@@ -68,11 +68,11 @@ export default async function CollaboratorsPage() {
             </datalist>
           </div>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="profile_url">Profile URL</Label>
           <Input id="profile_url" name="profile_url" />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <Label htmlFor="notes">Notes (optional)</Label>
           <Textarea
             id="notes"
