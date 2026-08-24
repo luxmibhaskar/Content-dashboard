@@ -17,7 +17,7 @@ export function CompetitorBenchmarksSection({
   competitors: { id: string; name: string }[];
 }) {
   return (
-    <GlowCard glow={3} className="p-4">
+    <GlowCard glow={3} className="p-4" textHeavy>
       <p className="text-sm font-medium">Competitor Benchmarks</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Per-topic competitor references. The high-level map across all topics lives on the

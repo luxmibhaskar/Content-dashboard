@@ -106,7 +106,7 @@ function TagContainer({
   const action = kind === "keyword" ? useResearchKeywordTags : useResearchQuestionTags;
   const boundAction = action.bind(null, contentId, tags);
   return (
-    <GlowCard glow={1} className="space-y-2 p-4">
+    <GlowCard glow={1} className="space-y-2 p-4" textHeavy>
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{label}</p>
         <form action={boundAction}>
@@ -135,7 +135,7 @@ function TagContainer({
 
 function SourceContainer({ container }: { container: ResearchCopyContainer }) {
   return (
-    <GlowCard glow={2} className="space-y-3 p-4">
+    <GlowCard glow={2} className="space-y-3 p-4" textHeavy>
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{container.sourceName}</p>
         <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -270,7 +270,7 @@ function VersionPanel({
             </div>
           )}
 
-          <GlowCard glow={2} className="space-y-2 p-3.5">
+          <GlowCard glow={2} className="space-y-2 p-3.5" textHeavy>
             <p className="text-xs font-medium text-muted-foreground">Summary</p>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{researchCopy.summary}</p>
           </GlowCard>
@@ -279,7 +279,7 @@ function VersionPanel({
             <SourceLinks sources={researchCopy.globalSources} />
           </CollapsibleSection>
 
-          <GlowCard glow={3} className="space-y-2 p-3.5">
+          <GlowCard glow={3} className="space-y-2 p-3.5" textHeavy>
             <p className="text-xs font-medium text-muted-foreground">Titles</p>
             <div className="space-y-2">
               {researchCopy.titles.map((t, i) => (
@@ -299,7 +299,7 @@ function VersionPanel({
             </div>
           </GlowCard>
 
-          <GlowCard glow={1} className="space-y-2 p-3.5">
+          <GlowCard glow={1} className="space-y-2 p-3.5" textHeavy>
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-muted-foreground">Description</p>
               <form action={boundUseDescription}>
@@ -413,7 +413,7 @@ export function ResearchAndCopyTab({
 
   return (
     <div className="space-y-5">
-      <GlowCard glow={1} className="space-y-3 p-4">
+      <GlowCard glow={1} className="space-y-3 p-4" textHeavy>
         {/* Two sibling forms, not nested, HTML doesn't allow nesting
             forms (same reasoning as the Use This actions further down):
             Save persists Brief Description/Keywords, Run kicks off the

@@ -310,6 +310,96 @@ html[data-brand="lbsworks"] body {
   opacity: 1;
 }
 
+/* Five-refinement pass (src/components/glow-card.tsx), on top of the
+   breathing/ambient-glow/tilt above:
+
+   Refinement 2, rim light: a thin brand-accent highlight hugging the top
+   edge, on its own "the single strongest premium-glass cue" per the ask
+   that added it. Static, no JS, same reasoning as idle breathing living
+   here instead of in React.
+
+   Refinement 1, inner offset layer: a second, subtler translucent pane
+   inset unevenly (not a plain inset:Npx on every side) so it reads as a
+   pane sitting behind/up-left of the front one, real stacked-glass depth
+   instead of one flat blurred surface. Both are ::before/::after on
+   .glow-card itself so they never compete with real DOM children for
+   z-index bookkeeping; the actual content wrapper gets an explicit
+   z-index (glow-card.tsx) precisely so these two stay behind it instead
+   of painting over text, since ::after is last in paint order otherwise. */
+.glow-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 10% auto 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--glow-color) 80%, transparent),
+    transparent
+  );
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.glow-card::after {
+  content: "";
+  position: absolute;
+  inset: 6px 18px 18px 6px;
+  border-radius: inherit;
+  background: color-mix(in oklch, var(--glow-color) 7%, transparent);
+  border: 1px solid color-mix(in oklch, var(--glow-color) 14%, transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Same card-type scoping as the rest of the app-wide visual pass: full
+   effect on glanceable cards, dialed back (not removed, the doc's own
+   Phase 4 already judged breathing/glow/tilt fine on text-heavy
+   surfaces) here. See the textHeavy prop doc in glow-card.tsx. */
+.glow-card[data-text-heavy="true"]::before {
+  opacity: 0.35;
+}
+
+.glow-card[data-text-heavy="true"]::after {
+  opacity: 0.4;
+}
+
+/* Refinement 3: a second, tighter specular highlight distinct from
+   .glow-card-sheen's wider ambient glow above, its own motion.div (see
+   glow-card.tsx) so it can use a smaller/sharper radial-gradient and a
+   snappier spring than the ambient one's unsprung 1:1 follow. Not
+   rendered at all on textHeavy cards. */
+.glow-card-specular {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  pointer-events: none;
+}
+
+.group:hover > .glow-card-specular {
+  opacity: 1;
+}
+
+/* Refinement 4: the click/tap ripple's ring itself, expanding via
+   Framer Motion's animate (glow-card.tsx sets the actual scale/opacity
+   keyframes so the max scale can differ on textHeavy cards); this rule
+   only carries the static shape/color. z-20 to clear the z-10 content
+   wrapper, a click's own feedback should read above the text it landed
+   on, not disappear behind it. */
+.glow-card-ripple {
+  position: absolute;
+  z-index: 20;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklch, var(--glow-color) 70%, transparent);
+  pointer-events: none;
+}
+
 @keyframes card-breathe {
   0%,
   100% {
@@ -329,6 +419,19 @@ html[data-brand="lbsworks"] body {
     animation: none;
   }
   .glow-card-sheen {
+    display: none;
+  }
+  /* Same reasoning as .glow-card-sheen above: opacity is purely
+     hover-driven in CSS, independent of the JS guard that already stops
+     mouseX/mouseY from moving under reduced motion, so without this a
+     reduced-motion user would still see a static, centered specular glow
+     fade in on hover. Ripples are already never created under reduced
+     motion (glow-card.tsx checks before setting state), this is just
+     defense in depth matching the pattern used everywhere else here. */
+  .glow-card-specular {
+    display: none;
+  }
+  .glow-card-ripple {
     display: none;
   }
 }

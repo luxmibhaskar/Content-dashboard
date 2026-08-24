@@ -38,7 +38,7 @@ function PointerList({ points }: { points: ScriptPointer[] }) {
 
 function AtomizedShortCard({ short, index }: { short: AtomizedShort; index: number }) {
   return (
-    <GlowCard glow={((index % 3) + 1) as 1 | 2 | 3} className="space-y-2 p-4">
+    <GlowCard glow={((index % 3) + 1) as 1 | 2 | 3} className="space-y-2 p-4" textHeavy>
       <p className="text-sm font-medium">
         Short {index + 1}: {short.title}
       </p>
@@ -89,7 +89,7 @@ function VersionPanel({
         </p>
       ) : (
         <div className="space-y-3">
-          <GlowCard glow={2} className="space-y-4 p-3.5">
+          <GlowCard glow={2} className="space-y-4 p-3.5" textHeavy>
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">Opening hooks</p>
               <div className="space-y-2">
@@ -127,7 +127,7 @@ function VersionPanel({
             </div>
           </GlowCard>
 
-          <GlowCard glow={3} className="space-y-2 p-3.5">
+          <GlowCard glow={3} className="space-y-2 p-3.5" textHeavy>
             <p className="text-xs font-medium text-muted-foreground">Short-form pass (same topic, condensed)</p>
             <PointerList points={scripts.shortFormPointers} />
           </GlowCard>
@@ -191,7 +191,7 @@ export function ScriptsTab({
 
   return (
     <div className="space-y-5">
-      <GlowCard glow={1} className="space-y-3 p-4">
+      <GlowCard glow={1} className="space-y-3 p-4" textHeavy>
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
             {activeResearchCopy

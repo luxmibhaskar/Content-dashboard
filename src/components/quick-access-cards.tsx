@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Calendar, Sparkles, Users, BarChart3 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { GlowCard } from "@/components/glow-card";
+import { GlowCard, GlowCardParallax } from "@/components/glow-card";
 
 const CARDS: { href: string; label: string; description: string; icon: LucideIcon; glow: 1 | 2 | 3 }[] = [
   { href: "/calendar", label: "Content Calendar", description: "Plan and manage topics", icon: Calendar, glow: 1 },
@@ -20,8 +20,13 @@ export function QuickAccessCards() {
       {CARDS.map(({ href, label, description, icon: Icon, glow }) => (
         <Link key={href} href={href}>
           <GlowCard glow={glow} className="p-3 transition-colors duration-150 hover:bg-muted/30">
-            <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
-            <p className="mt-2 text-sm font-medium">{label}</p>
+            {/* Refinement 5: icon + label are this card's "nearer" plane
+                (a couple px of extra parallax shift), the description
+                stays still as the body plane beneath it. */}
+            <GlowCardParallax depth={4}>
+              <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
+              <p className="mt-2 text-sm font-medium">{label}</p>
+            </GlowCardParallax>
             <p className="text-xs text-muted-foreground">{description}</p>
           </GlowCard>
         </Link>

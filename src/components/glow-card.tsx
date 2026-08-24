@@ -1,7 +1,14 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { createContext, useContext, useRef, useState } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  AnimatePresence,
+  type MotionValue,
+} from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type GlowIndex = 1 | 2 | 3;
@@ -40,27 +47,66 @@ function splitOuterAndInnerClasses(className?: string) {
   return { outer: outer.join(" "), inner: inner.join(" ") };
 }
 
+// Five-refinement pass (on top of breathing/cursor-glow/tilt below):
+// exposes the same raw mouseX/mouseY this card already tracks to its own
+// descendants, so a card's icon/heading can shift a few extra px against
+// the cursor during tilt (GlowCardParallax below) without threading
+// motion values through props at every call site. null outside a
+// GlowCard entirely (GlowCardParallax degrades to static in that case).
+const GlowCardTiltContext = createContext<{ mouseX: MotionValue<number>; mouseY: MotionValue<number> } | null>(
+  null,
+);
+
+// Refinement 5 (multi-plane parallax): wraps one "nearer" element (a
+// card's icon or heading, never the whole card) so it shifts slightly
+// more than the body content sitting still beneath it, that contrast is
+// what reads as layered depth rather than the whole card rotating as one
+// flat piece. Opt-in per element, not automatic on every GlowCard child,
+// wired up so far on the two clearest icon/heading glanceable cards (KPI
+// tiles, Quick Access cards); other call sites can adopt it the same way.
+export function GlowCardParallax({
+  children,
+  className,
+  depth = 6,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  depth?: number;
+}) {
+  const tilt = useContext(GlowCardTiltContext);
+  const fallback = useMotionValue(0.5);
+  const x = useTransform(tilt?.mouseX ?? fallback, [0, 1], [-depth, depth]);
+  const y = useTransform(tilt?.mouseY ?? fallback, [0, 1], [-depth, depth]);
+  return (
+    <motion.div style={{ x, y }} className={className}>
+      {children}
+    </motion.div>
+  );
+}
+
 // Redesign Phase 4 (docs/dashboard-redesign.md): the one shared
 // container primitive every card/box in the app routes through. The
 // static glass look, brand-colored edge, and idle breathing animation
 // are plain CSS (.glow-card in globals.css, cheaper and simpler than
 // animating them from React, and where prefers-reduced-motion is
-// actually handled, see that file); this component only owns the two
-// things that genuinely need pointer tracking, a cursor-following glow
-// and a matching parallax tilt. Deliberately doesn't read
-// useReducedMotion() itself: that hook's client-only first value can
-// differ from its SSR value, and branching render output on it caused a
-// real hydration mismatch here, this only ever moves the motion values
-// in the pointer handlers below (never during render), and a
-// reduced-motion user simply never triggers that movement client-side,
-// same end result without the server/client split. glow picks which of
-// the brand's three docs/brand-tokens.md colors this instance glows, so
-// neighboring cards don't all carry the identical accent.
+// actually handled, see that file); this component only owns the things
+// that genuinely need pointer tracking: the cursor-following ambient
+// glow, a second tighter specular highlight, the matching parallax tilt,
+// and a click/tap ripple. Deliberately doesn't read useReducedMotion()
+// itself: that hook's client-only first value can differ from its SSR
+// value, and branching render output on it caused a real hydration
+// mismatch here, this only ever moves the motion values in the pointer
+// handlers below (never during render), and a reduced-motion user simply
+// never triggers that movement client-side, same end result without the
+// server/client split. glow picks which of the brand's three
+// docs/brand-tokens.md colors this instance glows, so neighboring cards
+// don't all carry the identical accent.
 export function GlowCard({
   children,
   className,
   glow = 1,
   fill = false,
+  textHeavy = false,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -74,6 +120,18 @@ export function GlowCard({
   // so the card's own resolved height (from flex-1 in a fixed-height
   // flex column, or a grid cell, etc.) actually propagates down.
   fill?: boolean;
+  // Same card-type scoping the visual-treatment pass already drew
+  // (docs/dashboard-redesign.md Phase 4: "every genuine standalone
+  // card/panel", including the topic page's text-heavy work surfaces):
+  // full effect on glanceable cards (KPI tiles, list rows, Quick
+  // Access), restrained here on dense text panels (Copy-Ready, Research
+  // & Copy, Scripts, Competitor Benchmarks) where a second moving
+  // highlight competes with reading rather than reading as polish. Skips
+  // the tighter specular highlight entirely and dials back the rim
+  // light/inner layer's opacity (globals.css); breathing, the ambient
+  // glow, and tilt are unaffected, those were already judged fine on
+  // text-heavy surfaces when Phase 4 shipped.
+  textHeavy?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -86,8 +144,26 @@ export function GlowCard({
     return `radial-gradient(220px circle at ${x * 100}% ${y * 100}%, color-mix(in oklch, var(--glow-color) 40%, transparent), transparent 70%)`;
   });
 
+  // Refinement 3: a second highlight distinct from the ambient glow
+  // above, smaller and sharper (tighter falloff, brighter core) with its
+  // own snappy, slightly-overshooting spring instead of the ambient's
+  // unsprung 1:1 follow, that overshoot is what reads as "faster/livelier"
+  // even though raw pointer position can't be tracked with less latency
+  // than the ambient glow already has. Skipped entirely on textHeavy
+  // cards (see the prop doc above).
+  const specularX = useSpring(mouseX, { stiffness: 900, damping: 30, mass: 0.3 });
+  const specularY = useSpring(mouseY, { stiffness: 900, damping: 30, mass: 0.3 });
+  const specularBackground = useTransform([specularX, specularY], (latest) => {
+    const [x, y] = latest as [number, number];
+    return `radial-gradient(90px circle at ${x * 100}% ${y * 100}%, color-mix(in oklch, var(--glow-color) 75%, transparent), transparent 55%)`;
+  });
+
+  function reducedMotion() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (reducedMotion()) return;
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
     mouseX.set((e.clientX - rect.left) / rect.width);
@@ -111,6 +187,26 @@ export function GlowCard({
     if (e.pointerType === "touch") handlePointerLeave();
   }
 
+  // Refinement 4: a real expanding ring from the actual tap/click point,
+  // feedback on the click itself rather than only ever reacting to hover
+  // proximity. rippleSeq is a plain ref counter, not state, IDs just need
+  // to be unique within one card's lifetime for React's key + the removal
+  // filter below, no reason to trigger a render to produce one.
+  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
+  const rippleSeq = useRef(0);
+
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (reducedMotion()) return;
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const id = ++rippleSeq.current;
+    setRipples((prev) => [...prev, { id, x: e.clientX - rect.left, y: e.clientY - rect.top }]);
+  }
+
+  function removeRipple(id: number) {
+    setRipples((prev) => prev.filter((r) => r.id !== id));
+  }
+
   const { outer: outerClassName, inner: innerClassName } = splitOuterAndInnerClasses(className);
 
   return (
@@ -120,16 +216,41 @@ export function GlowCard({
       onPointerLeave={handlePointerLeave}
       onPointerUp={handlePointerEnd}
       onPointerCancel={handlePointerEnd}
+      onPointerDown={handlePointerDown}
       style={{
         rotateX,
         rotateY,
         perspective: 800,
         ["--glow-color" as string]: `var(--glow-${glow})`,
       }}
+      data-text-heavy={textHeavy ? "true" : undefined}
       className={cn("glow-card group rounded-lg", outerClassName)}
     >
       <motion.div aria-hidden="true" className="glow-card-sheen" style={{ background: sheenBackground }} />
-      <div className={cn("relative", fill && "flex h-full flex-col", innerClassName)}>{children}</div>
+      {!textHeavy && (
+        <motion.div
+          aria-hidden="true"
+          className="glow-card-specular"
+          style={{ background: specularBackground }}
+        />
+      )}
+      <GlowCardTiltContext.Provider value={{ mouseX, mouseY }}>
+        <div className={cn("relative z-10", fill && "flex h-full flex-col", innerClassName)}>{children}</div>
+      </GlowCardTiltContext.Provider>
+      <AnimatePresence>
+        {ripples.map((r) => (
+          <motion.span
+            key={r.id}
+            aria-hidden="true"
+            className="glow-card-ripple"
+            style={{ left: r.x, top: r.y }}
+            initial={{ opacity: 0.5, scale: 0 }}
+            animate={{ opacity: 0, scale: textHeavy ? 6 : 9 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            onAnimationComplete={() => removeRipple(r.id)}
+          />
+        ))}
+      </AnimatePresence>
     </motion.div>
   );
 }

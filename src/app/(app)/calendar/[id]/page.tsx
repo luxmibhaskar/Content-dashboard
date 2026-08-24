@@ -162,7 +162,7 @@ export default async function TopicPage({
           />
         </div>
 
-        <GlowCard glow={1} className="space-y-4 p-4">
+        <GlowCard glow={1} className="space-y-4 p-4" textHeavy>
           <div>
             <p className="text-sm font-medium">Copy-Ready</p>
             <p className="text-xs text-muted-foreground">
