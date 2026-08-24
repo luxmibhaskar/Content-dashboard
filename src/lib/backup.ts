@@ -3,7 +3,8 @@ import { writeSheetTabs } from "@/lib/google-sheets";
 import { syncDriveArchive, type DriveLinks } from "@/lib/drive-archive";
 import { archiveIdleContent } from "@/lib/archive-lifecycle";
 import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
-import type { ResearchCopyResult, ScriptsResult } from "@/lib/types";
+import { resolveGoalCurrentValues } from "@/lib/goals";
+import type { ResearchCopyResult, ScriptsResult, Goal } from "@/lib/types";
 
 type Row = (string | number | boolean | null)[];
 type Tab = { title: string; headers: string[]; rows: Row[] };
@@ -452,6 +453,136 @@ async function buildDailyStreaksTab(supabase: SupabaseClient, brand: Brand): Pro
   };
 }
 
+// Audit finding, fixed here: platform_snapshots, custom_sub_topics,
+// goals, and collaborators had zero backup coverage since creation.
+// All four are flat, brand-level list tables with no nested per-item
+// detail to split off to Drive, same shape as competitors/daily_streaks
+// above, so Sheets-only coverage matches this file's existing division
+// of labor (Drive is for content-item-linked full detail, not general
+// list tables).
+async function buildPlatformSnapshotsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+  const { data } = await supabase
+    .from("platform_snapshots")
+    .select("platform, follower_count, snapshot_date")
+    .eq("brand", brand)
+    .order("snapshot_date", { ascending: false });
+
+  const rows: Row[] = (data ?? []).map((r) => [r.platform, r.follower_count, r.snapshot_date]);
+
+  return {
+    title: "Platform Snapshots",
+    headers: ["Platform", "Follower Count", "Snapshot Date"],
+    rows,
+  };
+}
+
+async function buildCustomSubTopicsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+  const { data } = await supabase
+    .from("custom_sub_topics")
+    .select("pillar, sub_topic, is_archived")
+    .eq("brand", brand)
+    .order("pillar", { ascending: true });
+
+  const rows: Row[] = (data ?? []).map((r) => [r.pillar, r.sub_topic, r.is_archived ? "Yes" : "No"]);
+
+  return {
+    title: "Custom Sub-topics",
+    headers: ["Pillar", "Sub-topic", "Archived"],
+    rows,
+  };
+}
+
+// current_value is stored (and meaningful) only for old target_metric-
+// based rows; platform-linked goals (platform_name set) never get it
+// written anymore (src/lib/goals.ts), it's resolved live at read time
+// from platform_snapshots/content_calendar instead. Recomputed here the
+// same way so the backed-up number is the real current one, not a
+// stale/null column value.
+async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+  const [{ data: goalRows }, { data: snapshotRows }, { data: viewRows }] = await Promise.all([
+    supabase
+      .from("goals")
+      .select(
+        "goal_text, target_metric, target_value, current_value, target_date, status, platform_name, icon_slug",
+      )
+      .eq("brand", brand),
+    supabase
+      .from("platform_snapshots")
+      .select("platform, follower_count, snapshot_date")
+      .eq("brand", brand)
+      .order("snapshot_date", { ascending: false }),
+    supabase.from("content_calendar").select("views").eq("brand", brand),
+  ]);
+
+  const latestSnapshotsByPlatform: Record<string, number> = {};
+  for (const r of snapshotRows ?? []) {
+    if (!(r.platform in latestSnapshotsByPlatform)) latestSnapshotsByPlatform[r.platform] = r.follower_count;
+  }
+  const totalViews = (viewRows ?? []).reduce((sum, r) => sum + (r.views ?? 0), 0);
+
+  // resolveGoalCurrentValues only ever runs, live, on platform_name-not-
+  // null rows (src/app/(app)/layout.tsx filters to those before calling
+  // it); for any row it wasn't designed for it unconditionally nulls
+  // current_value, which would silently blank out a legacy row's real
+  // stored value here. Only resolve for platform-linked rows and pass
+  // pre-redesign (platform_name null) rows through with their raw
+  // stored current_value untouched, same "preserve what a superseded
+  // field actually holds" rule this file follows elsewhere.
+  const rawGoals = (goalRows ?? []) as Goal[];
+  const resolved = resolveGoalCurrentValues(rawGoals, totalViews, latestSnapshotsByPlatform).map((g, i) =>
+    rawGoals[i].platform_name === null ? rawGoals[i] : g,
+  );
+
+  const rows: Row[] = resolved.map((g) => [
+    g.platform_name,
+    g.icon_slug,
+    g.status,
+    g.target_value,
+    g.current_value,
+    g.target_date,
+    g.target_metric,
+    g.goal_text,
+  ]);
+
+  return {
+    title: "Goals",
+    headers: [
+      "Platform Name",
+      "Icon Slug",
+      "Status",
+      "Target Value",
+      "Current Value",
+      "Target Date",
+      "Legacy Target Metric",
+      "Legacy Goal Text",
+    ],
+    rows,
+  };
+}
+
+async function buildCollaboratorsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
+  const { data } = await supabase
+    .from("collaborators")
+    .select("name, platform, profile_url, status, notes, last_contact_date")
+    .eq("brand", brand)
+    .order("name", { ascending: true });
+
+  const rows: Row[] = (data ?? []).map((r) => [
+    r.name,
+    r.platform,
+    r.profile_url,
+    r.status,
+    r.notes,
+    r.last_contact_date,
+  ]);
+
+  return {
+    title: "Collaborators",
+    headers: ["Name", "Platform", "Profile URL", "Status", "Notes", "Last Contact Date"],
+    rows,
+  };
+}
+
 type SyncResult = { ok: true } | { ok: false; error: string };
 
 async function syncDriveOnce(brand: Brand): Promise<SyncResult & { links?: DriveLinks }> {
@@ -481,6 +612,10 @@ async function syncSheetsOnce(brand: Brand, links: DriveLinks): Promise<SyncResu
       buildCompetitorsTab(supabase, brand),
       buildCompetitorBenchmarksTab(supabase, brand),
       buildDailyStreaksTab(supabase, brand),
+      buildPlatformSnapshotsTab(supabase, brand),
+      buildCustomSubTopicsTab(supabase, brand),
+      buildGoalsTab(supabase, brand),
+      buildCollaboratorsTab(supabase, brand),
     ]);
 
     await writeSheetTabs(sheetIdFor(brand), tabs);
@@ -544,7 +679,15 @@ export async function runBackupSync(brand: Brand) {
     }
   }
 
-  return { drive: driveResult, sheets: sheetsResult, archive: archiveResult };
+  // driveResult.links (contentLinks/snapshotLinks) is internal, Map-typed
+  // plumbing consumed by syncSheetsOnce above, not JSON-safe: a raw Map
+  // serializes to "{}" via JSON.stringify, which made the /api/cron/backup
+  // response look like Drive linking silently produced nothing even on a
+  // fully successful run. Callers (the route, the status UI) only need
+  // ok/error, same shape as sheetsResult.
+  const driveSummary: SyncResult = driveResult.ok ? { ok: true } : { ok: false, error: driveResult.error };
+
+  return { drive: driveSummary, sheets: sheetsResult, archive: archiveResult };
 }
 
 export async function runBackupSyncAllBrands() {
