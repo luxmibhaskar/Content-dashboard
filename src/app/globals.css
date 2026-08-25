@@ -288,13 +288,86 @@ html[data-brand="lbsworks"] body {
    those; the idle breathing animation doesn't need JS, it lives here. */
 .glow-card {
   --glow-color: var(--glow-1);
+  /* Refinement 6 (embossed depth): a light-from-top-left / dark-toward-
+     bottom-right pair of 1px inset shadows, folded into card-breathe's
+     box-shadow list below since a second, separate box-shadow
+     declaration would just replace the first rather than layer with it.
+     Plain white/black rather than theme tokens on purpose, a bevel highlight
+     and shadow read the same way regardless of what's under them, this
+     is a lighting cue, not a text/surface color. Custom properties (not
+     literal alpha values) so [data-text-heavy] below can dial them back
+     without a second copy of the keyframes. */
+  --emboss-light-alpha: 0.16;
+  --emboss-dark-alpha: 0.22;
+  /* Refinement 7 (light-mode alive edge): the soft halo bleeding outward
+     from card-breathe's ring, folded in the same way as the emboss
+     shadows above. 0% in dark mode (.dark .glow-card below) is not a
+     placeholder, mixing 0% of a color is fully transparent, so this one
+     variable is what turns the halo off there entirely, dark mode's
+     "alive" cue is the rim light sweep on ::before instead, a halo would
+     just be redundant glow on top of an already-glowing edge. */
+  --halo-strength: 35%;
+  /* Refinement 6 (grain): opacity of .glow-card-grain below, its own
+     variable rather than a literal on that rule so [data-text-heavy]
+     can dial it back the same way as the other three. */
+  --grain-opacity: 0.05;
+  /* Refinement 7 (light mode): the border's own color-mix percentage,
+     variable for the same [data-text-heavy] reason as the three above.
+     Dark mode's border-color (.dark .glow-card below) is a flat,
+     unconditional 40% instead of reading this variable at all, that
+     saturated-border cue is a light-mode-only technique to begin with,
+     nothing for [data-text-heavy] to dial back there. */
+  --border-strength: 70%;
   position: relative;
   overflow: hidden;
   background: color-mix(in oklch, var(--card) 55%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in oklch, var(--glow-color) 40%, var(--border));
+  /* Refinement 7: light mode's own "this card is lit" cue. A bright rim
+     line barely registers against a near-white surface (see .dark
+     .glow-card below for why dark mode doesn't lean on this same
+     saturated border), so light mode instead uses a more deliberately
+     colored border than the original 40% mix, paired with the halo
+     above as the equivalent effect that actually shows up here. */
+  border: 1px solid color-mix(in oklch, var(--glow-color) var(--border-strength), var(--border));
+  /* Static fallback matching card-breathe's own 0%/100% frame exactly:
+     prefers-reduced-motion below sets animation: none, which reverts to
+     whatever box-shadow is declared here rather than to nothing. Without
+     this, a reduced-motion user would lose the glow ring AND the two new
+     static-by-design emboss lines entirely, not just the pulse, since
+     every layer lived only inside the keyframes before this pass. */
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
+    0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent),
+    0 0 22px -4px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
+    inset 1px 1px 0 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
+    inset -1px -1px 0 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   animation: card-breathe 6s ease-in-out infinite;
+}
+
+.dark .glow-card {
+  --halo-strength: 0%;
+  border-color: color-mix(in oklch, var(--glow-color) 40%, var(--border));
+}
+
+/* Same card-type scoping as the rest of this pass: dial every one of
+   refinements 6/7's custom properties back together in one place,
+   rather than repeating [data-text-heavy] per property below. */
+.glow-card[data-text-heavy="true"] {
+  --emboss-light-alpha: 0.08;
+  --emboss-dark-alpha: 0.11;
+  --halo-strength: 15%;
+  --grain-opacity: 0.025;
+  --border-strength: 45%;
+}
+
+/* .dark .glow-card and .glow-card[data-text-heavy="true"] are equal
+   specificity, so without this, source order alone would decide which
+   --halo-strength wins on a dark + textHeavy card, undoing dark mode's
+   "no halo, the rim sweep is the cue" call for exactly the cards where
+   that call matters most. This three-selector rule outranks both. */
+.dark .glow-card[data-text-heavy="true"] {
+  --halo-strength: 0%;
 }
 
 .glow-card-sheen {
@@ -364,6 +437,50 @@ html[data-brand="lbsworks"] body {
   opacity: 0.4;
 }
 
+/* Refinement 7 (dark-mode alive edge): a bright rim reads fine against a
+   dark surface (unlike light mode, see the border/halo treatment on
+   .glow-card / .dark .glow-card above), so dark mode leans into it
+   further instead of switching techniques: brighter, more saturated,
+   and a slow continuous sweep along the edge so it feels alive at rest
+   rather than just present. background-size wider than the element plus
+   an animated background-position is what makes the existing 3-stop
+   gradient travel; the gradient shape/stops themselves are unchanged. */
+.dark .glow-card::before {
+  opacity: 0.85;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--glow-color) 95%, white 15%),
+    transparent
+  );
+  background-size: 250% 100%;
+  animation: glow-card-rim-sweep 7s ease-in-out infinite;
+}
+
+/* Simplified, not just dialed back, on text-heavy dark-mode cards: a
+   moving highlight is exactly the kind of thing that competes with
+   reading (same reasoning refinement 3 skips the specular highlight
+   entirely there), so this drops the sweep animation and settles for a
+   static rim brighter than light mode's textHeavy baseline but well
+   under this card type's own full-strength one above. More specific
+   than the rule above (the added [data-text-heavy] attribute selector),
+   so it wins regardless of declaration order; still kept after it for
+   the same reason the other textHeavy overrides in this file are. */
+.dark .glow-card[data-text-heavy="true"]::before {
+  opacity: 0.5;
+  animation: none;
+}
+
+@keyframes glow-card-rim-sweep {
+  0%,
+  100% {
+    background-position: 0% 0;
+  }
+  50% {
+    background-position: 100% 0;
+  }
+}
+
 /* Refinement 3: a second, tighter specular highlight distinct from
    .glow-card-sheen's wider ambient glow above, its own motion.div (see
    glow-card.tsx) so it can use a smaller/sharper radial-gradient and a
@@ -400,22 +517,69 @@ html[data-brand="lbsworks"] body {
   pointer-events: none;
 }
 
+/* Refinement 6 (grain): real frosted glass has micro-imperfections, a
+   perfectly smooth blur reads flat. A tiled feTurbulence data-URI (no
+   network request, no extra asset to ship) rather than a raster image,
+   mix-blend-mode: overlay so the noise adds/subtracts contrast against
+   whatever's actually under it (the card's own tint, the inner offset
+   layer, glow-in-progress) instead of sitting on top as a flat gray
+   wash. Static, always-visible (opacity is the only thing that varies,
+   via --grain-opacity), not hover-gated like the sheen/specular above,
+   grain is a surface property of the glass, not a pointer-reactive one. */
+.glow-card-grain {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* card-breathe carries three visual jobs at once, all folded into one
+   box-shadow list because a second box-shadow declaration would replace
+   this one rather than layer with it:
+   - layers 1-2 (original): the pulsing glow ring, unchanged.
+   - layer 3, refinement 7's light-mode halo: a soft, non-offset colored
+     bleed outward from the edges, --halo-strength is 0% in dark mode
+     (.dark .glow-card above), which makes this color-mix fully
+     transparent there, dark mode's edge cue is the rim sweep instead.
+   - layers 4-5, refinement 6's emboss: a light-from-top-left /
+     dark-toward-bottom-right pair of 1px inset lines, constant across
+     the breathe cycle on purpose (only the outer glow needs to pulse,
+     a "lit from one direction" cue pulsing too would read as flickering
+     light, not a fixed bevel). */
 @keyframes card-breathe {
   0%,
   100% {
     box-shadow:
       0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
-      0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent);
+      0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent),
+      0 0 22px -4px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
+      inset 1px 1px 0 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
+      inset -1px -1px 0 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   }
   50% {
     box-shadow:
       0 0 0 1px color-mix(in oklch, var(--glow-color) 50%, transparent),
-      0 10px 34px -12px color-mix(in oklch, var(--glow-color) 65%, transparent);
+      0 10px 34px -12px color-mix(in oklch, var(--glow-color) 65%, transparent),
+      0 0 30px -2px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
+      inset 1px 1px 0 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
+      inset -1px -1px 0 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .glow-card {
+    animation: none;
+  }
+  /* Dark mode's rim sweep (refinement 7) is the one other animated
+     piece from this pass, .glow-card's own animation:none above doesn't
+     reach it since it's a separate animation declared on ::before, not
+     inherited. Grain (refinement 6) needs no entry here, it was never
+     animated, opacity is a plain --grain-opacity var either way. */
+  .glow-card::before {
     animation: none;
   }
   .glow-card-sheen {

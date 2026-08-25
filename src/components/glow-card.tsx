@@ -128,9 +128,11 @@ export function GlowCard({
   // & Copy, Scripts, Competitor Benchmarks) where a second moving
   // highlight competes with reading rather than reading as polish. Skips
   // the tighter specular highlight entirely and dials back the rim
-  // light/inner layer's opacity (globals.css); breathing, the ambient
-  // glow, and tilt are unaffected, those were already judged fine on
-  // text-heavy surfaces when Phase 4 shipped.
+  // light/inner layer's opacity, the embossed inset shadows, the grain,
+  // and the light-mode outward halo's strength (all CSS custom
+  // properties, globals.css); breathing, the ambient glow, and tilt are
+  // unaffected, those were already judged fine on text-heavy surfaces
+  // when Phase 4 shipped.
   textHeavy?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -226,6 +228,13 @@ export function GlowCard({
       data-text-heavy={textHeavy ? "true" : undefined}
       className={cn("glow-card group rounded-lg", outerClassName)}
     >
+      {/* Refinement 6 (embossed depth + grain): the directional inset
+          "lit from one side" shadows and the outward halo (refinement 7's
+          light-mode edge cue) live entirely in globals.css, both are part
+          of the already-animated card-breathe box-shadow, no separate
+          layer needed. Grain is the one static piece that does need its
+          own layer, a background-image can't share a box-shadow list. */}
+      <div aria-hidden="true" className="glow-card-grain" />
       <motion.div aria-hidden="true" className="glow-card-sheen" style={{ background: sheenBackground }} />
       {!textHeavy && (
         <motion.div
