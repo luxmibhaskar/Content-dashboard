@@ -81,12 +81,18 @@ one page, `?entry=manual` branches which one renders):
   same fallback UX as Section 7's own paste import: the raw text stays
   right there, editable, with an inline message, nothing gets created.
 
-## 2. Topic page: two tabs, not five sections
+## 2. Topic page: three tabs, not five sections
+
+**⚠ Updated**: originally exactly two tabs (Research & Copy, Scripts).
+Reference Videos (builder-brief.md Section 10.2.1) is a third, same pill
+styling, added after the original two-tab build; it was never meant to
+be cut, it just went silently unwired for a stretch and has since been
+restored. See Tab 3 below.
 
 Remove entirely as separate sections: Creator Input, Audience Strategy,
-Viewer POV, Normal POV, Recording Section. Replace with exactly two tabs,
-styled visually like the existing brand-switcher pill toggle, not a plain
-tab bar.
+Viewer POV, Normal POV, Recording Section. Replace with tabs styled
+visually like the existing brand-switcher pill toggle, not a plain tab
+bar.
 
 Remove the old separate `/calendar/[id]/research` subpage and its
 "Research (N) →" breadcrumb entirely. Research now lives inside Tab 1 on
@@ -155,6 +161,12 @@ videos, generate multiple distinct scripts when the topic supports it,
 each a complete, self-contained video, living within one container,
 separated from each other by dividers, same visual pattern as the source
 containers in Tab 1.
+
+### Tab 3: "Reference Videos"
+
+Full spec lives in builder-brief.md Section 10.2.1, unaffected by this
+doc otherwise, this entry just records that it's a tab on this same page
+alongside Tab 1 and Tab 2, not a separate route.
 
 ## 3. Navigation cleanup
 

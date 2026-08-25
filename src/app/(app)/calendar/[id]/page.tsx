@@ -16,6 +16,7 @@ import {
   PRODUCTION_STATUSES,
   VIABILITY_STATUSES,
   type ContentCalendarDetail,
+  type ReferenceVideo,
   type ResearchCopyVersion,
   type ScriptsVersion,
 } from "@/lib/types";
@@ -88,6 +89,7 @@ export default async function TopicPage({
     { data: derivativeItems },
     { data: researchCopyVersions },
     { data: scriptsVersions },
+    { data: referenceVideos },
     structure,
   ] = await Promise.all([
     item.derived_from_content_id
@@ -112,6 +114,13 @@ export default async function TopicPage({
       .from("scripts_versions")
       .select("id, source, data, is_live")
       .eq("content_id", id),
+    // Section 10.2.1: newest first, per reference-videos-section.tsx's
+    // own "cards stack newest first" comment.
+    supabase
+      .from("reference_videos")
+      .select("id, content_id, url, hook_note, rehook_note, cta_note, date_added")
+      .eq("content_id", id)
+      .order("date_added", { ascending: false }),
     getMergedPillarStructure(item.brand),
   ]);
 
@@ -373,6 +382,7 @@ export default async function TopicPage({
           keywords={item.raw_keywords_topics}
           researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
           scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
+          referenceVideos={(referenceVideos ?? []) as ReferenceVideo[]}
         />
       </div>
     </div>
