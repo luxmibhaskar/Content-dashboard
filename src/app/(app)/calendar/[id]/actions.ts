@@ -32,6 +32,10 @@ function num(formData: FormData, key: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getAll(formData: FormData, key: string): string[] {
+  return formData.getAll(key).map(String);
+}
+
 export async function updateContentItem(id: string, formData: FormData) {
   const supabase = await createClient();
 
@@ -50,6 +54,10 @@ export async function updateContentItem(id: string, formData: FormData) {
       pillar: str(formData, "pillar"),
       sub_topic: str(formData, "sub_topic"),
       format: str(formData, "format"),
+      // Only present in formData while Format is Short
+      // (format-platform-fields.tsx), otherwise correctly clears to [],
+      // this field's only meaning is short-form distribution.
+      platform: getAll(formData, "platform"),
       publish_date: publishDateRaw ? new Date(publishDateRaw).toISOString() : null,
 
       // 10.1.1 Creator Input

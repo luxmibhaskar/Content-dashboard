@@ -470,6 +470,22 @@ longer be set from the topic page. The read-only "Repurposed from: X" /
 "Derivatives (N)" display near the top of the page is unaffected and
 still reads whatever was set before.
 
+**⚠ Format/Platform updated since, see `format-platform-fields.tsx`.**
+Format's own dropdown narrowed to Short/Long only (full reasoning and
+the Analytics/Content-Output-Tracker linkage check that shaped it is in
+`calendar/[id]/page.tsx`'s own comment history, not repeated here). New:
+picking Short reveals a second field, "Posted on (select all that
+apply)", a toggle-pill multiselect writing into the previously-unused
+`content_calendar.platform` column (YouTube/Instagram/TikTok/Threads/
+Facebook/X/Carousel/Article, `CONTENT_POST_PLATFORMS` in
+`src/lib/types.ts`, deliberately its own list, not the shared
+`PLATFORMS` that Competitor Benchmarks/Collaborators/Competitors use).
+Exists so Analytics can eventually count only the platforms a Short
+actually went out on, not assume every Short reached everywhere.
+Clears automatically if Format is switched away from Short and the item
+is saved in that state, on purpose: the field's only meaning is
+short-form distribution.
+
 **Competitor Benchmarks section removed** from the topic page
 (`CompetitorBenchmarksSection`, both its auto-populated results display
 and its manual "Add benchmark" form, the only UI anywhere that created

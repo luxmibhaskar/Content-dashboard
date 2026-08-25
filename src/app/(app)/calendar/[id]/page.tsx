@@ -8,6 +8,7 @@ import { ProductionStatusTracker } from "@/components/production-status-tracker"
 import { CopyButton } from "@/components/copy-button";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
+import { FormatPlatformFields } from "@/components/format-platform-fields";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import {
   PRODUCTION_STATUSES,
@@ -35,24 +36,9 @@ export const maxDuration = 300;
 // replaced by the two-tab Research & Copy / Scripts structure below.
 // System & Production and Performance are unaffected, still collapsible
 // sections further down.
-// Content Calendar's own format picker, deliberately narrower than the
-// shared FORMATS list (src/lib/types.ts) that Idea Panel still uses in
-// full elsewhere, only Short vs Long is a real distinction once an idea
-// is far enough along to be a real item here, matching how the rest of
-// this page's own downstream consumers already split content: the
-// Scripting phase's Long-Form vs Short-Form tabs, and (outside this
-// page) Analytics Overview's repurposing check and the Dashboard's
-// Content Output Tracker, both of which key off the literal string
-// "Long Video" already, so that value stays exactly as-is here, only
-// its visible label reads "Long".
-const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
-  { value: "Short", label: "Short" },
-  { value: "Long Video", label: "Long" },
-];
-
 const SELECT_COLUMNS = `
   id, brand, final_title, production_status, viability_status, viability_reason_note,
-  pillar, sub_topic, format, publish_date, is_archived,
+  pillar, sub_topic, format, platform, publish_date, is_archived,
   raw_idea_title, raw_keywords_topics, brief_intent,
   sequence_step, sequence_order_custom, evidence_condition, script_outline_link,
   published_url, performance_notes, series_playlist, search_demand_trend_signal,
@@ -243,41 +229,11 @@ export default async function TopicPage({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="format">Format</Label>
-            <select
-              id="format"
-              name="format"
-              defaultValue={item.format ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-            >
-              <option value="">-</option>
-              {CONTENT_FORMAT_OPTIONS.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-              {/* A pre-existing item tagged with one of the old Reel/
-                  Post/Thread/Story/Other values keeps showing its real
-                  value here rather than silently landing on "Short" on
-                  the next unrelated Save, same reasoning as Production
-                  status's own "No status yet" fallback above. */}
-              {item.format && !CONTENT_FORMAT_OPTIONS.some((f) => f.value === item.format) && (
-                <option value={item.format}>{item.format} (legacy)</option>
-              )}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="publish_date">Publish date</Label>
-            <Input
-              id="publish_date"
-              name="publish_date"
-              type="datetime-local"
-              defaultValue={publishDateValue}
-            />
-          </div>
-        </div>
+        <FormatPlatformFields
+          initialFormat={item.format ?? ""}
+          initialPlatforms={item.platform ?? []}
+          publishDateValue={publishDateValue}
+        />
 
         {/* Follow-up: relocated out of the removed System & Production
             section, the only field in there that fed anything outside

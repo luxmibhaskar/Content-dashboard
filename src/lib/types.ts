@@ -150,6 +150,10 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   core_tags: string[] | null;
   detailed_viewer_search_phrase_tags: string[] | null;
 
+  // "Posted on" for Short-format items (format-platform-fields.tsx),
+  // always [] otherwise, not surfaced anywhere until this field.
+  platform: string[] | null;
+
   printable_marketing_hooks: PrintableMarketingHooks | null;
 };
 
@@ -481,6 +485,26 @@ export type JourneyEntry = {
 };
 
 export const PLATFORMS = ["YouTube", "Instagram", "TikTok", "Threads", "Facebook"] as const;
+
+// Content Calendar's own "where did this Short actually get posted"
+// multiselect (format-platform-fields.tsx), deliberately separate from
+// PLATFORMS above rather than extending it: PLATFORMS feeds Competitor
+// Benchmarks/Collaborators/Competitors, where "Carousel"/"Article"
+// aren't platforms at all, they're post shapes, adding them there would
+// leak into those unrelated pickers. Starts from PLATFORMS' own five,
+// adds X (not already present), Carousel and Article (post shapes short-
+// form content also gets atomized into, see the Manual/AI Scripting
+// phase's own carousel script output).
+export const CONTENT_POST_PLATFORMS = [
+  "YouTube",
+  "Instagram",
+  "TikTok",
+  "Threads",
+  "Facebook",
+  "X",
+  "Carousel",
+  "Article",
+] as const;
 
 // Section 10.1.4, restructured: two parallel modes per platform rather
 // than one set of fields. Viewer POV is the algorithm/platform-optimized
