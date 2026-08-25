@@ -288,17 +288,21 @@ html[data-brand="lbsworks"] body {
    those; the idle breathing animation doesn't need JS, it lives here. */
 .glow-card {
   --glow-color: var(--glow-1);
-  /* Refinement 6 (embossed depth): a light-from-top-left / dark-toward-
-     bottom-right pair of 1px inset shadows, folded into card-breathe's
-     box-shadow list below since a second, separate box-shadow
-     declaration would just replace the first rather than layer with it.
+  /* Refinement 6 (embossed depth), pushed further per a later ask ("genuinely
+     soft-extruded/pressed, not a subtle bevel"): a light-from-top-left /
+     dark-toward-bottom-right pair of inset shadows, folded into
+     card-breathe's box-shadow list below since a second, separate
+     box-shadow declaration would just replace the first rather than layer
+     with it. Offset and blur both grew (1px/0 to 3px/9px) so the pair reads
+     as soft depth rather than a hairline; alpha nudged up to match, since
+     the same alpha spread over a much larger blur reads fainter per pixel.
      Plain white/black rather than theme tokens on purpose, a bevel highlight
      and shadow read the same way regardless of what's under them, this
      is a lighting cue, not a text/surface color. Custom properties (not
      literal alpha values) so [data-text-heavy] below can dial them back
      without a second copy of the keyframes. */
-  --emboss-light-alpha: 0.16;
-  --emboss-dark-alpha: 0.22;
+  --emboss-light-alpha: 0.22;
+  --emboss-dark-alpha: 0.3;
   /* Refinement 7 (light-mode alive edge): the soft halo bleeding outward
      from card-breathe's ring, folded in the same way as the emboss
      shadows above. 0% in dark mode (.dark .glow-card below) is not a
@@ -307,6 +311,16 @@ html[data-brand="lbsworks"] body {
      "alive" cue is the rim light sweep on ::before instead, a halo would
      just be redundant glow on top of an already-glowing edge. */
   --halo-strength: 35%;
+  /* Later ask, "a real outer glow, distinct from the rim light and halo,
+     which sit at or just past the edge": those two hug the border, this
+     is a wider, unoffset drop-shadow that bleeds well outside the card so
+     the card reads as glowing against its surroundings, not just edge-lit.
+     Unlike --halo-strength above this is NOT zeroed in dark mode, a wide
+     outward bleed is the one edge cue that reads MORE naturally against a
+     dark backdrop, so dark mode pushes it stronger instead of dropping it
+     (.dark .glow-card below); this lighter default value is light mode's
+     own, more restrained so it doesn't read as a rendering artifact. */
+  --outer-glow-strength: 20%;
   /* Refinement 6 (grain): opacity of .glow-card-grain below, its own
      variable rather than a literal on that rule so [data-text-heavy]
      can dial it back the same way as the other three. */
@@ -340,13 +354,15 @@ html[data-brand="lbsworks"] body {
     0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
     0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent),
     0 0 22px -4px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
-    inset 1px 1px 0 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
-    inset -1px -1px 0 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
+    0 0 48px 8px color-mix(in oklch, var(--glow-color) var(--outer-glow-strength), transparent),
+    inset 3px 3px 9px 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
+    inset -3px -3px 9px 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   animation: card-breathe 6s ease-in-out infinite;
 }
 
 .dark .glow-card {
   --halo-strength: 0%;
+  --outer-glow-strength: 42%;
   border-color: color-mix(in oklch, var(--glow-color) 40%, var(--border));
 }
 
@@ -354,20 +370,26 @@ html[data-brand="lbsworks"] body {
    refinements 6/7's custom properties back together in one place,
    rather than repeating [data-text-heavy] per property below. */
 .glow-card[data-text-heavy="true"] {
-  --emboss-light-alpha: 0.08;
-  --emboss-dark-alpha: 0.11;
+  --emboss-light-alpha: 0.11;
+  --emboss-dark-alpha: 0.15;
   --halo-strength: 15%;
+  --outer-glow-strength: 9%;
   --grain-opacity: 0.025;
   --border-strength: 45%;
 }
 
 /* .dark .glow-card and .glow-card[data-text-heavy="true"] are equal
    specificity, so without this, source order alone would decide which
-   --halo-strength wins on a dark + textHeavy card, undoing dark mode's
-   "no halo, the rim sweep is the cue" call for exactly the cards where
-   that call matters most. This three-selector rule outranks both. */
+   --halo-strength/--outer-glow-strength wins on a dark + textHeavy card,
+   undoing dark mode's "no halo, the rim sweep is the cue" call (halo) and
+   the textHeavy dial-back (outer glow) for exactly the cards where those
+   calls matter most. This three-selector rule outranks both. Outer glow
+   stays nonzero here, unlike halo: it's the one edge cue dark mode keeps
+   even on text-heavy surfaces, just dialed back from the full-strength
+   dark value, roughly matching light mode's own full-strength glow. */
 .dark .glow-card[data-text-heavy="true"] {
   --halo-strength: 0%;
+  --outer-glow-strength: 20%;
 }
 
 .glow-card-sheen {
@@ -537,19 +559,28 @@ html[data-brand="lbsworks"] body {
   pointer-events: none;
 }
 
-/* card-breathe carries three visual jobs at once, all folded into one
+/* card-breathe carries four visual jobs at once, all folded into one
    box-shadow list because a second box-shadow declaration would replace
    this one rather than layer with it:
    - layers 1-2 (original): the pulsing glow ring, unchanged.
    - layer 3, refinement 7's light-mode halo: a soft, non-offset colored
-     bleed outward from the edges, --halo-strength is 0% in dark mode
-     (.dark .glow-card above), which makes this color-mix fully
-     transparent there, dark mode's edge cue is the rim sweep instead.
-   - layers 4-5, refinement 6's emboss: a light-from-top-left /
-     dark-toward-bottom-right pair of 1px inset lines, constant across
-     the breathe cycle on purpose (only the outer glow needs to pulse,
-     a "lit from one direction" cue pulsing too would read as flickering
-     light, not a fixed bevel). */
+     bleed outward from the edges, tight to the border (-4px spread).
+     --halo-strength is 0% in dark mode (.dark .glow-card above), which
+     makes this color-mix fully transparent there, dark mode's edge cue
+     is the rim sweep instead.
+   - layer 4, the later "real outer glow" ask: distinct from both the rim
+     light and the halo above, which the ask calls out as sitting "at or
+     just past the edge". This one carries a positive spread (8px to
+     14px) and a much bigger blur (48px to 68px) so it bleeds well beyond
+     the card into the surrounding page, reading as the card glowing
+     against its backdrop rather than an edge highlight. Unlike the halo,
+     --outer-glow-strength is NOT zeroed in dark mode, see that variable's
+     definition above for why.
+   - layers 5-6, refinement 6's emboss: a light-from-top-left /
+     dark-toward-bottom-right pair of soft inset shadows, constant across
+     the breathe cycle on purpose (only the outer glow layers need to
+     pulse, a "lit from one direction" cue pulsing too would read as
+     flickering light, not a fixed bevel). */
 @keyframes card-breathe {
   0%,
   100% {
@@ -557,16 +588,18 @@ html[data-brand="lbsworks"] body {
       0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
       0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent),
       0 0 22px -4px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
-      inset 1px 1px 0 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
-      inset -1px -1px 0 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
+      0 0 48px 8px color-mix(in oklch, var(--glow-color) var(--outer-glow-strength), transparent),
+      inset 3px 3px 9px 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
+      inset -3px -3px 9px 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   }
   50% {
     box-shadow:
       0 0 0 1px color-mix(in oklch, var(--glow-color) 50%, transparent),
       0 10px 34px -12px color-mix(in oklch, var(--glow-color) 65%, transparent),
       0 0 30px -2px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
-      inset 1px 1px 0 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
-      inset -1px -1px 0 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
+      0 0 68px 14px color-mix(in oklch, var(--glow-color) var(--outer-glow-strength), transparent),
+      inset 3px 3px 9px 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
+      inset -3px -3px 9px 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   }
 }
 
