@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResearchPhaseContent } from "@/components/research-phase-content";
-import type { ResearchPhaseData } from "@/lib/manual-workflow-parsing";
+import { PackagingPhaseContent } from "@/components/packaging-phase-content";
+import type { ResearchPhaseData, PackagingPhaseData } from "@/lib/manual-workflow-parsing";
 import {
   MANUAL_WORKFLOW_PHASES,
   type ManualWorkflowPhase,
@@ -23,18 +24,12 @@ const LOCK_MESSAGE: Record<ManualWorkflowPhase, string> = {
   scripting: "Scripting is locked until Packaging is pasted in and parsed.",
 };
 
-const PHASE_BUILD_STEP: Record<Exclude<ManualWorkflowPhase, "research">, string> = {
-  packaging: "Phase C",
-  scripting: "Phase D",
-};
-
 // docs/manual-workflow-redesign.md: replaces the old Manual paste-panel
 // that used to live inside Research & Copy/Scripts (still there for now,
 // see topic-page-tabs.tsx) with a phase-gated Research -> Packaging ->
 // Scripting workflow matching docs/research-packaging-scripting-template.txt
-// in full. Phase B (this pass): Research's own full parsing/display
-// (research-phase-content.tsx) is wired up; Packaging/Scripting stay
-// placeholders until Phase C/D.
+// in full. Phase C (this pass): Research and Packaging both have full
+// parsing/display wired up; Scripting stays a placeholder until Phase D.
 //
 // Gating reads parsed_data specifically, not just row presence: a row
 // can exist (e.g. a raw paste that failed to parse, per the doc's own
@@ -59,6 +54,7 @@ export function ManualWorkflowPanel({
   };
 
   const researchRow = rowFor("research");
+  const packagingRow = rowFor("packaging");
 
   return (
     <div>
@@ -83,8 +79,9 @@ export function ManualWorkflowPanel({
           this box scrolls once a phase's content (Scripting especially,
           two full script versions) outgrows it. Plain border, not a
           GlowCard: each phase's own content below is a stack of GlowCards
-          (research-phase-content.tsx), nesting those inside another
-          GlowCard here would be glow-in-glow. */}
+          (research-phase-content.tsx, packaging-phase-content.tsx),
+          nesting those inside another GlowCard here would be
+          glow-in-glow. */}
       <div className="mt-4 max-h-[70vh] overflow-y-auto rounded-lg border border-border p-4">
         {locked[activePhase] ? (
           <p className="text-sm text-muted-foreground">{LOCK_MESSAGE[activePhase]}</p>
@@ -95,19 +92,19 @@ export function ManualWorkflowPanel({
             status={researchRow?.status ?? null}
             hasExistingImport={researchRow != null}
           />
+        ) : activePhase === "packaging" ? (
+          <PackagingPhaseContent
+            contentId={contentId}
+            data={(packagingRow?.parsed_data as PackagingPhaseData | null) ?? null}
+            hasExistingImport={packagingRow != null}
+          />
         ) : (
-          <PlaceholderPhaseContent phase={activePhase} />
+          <p className="text-sm text-muted-foreground">
+            Scripting phase content, parsing, and its own &ldquo;Paste from AI chat&rdquo; import land
+            in Phase D of the build.
+          </p>
         )}
       </div>
     </div>
-  );
-}
-
-function PlaceholderPhaseContent({ phase }: { phase: Exclude<ManualWorkflowPhase, "research"> }) {
-  return (
-    <p className="text-sm text-muted-foreground">
-      {PHASE_LABELS[phase]} phase content, parsing, and its own &ldquo;Paste from AI chat&rdquo; import land in{" "}
-      {PHASE_BUILD_STEP[phase]} of the build.
-    </p>
   );
 }

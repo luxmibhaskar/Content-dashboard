@@ -1,14 +1,18 @@
 import type { ManualWorkflowStatus } from "@/lib/types";
 
-// "Paste from AI chat" for the Manual workflow's Research phase
-// (docs/manual-workflow-redesign.md, docs/research-packaging-scripting-template.txt
-// Phase 1). Same free, pattern-based, no-Claude-call philosophy as
-// src/lib/paste-import.ts, deliberately kept as its own self-contained
-// module rather than extended into that file: this is a much larger,
-// differently-shaped template (26 top-level fields plus two nested
-// structures) against a completely separate table
-// (manual_workflow_phases, not research_copy_versions/scripts_versions),
-// no reason to couple the two parsers' header sets together.
+// "Paste from AI chat" for the Manual workflow's three phases (Research,
+// Packaging, Scripting - docs/manual-workflow-redesign.md,
+// docs/research-packaging-scripting-template.txt). Same free,
+// pattern-based, no-Claude-call philosophy as src/lib/paste-import.ts,
+// deliberately kept as its own self-contained module rather than
+// extended into that file: these are much larger, differently-shaped
+// templates against a completely separate table (manual_workflow_phases,
+// not research_copy_versions/scripts_versions), no reason to couple this
+// parser's header sets to that older, unrelated system's. All three
+// phases share this one module (not one file each) since they DO
+// genuinely share low-level helpers (splitSections, joinBlock, listLines,
+// labeled, labeledScore, splitBlocks below) and belong to the same
+// workflow, unlike the old system this deliberately isn't coupled to.
 //
 // Same anti-fabrication stance as the rest of this app (CLAUDE.md
 // Section 16, and this template's own [VERIFY]/[PERSONAL INPUT NEEDED]/
@@ -340,4 +344,267 @@ export function extractApprovalStatus(statusText: string): ManualWorkflowStatus 
   if (/\bAPPROVED\b/.test(upper)) return "approved";
   if (/\bREJECTED\b/.test(upper)) return "rejected";
   return null;
+}
+
+// ---------------------------------------------------------------------
+// Packaging phase (docs/research-packaging-scripting-template.txt Phase 2)
+// ---------------------------------------------------------------------
+
+export type PackagingTitleOption = {
+  title: string;
+  researchSupport: string;
+  viewerProblemAddressed: string;
+  promiseMade: string;
+  reasonToClick: string;
+  riskOfMisleading: string;
+};
+
+export type ThumbnailSuggestion = {
+  concept: string;
+  mainVisual: string;
+  subjectActionOrExpression: string;
+  thumbnailText: string;
+  colorDirection: string;
+  emotionalTrigger: string;
+  whyItFits: string;
+  whatToAvoid: string;
+};
+
+export type CarouselEvaluation = {
+  recommendation: string;
+  suitabilityScore: number;
+  reason: string;
+  recommendedSlideCount: string;
+  bestCarouselAngle: string;
+  bestPlatform: string;
+  titleOptions: string[];
+  designDirection: string;
+  colorDirection: string;
+  finalSlideCta: string;
+  viewerTakeaway: string;
+};
+
+export type PackagingPhaseData = {
+  titles: PackagingTitleOption[];
+  // The template's own numbered list of 7 platforms, in that order.
+  // A plain record (not one field per platform) so the display side can
+  // iterate PLATFORM_COPY_LABELS without a 7-way switch.
+  platformCopy: Record<
+    | "youtubeDescription"
+    | "shortFormCaption"
+    | "instagramCaption"
+    | "tiktokCaption"
+    | "youtubeShortsCaption"
+    | "xCaption"
+    | "threadsCaption",
+    string
+  >;
+  shortKeywords: string[];
+  searchPhrases: string[];
+  thumbnails: ThumbnailSuggestion[];
+  visualHooks: string[];
+  textualHooks: string[];
+  verbalHooks: string[];
+  carousel: CarouselEvaluation;
+  ctaOptions: {
+    engagement: string;
+    saveShare: string;
+    followSubscribeResourceConversion: string;
+  };
+  recommendations: {
+    strongestTitle: string;
+    strongestVisualHook: string;
+    strongestTextualHook: string;
+    strongestVerbalHook: string;
+    strongestThumbnail: string;
+    strongestCta: string;
+  };
+};
+
+export const PACKAGING_PASTE_TEMPLATE_HINT = `Expects these headers, each on its own line (case-insensitive, optional
+leading #/##/### or number, optional trailing colon), matching
+docs/research-packaging-scripting-template.txt Phase 2: Titles / YouTube
+Description / Short-Form Caption / Instagram Caption / TikTok Caption /
+YouTube Shorts Caption / X Caption / Threads Caption / Short Keywords /
+Search Phrases / Thumbnails / Visual Hooks / Textual Hooks / Verbal
+Hooks / Carousel Evaluation / CTA Options / Recommendations.
+Under Titles, each option starts its own "Title N: <title>" line, then
+"Label: value" lines for Research support, Viewer problem addressed,
+Promise made, Reason to click, Risk of misleading.
+Under Thumbnails, each suggestion starts its own "Thumbnail N: <short name>"
+line, then "Label: value" lines for Main visual, Subject action or
+expression, Thumbnail text, Color direction, Emotional trigger, Why it
+fits, What to avoid.
+Under Carousel Evaluation: "Label: value" lines for Carousel
+recommendation, Suitability score, Reason, Recommended slide count, Best
+carousel angle, Best platform, Design direction, Color direction,
+Final-slide CTA, Viewer takeaway, plus a "Carousel title options:" line
+followed by its own three bulleted lines.
+Under CTA Options: "Label: value" lines for Engagement CTA, Save/share
+CTA, Follow/subscribe/resource/conversion CTA.
+Under Recommendations: "Label: value" lines for Strongest title,
+Strongest visual hook, Strongest textual hook, Strongest verbal hook,
+Strongest thumbnail, Strongest CTA.`;
+
+const TITLE_START_RE = /^(?:#{1,3}\s*)?(?:Title\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+
+function parsePackagingTitles(lines: string[] | undefined): PackagingTitleOption[] {
+  const blocks = splitBlocks(lines, TITLE_START_RE);
+  return blocks.map((block) => {
+    const startMatch = block[0].trim().match(TITLE_START_RE);
+    const title = (startMatch?.[1] ?? startMatch?.[3] ?? "Untitled").trim();
+    return {
+      title,
+      researchSupport: labeled(block, "Research support") ?? "",
+      viewerProblemAddressed: labeled(block, "Viewer problem addressed") ?? "",
+      promiseMade: labeled(block, "Promise made", "Promise") ?? "",
+      reasonToClick: labeled(block, "Reason the viewer may click", "Reason to click") ?? "",
+      riskOfMisleading: labeled(block, "Risk of misleading the viewer", "Risk of misleading") ?? "",
+    };
+  });
+}
+
+const THUMBNAIL_START_RE = /^(?:#{1,3}\s*)?(?:Thumbnail\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+
+function parseThumbnailSuggestions(lines: string[] | undefined): ThumbnailSuggestion[] {
+  const blocks = splitBlocks(lines, THUMBNAIL_START_RE);
+  return blocks.map((block) => {
+    const startMatch = block[0].trim().match(THUMBNAIL_START_RE);
+    const concept = (startMatch?.[1] ?? startMatch?.[3] ?? "Untitled thumbnail").trim();
+    return {
+      concept,
+      mainVisual: labeled(block, "Main visual") ?? "",
+      subjectActionOrExpression: labeled(block, "Subject action or expression") ?? "",
+      thumbnailText: labeled(block, "Thumbnail text") ?? "",
+      colorDirection: labeled(block, "Color direction") ?? "",
+      emotionalTrigger: labeled(block, "Emotional trigger") ?? "",
+      whyItFits: labeled(block, "Why it fits") ?? "",
+      whatToAvoid: labeled(block, "What to avoid") ?? "",
+    };
+  });
+}
+
+// A handful of fields (Carousel title options here, nothing else in
+// this template) are a label followed by its OWN bulleted sub-list
+// rather than a single "Label: value" line, this walks the lines right
+// after the label collecting bullets until a blank line or the next
+// non-bullet line ends the list.
+function labeledSublist(lines: string[], label: string): string[] {
+  const re = new RegExp(`^\\s*(?:[-*]\\s*)?${label}\\s*:?\\s*(.*)$`, "i");
+  const idx = lines.findIndex((l) => re.test(l.trim()));
+  if (idx === -1) return [];
+  const items: string[] = [];
+  const inline = lines[idx].trim().match(re)?.[1]?.trim();
+  if (inline) items.push(inline);
+  for (let i = idx + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line === "") continue;
+    if (/^[-*]\s+|^\d+[.)]\s+/.test(line)) {
+      items.push(line.replace(/^[-*]\s+|^\d+[.)]\s+/, "").trim());
+    } else {
+      break;
+    }
+  }
+  return items.filter(Boolean);
+}
+
+function parseCarouselEvaluation(lines: string[] | undefined): CarouselEvaluation {
+  const block = lines ?? [];
+  return {
+    recommendation: labeled(block, "Carousel recommendation") ?? "",
+    suitabilityScore: labeledScore(block, "Suitability score"),
+    reason: labeled(block, "Reason") ?? "",
+    recommendedSlideCount: labeled(block, "Recommended slide count") ?? "",
+    bestCarouselAngle: labeled(block, "Best carousel angle") ?? "",
+    bestPlatform: labeled(block, "Best platform") ?? "",
+    titleOptions: labeledSublist(block, "Carousel title options"),
+    designDirection: labeled(block, "Design direction") ?? "",
+    colorDirection: labeled(block, "Color direction") ?? "",
+    finalSlideCta: labeled(block, "Final-slide CTA", "Final slide CTA") ?? "",
+    viewerTakeaway: labeled(block, "Viewer takeaway") ?? "",
+  };
+}
+
+const PACKAGING_CORE_HEADERS = [
+  "TITLES",
+  "YOUTUBE DESCRIPTION",
+  "THUMBNAILS",
+  "CAROUSEL EVALUATION",
+  "RECOMMENDATIONS",
+] as const;
+
+const PACKAGING_HEADERS = [
+  "TITLES",
+  "YOUTUBE DESCRIPTION",
+  "SHORT-FORM CAPTION",
+  "INSTAGRAM CAPTION",
+  "TIKTOK CAPTION",
+  "YOUTUBE SHORTS CAPTION",
+  "X CAPTION",
+  "THREADS CAPTION",
+  "SHORT KEYWORDS",
+  "SEARCH PHRASES",
+  "THUMBNAILS",
+  "VISUAL HOOKS",
+  "TEXTUAL HOOKS",
+  "VERBAL HOOKS",
+  "CAROUSEL EVALUATION",
+  "CTA OPTIONS",
+  "RECOMMENDATIONS",
+] as const;
+
+export function parsePackagingPhasePaste(text: string): PackagingPhaseData | null {
+  const sections = splitSections(text, PACKAGING_HEADERS);
+  if (!PACKAGING_CORE_HEADERS.every((h) => sections.has(h))) return null;
+
+  const titles = parsePackagingTitles(sections.get("TITLES"));
+  const youtubeDescription = joinBlock(sections.get("YOUTUBE DESCRIPTION"));
+  const thumbnails = parseThumbnailSuggestions(sections.get("THUMBNAILS"));
+  const carousel = parseCarouselEvaluation(sections.get("CAROUSEL EVALUATION"));
+  const recommendationLines = sections.get("RECOMMENDATIONS") ?? [];
+  const strongestTitle = labeled(recommendationLines, "Strongest title") ?? "";
+  if (titles.length === 0 || !youtubeDescription || thumbnails.length === 0 || !carousel.recommendation || !strongestTitle) {
+    return null;
+  }
+
+  const ctaLines = sections.get("CTA OPTIONS") ?? [];
+
+  return {
+    titles,
+    platformCopy: {
+      youtubeDescription,
+      shortFormCaption: joinBlock(sections.get("SHORT-FORM CAPTION")),
+      instagramCaption: joinBlock(sections.get("INSTAGRAM CAPTION")),
+      tiktokCaption: joinBlock(sections.get("TIKTOK CAPTION")),
+      youtubeShortsCaption: joinBlock(sections.get("YOUTUBE SHORTS CAPTION")),
+      xCaption: joinBlock(sections.get("X CAPTION")),
+      threadsCaption: joinBlock(sections.get("THREADS CAPTION")),
+    },
+    shortKeywords: listLines(sections.get("SHORT KEYWORDS")),
+    searchPhrases: listLines(sections.get("SEARCH PHRASES")),
+    thumbnails,
+    visualHooks: listLines(sections.get("VISUAL HOOKS")),
+    textualHooks: listLines(sections.get("TEXTUAL HOOKS")),
+    verbalHooks: listLines(sections.get("VERBAL HOOKS")),
+    carousel,
+    ctaOptions: {
+      engagement: labeled(ctaLines, "Engagement CTA") ?? "",
+      saveShare: labeled(ctaLines, "Save/share CTA", "Save.share CTA") ?? "",
+      followSubscribeResourceConversion:
+        labeled(
+          ctaLines,
+          "Follow, subscribe, resource, or conversion CTA",
+          "Follow/subscribe/resource/conversion CTA",
+          "Follow CTA",
+        ) ?? "",
+    },
+    recommendations: {
+      strongestTitle,
+      strongestVisualHook: labeled(recommendationLines, "Strongest visual hook") ?? "",
+      strongestTextualHook: labeled(recommendationLines, "Strongest textual hook") ?? "",
+      strongestVerbalHook: labeled(recommendationLines, "Strongest verbal hook") ?? "",
+      strongestThumbnail: labeled(recommendationLines, "Strongest thumbnail") ?? "",
+      strongestCta: labeled(recommendationLines, "Strongest CTA") ?? "",
+    },
+  };
 }

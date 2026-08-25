@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { parseResearchPhasePaste, extractApprovalStatus } from "@/lib/manual-workflow-parsing";
+import {
+  parseResearchPhasePaste,
+  parsePackagingPhasePaste,
+  extractApprovalStatus,
+} from "@/lib/manual-workflow-parsing";
 
 export type ImportManualPhaseState = { fallbackRaw: string | null };
 
@@ -45,6 +49,48 @@ export async function importResearchPhase(
       raw_pasted_text: pastedText,
       parsed_data: parsed,
       status,
+    },
+    { onConflict: "content_id,phase" },
+  );
+
+  revalidatePath(`/calendar/${contentId}`);
+  return { fallbackRaw: null };
+}
+
+// docs/manual-workflow-redesign.md Phase C. No status extraction here:
+// Packaging's own template has no APPROVED/NEEDS REVISION/REJECTED
+// field (approval happens by the user typing the next-phase instruction
+// to their AI chat, not a parsed line), so the row's status column stays
+// null, same as the migration's own comment documents.
+export async function importPackagingPhase(
+  contentId: string,
+  _prevState: ImportManualPhaseState,
+  formData: FormData,
+): Promise<ImportManualPhaseState> {
+  const pastedText = String(formData.get("pasted_text") ?? "");
+  const parsed = parsePackagingPhasePaste(pastedText);
+  if (!parsed) {
+    return { fallbackRaw: pastedText };
+  }
+
+  const supabase = await createClient();
+  const { data: item, error: itemError } = await supabase
+    .from("content_calendar")
+    .select("brand")
+    .eq("id", contentId)
+    .single();
+  if (itemError || !item) {
+    return { fallbackRaw: pastedText };
+  }
+
+  await supabase.from("manual_workflow_phases").upsert(
+    {
+      content_id: contentId,
+      brand: item.brand,
+      phase: "packaging",
+      raw_pasted_text: pastedText,
+      parsed_data: parsed,
+      status: null,
     },
     { onConflict: "content_id,phase" },
   );
