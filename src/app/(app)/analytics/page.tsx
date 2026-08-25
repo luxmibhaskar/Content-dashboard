@@ -126,23 +126,25 @@ export default async function AnalyticsPage({
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <KpiCard label="Total Published" value={kpis.totalPublished.toLocaleString()} />
-        <KpiCard label="Total Views" value={kpis.totalViews.toLocaleString()} />
-        <KpiCard label="Total Engagement" value={kpis.totalEngagement.toLocaleString()} />
+        <KpiCard glow={1} label="Total Published" value={kpis.totalPublished.toLocaleString()} />
+        <KpiCard glow={2} label="Total Views" value={kpis.totalViews.toLocaleString()} />
+        <KpiCard glow={3} label="Total Engagement" value={kpis.totalEngagement.toLocaleString()} />
         <KpiCard
+          glow={1}
           label="Avg Engagement Rate"
           value={kpis.avgEngagementRate !== null ? `${kpis.avgEngagementRate.toFixed(1)}%` : "-"}
         />
         {kpis.hasConversions && (
           <>
-            <KpiCard label="Total Conversions" value={kpis.totalConversions.toLocaleString()} />
+            <KpiCard glow={2} label="Total Conversions" value={kpis.totalConversions.toLocaleString()} />
             <KpiCard
+              glow={3}
               label="Avg Conversion Rate"
               value={kpis.avgConversionRate !== null ? `${kpis.avgConversionRate.toFixed(1)}%` : "-"}
             />
           </>
         )}
-        <KpiCard label="Current Streak" value={`${walkStreak} walk / ${postStreak} post`} />
+        <KpiCard glow={1} label="Current Streak" value={`${walkStreak} walk / ${postStreak} post`} />
       </div>
 
       <section className="mt-8">

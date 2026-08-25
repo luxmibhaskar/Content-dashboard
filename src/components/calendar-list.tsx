@@ -20,7 +20,7 @@ export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
         <Link key={item.id} href={`/calendar/${item.id}`}>
           <GlowCard
             glow={((i % 3) + 1) as 1 | 2 | 3}
-            className="flex min-h-[132px] flex-col gap-2 p-3.5 transition hover:border-primary/40"
+            className="flex min-h-[132px] flex-col gap-2 p-3.5 transition hover:bg-muted/30"
           >
             <div className="flex items-start justify-between gap-2">
               <span className="truncate text-sm font-medium">

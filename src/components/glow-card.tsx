@@ -11,7 +11,7 @@ import {
 } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-type GlowIndex = 1 | 2 | 3;
+export type GlowIndex = 1 | 2 | 3;
 
 // Real bug, root-caused here rather than patched per call site: the
 // outer motion.div below is a two-child box (the decorative sheen, then

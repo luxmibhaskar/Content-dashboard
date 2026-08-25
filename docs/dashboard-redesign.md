@@ -147,23 +147,30 @@ generic neon:
   particular fix is worth an actual phone tap to confirm.
 
 Applied to every genuine standalone card/panel across the app: KPI
-tiles, the Content Calendar grid, list panels (Journey Log, Ideas,
-Collaborators, Competitors, Quick Capture, Hook Library groups,
-Reference Videos), the Command Center graphs, and every distinct
-form/section panel on the topic page (Copy-Ready, Research & Copy,
-Scripts, Competitor Benchmarks) including the text-heavy work surfaces
-named in the original ask. Deliberately *not* applied to: tiny nested
-form-field wrappers and inline edit rows (e.g. a single goal's inline
-edit form, the streak-log popover), tab/nav chrome (the pill toggles,
-top bar), and modal dialogs (Platforms) — scoped down from "every
-bordered box" to "real standalone cards" per an explicit follow-up
-decision, since breathing/tilt on button-sized micro-UI reads as jitter
-rather than polish. `<details>`-based `CollapsibleSection` gets the same
-`.glow-card` CSS class directly (no pointer tracking, a native
-disclosure widget's own semantics aren't worth trading for the tilt
-effect). Nested content inside an already-glowing panel (e.g. a
-Collapsible Section inside a GlowCard) stays plain, to avoid glow-in-
-glow visual clutter.
+tiles (each cycling a different `glow` index across a row, same as
+every other multi-card list here, so neighboring tiles don't all carry
+the identical accent), the Content Calendar grid, list panels (Journey
+Log, Ideas, Collaborators, Competitors, Quick Capture), the Command
+Center graphs, the topic page's Reference Videos tab (Section 10.2.1;
+restored after going silently unwired for a stretch, see topic-page-
+redesign.md), and every distinct form/section panel on the topic page
+(Copy-Ready, Research & Copy, Scripts, Competitor Benchmarks) including
+the text-heavy work surfaces named in the original ask. Deliberately
+*not* applied to: tiny nested form-field wrappers and inline edit rows
+(e.g. a single goal's inline edit form, the streak-log popover),
+tab/nav chrome (the pill toggles, top bar), and modal dialogs
+(Platforms) — scoped down from "every bordered box" to "real standalone
+cards" per an explicit follow-up decision, since breathing/tilt on
+button-sized micro-UI reads as jitter rather than polish. `<details>`-
+based `CollapsibleSection` gets the same `.glow-card` CSS class directly
+(no pointer tracking, a native disclosure widget's own semantics aren't
+worth trading for the tilt effect). Nested content inside an
+already-glowing panel (e.g. a card inside a CollapsibleSection, or a
+CollapsibleSection inside a GlowCard) stays plain, to avoid glow-in-glow
+visual clutter — this is why Hook Library's two list types (the
+Delivery-Mode entries and the Live Variant Aggregation groups) are both
+plain `rounded-lg border` divs rather than GlowCards: both live inside a
+`CollapsibleSection`, which is already the glowing surface.
 
 ## Layout follow-ups (built)
 

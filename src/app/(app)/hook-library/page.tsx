@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { CollapsibleSection } from "@/components/collapsible-section";
-import { GlowCard } from "@/components/glow-card";
 import { HookLibraryEntryCard } from "@/components/hook-library-entry";
 import { HookLibraryImport } from "@/components/hook-library-import";
 import { HookLibraryExport } from "@/components/hook-library-export";
@@ -85,14 +84,20 @@ function groupThumbnailsByConcept(rows: LiveThumbnailRow[]): Group[] {
   return [...map.values()].sort((a, b) => b.uses - a.uses);
 }
 
+// Plain, not GlowCard: every GroupList lives inside a CollapsibleSection
+// (see the three call sites below), which already carries the .glow-card
+// CSS class itself, so a GlowCard here would glow-in-glow, exactly what
+// docs/dashboard-redesign.md Phase 4 rules out for nested content inside
+// an already-glowing panel. HookLibraryEntryCard above the aggregation
+// section (same file) is the sibling that already gets this right.
 function GroupList({ groups, emptyLabel }: { groups: Group[]; emptyLabel: string }) {
   if (groups.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
   return (
     <div className="space-y-2">
-      {groups.map((g, i) => (
-        <GlowCard key={g.key} glow={((i % 3) + 1) as 1 | 2 | 3} className="p-3">
+      {groups.map((g) => (
+        <div key={g.key} className="rounded-lg border border-border p-3">
           <div className="flex items-start justify-between gap-3">
             <p className="text-sm font-medium">{g.key}</p>
             <span className="shrink-0 text-xs text-muted-foreground">
@@ -111,7 +116,7 @@ function GroupList({ groups, emptyLabel }: { groups: Group[]; emptyLabel: string
               </Link>
             ))}
           </div>
-        </GlowCard>
+        </div>
       ))}
     </div>
   );
