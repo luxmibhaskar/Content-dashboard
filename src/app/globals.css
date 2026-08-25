@@ -366,6 +366,27 @@ html[data-brand="lbsworks"] body {
   border-color: color-mix(in oklch, var(--glow-color) 40%, var(--border));
 }
 
+/* Generic app-chrome variant (glow-card.tsx's neutral prop): --glow-color
+   is already swapped to var(--primary) via inline style, that alone
+   covers the border/rim-light/halo/outer-glow/emboss system, all of
+   which read --glow-color already. The one piece that inline style can't
+   reach is the plain background fill, so this is the one CSS override
+   still needed, a flat Mist-grey tint (#F1F5F9, docs/brand-tokens.md's
+   shared light-background neutral, same hex the light-mode body wash
+   above already uses) instead of the near-white translucent glass every
+   pillar-colored card gets, "smooth light grey" rather than "pure white
+   glass" being the whole point of this variant. Dark mode's card tone
+   was never pillar-tinted to begin with (only the border/shadow layers
+   read glow-color, not this background property), so it just keeps the
+   normal formula, nothing to swap out there. */
+.glow-card[data-neutral="true"] {
+  background: color-mix(in oklch, #f1f5f9 60%, var(--card) 40%);
+}
+
+.dark .glow-card[data-neutral="true"] {
+  background: color-mix(in oklch, var(--card) 55%, transparent);
+}
+
 /* Same card-type scoping as the rest of this pass: dial every one of
    refinements 6/7's custom properties back together in one place,
    rather than repeating [data-text-heavy] per property below. */

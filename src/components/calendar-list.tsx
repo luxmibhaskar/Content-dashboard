@@ -3,6 +3,7 @@ import { ProductionStatusBar } from "@/components/production-status-bar";
 import { ViabilityDot } from "@/components/viability-dot";
 import { PillarTag } from "@/components/pillar-tag";
 import { GlowCard } from "@/components/glow-card";
+import { pillarGlowIndex } from "@/lib/pillars";
 import type { ContentCalendarItem } from "@/lib/types";
 
 // Card layout confirmed and documented in
@@ -16,42 +17,52 @@ import type { ContentCalendarItem } from "@/lib/types";
 export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
   return (
     <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((item, i) => (
-        <Link key={item.id} href={`/calendar/${item.id}`}>
-          <GlowCard
-            glow={((i % 3) + 1) as 1 | 2 | 3}
-            className="flex min-h-[132px] flex-col gap-2 p-3.5 transition hover:bg-muted/30"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <span className="truncate text-sm font-medium">
-                {item.final_title || "Untitled"}
-              </span>
-              <ViabilityDot status={item.viability_status} />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {item.pillar && <PillarTag pillar={item.pillar} />}
-              {item.sub_topic && (
-                <span className="truncate text-xs text-muted-foreground">{item.sub_topic}</span>
-              )}
-              {item.is_archived && (
-                <span
-                  className="shrink-0 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                  title="Archived: full detail lives in Drive, opening it retrieves it back automatically"
-                >
-                  Archived
+      {items.map((item) => {
+        // Each card is one real, pillar-tagged piece of content, so its
+        // glow should reflect that item's actual pillar, not an
+        // arbitrary list-position cycle (a Mind item showing Terracotta
+        // just because of where it landed in the grid). null (no pillar
+        // set yet, or an unrecognized value) falls back to neutral
+        // rather than guessing a color. See lib/pillars.ts.
+        const glowIndex = pillarGlowIndex(item.brand, item.pillar);
+        return (
+          <Link key={item.id} href={`/calendar/${item.id}`}>
+            <GlowCard
+              glow={glowIndex ?? undefined}
+              neutral={glowIndex === null}
+              className="flex min-h-[132px] flex-col gap-2 p-3.5 transition hover:bg-muted/30"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="truncate text-sm font-medium">
+                  {item.final_title || "Untitled"}
                 </span>
-              )}
-            </div>
-
-            {item.production_status && (
-              <div className="mt-auto pt-2">
-                <ProductionStatusBar status={item.production_status} />
+                <ViabilityDot status={item.viability_status} />
               </div>
-            )}
-          </GlowCard>
-        </Link>
-      ))}
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {item.pillar && <PillarTag pillar={item.pillar} />}
+                {item.sub_topic && (
+                  <span className="truncate text-xs text-muted-foreground">{item.sub_topic}</span>
+                )}
+                {item.is_archived && (
+                  <span
+                    className="shrink-0 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                    title="Archived: full detail lives in Drive, opening it retrieves it back automatically"
+                  >
+                    Archived
+                  </span>
+                )}
+              </div>
+
+              {item.production_status && (
+                <div className="mt-auto pt-2">
+                  <ProductionStatusBar status={item.production_status} />
+                </div>
+              )}
+            </GlowCard>
+          </Link>
+        );
+      })}
     </div>
   );
 }

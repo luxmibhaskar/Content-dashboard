@@ -2,7 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
-import { pillarsFor } from "@/lib/pillars";
+import { pillarsFor, pillarGlowIndex } from "@/lib/pillars";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlowCard } from "@/components/glow-card";
@@ -106,8 +106,16 @@ export default async function QuickCapturePage({
       </div>
 
       <div className="mt-4 space-y-3">
-        {rows.map((c, i) => (
-          <GlowCard key={c.id} glow={((i % 3) + 1) as 1 | 2 | 3} className="p-3">
+        {rows.map((c) => {
+          // pillar here is a loose, free-text tag (see the Input above),
+          // not a validated assignment, so this only colors the card
+          // when it exactly matches a real pillar name, same as
+          // calendar-list.tsx's own item.pillar handling. A typo or
+          // made-up tag falls back to neutral rather than implying a
+          // categorization that was never actually made.
+          const glowIndex = pillarGlowIndex(c.brand, c.pillar);
+          return (
+          <GlowCard key={c.id} glow={glowIndex ?? undefined} neutral={glowIndex === null} className="p-3">
             <div className="flex items-center justify-between gap-2">
               <a href={c.url} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium hover:underline">
                 {c.url}
@@ -194,9 +202,10 @@ export default async function QuickCapturePage({
               </div>
             )}
           </GlowCard>
-        ))}
+          );
+        })}
         {rows.length === 0 && (
-          <GlowCard glow={1} className="px-3 py-6 text-center text-sm text-muted-foreground">
+          <GlowCard neutral className="px-3 py-6 text-center text-sm text-muted-foreground">
             Nothing in {status}.
           </GlowCard>
         )}

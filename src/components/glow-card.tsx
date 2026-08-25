@@ -105,12 +105,31 @@ export function GlowCard({
   children,
   className,
   glow = 1,
+  neutral = false,
   fill = false,
   textHeavy = false,
 }: {
   children: React.ReactNode;
   className?: string;
   glow?: GlowIndex;
+  // glow-1/2/3 are literally the brand's three pillar colors under a
+  // different name (see PILLAR_GLOW_INDEX in lib/pillars.ts), so using
+  // them - cycled or fixed - implies a specific pillar categorization.
+  // Correct for content genuinely tied to one (a Content Calendar item,
+  // a Quick Capture row with a real pillar tag), wrong for generic
+  // app-level chrome with no pillar of its own (KPI tiles, Quick Access,
+  // sidebar widgets, graph panels, platform goals): coloring those by
+  // pillar implies a categorization that isn't real. neutral overrides
+  // glow entirely, using the brand's single --primary accent instead
+  // (Iron Charcoal for LBsTransformation, Build Indigo for LBsWorks,
+  // both already equal one of the glow-N values, just not consistently
+  // the same index across brands, which is why this can't just be "pick
+  // glow=3 everywhere" the way the two-line diff would look), and swaps
+  // the background to a flat Mist-grey tint in light mode rather than
+  // the default translucent card glass (dark mode's card tone was
+  // already pillar-neutral, nothing to swap there). One consistent
+  // color every time a card like this renders, never cycled.
+  neutral?: boolean;
   // The inner content wrapper is a plain block div by default, sized to
   // its own content, so a child relying on h-full (e.g. a fixed-height
   // sidebar card with its own internal flex-col + a flex-1
@@ -223,9 +242,10 @@ export function GlowCard({
         rotateX,
         rotateY,
         perspective: 800,
-        ["--glow-color" as string]: `var(--glow-${glow})`,
+        ["--glow-color" as string]: neutral ? "var(--primary)" : `var(--glow-${glow})`,
       }}
       data-text-heavy={textHeavy ? "true" : undefined}
+      data-neutral={neutral ? "true" : undefined}
       className={cn("glow-card group rounded-lg", outerClassName)}
     >
       {/* Refinement 6 (embossed depth + grain): the directional inset
