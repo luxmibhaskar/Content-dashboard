@@ -248,32 +248,34 @@ html[data-brand="lbsworks"] {
   --glow-3: #10b981; /* Scale Green */
 }
 
-/* "Moving away from flat backgrounds": both brands use the same
-   light-from-above radial-gradient wash (same shape/position/falloff),
-   consistent visual language, only the tint differs per brand. LBsWorks
+/* "Moving away from flat backgrounds": a soft light-from-above radial
+   wash, centered above the viewport (50% -10%) so it reads as a bulb-like
+   light source shining down near the top of the page, around the brand
+   switcher, fading out well before mid-page (transparent 70%). LBsWorks
    originally had a dot-grid here instead (the spec's "either/or"
    wording), swapped for this same wash type per a later consistency
-   follow-up, brand expressed through color only, not through a
-   different effect. Both intentionally near-imperceptible, the bar is
-   "the page doesn't feel flat", not a visible design element, LBsWorks'
-   being newly built isn't a reason for it to read more prominent than
-   LBsTransformation's. Fixed attachment so the wash reads as the page's
-   own surface, not something that scrolls with content. */
-html[data-brand="lbstransformation"] body {
+   follow-up, then briefly tinted with each brand's own primary color
+   (Iron Charcoal / Build Indigo) rather than a shared neutral.
+   Brand-tinting didn't survive: Iron Charcoal is dark and desaturated
+   enough that it read as a near-imperceptible ambient glow, the actual
+   design intent ("the page doesn't feel flat", not a visible design
+   element on its own), but Build Indigo is bright and saturated, so the
+   identical technique read as a visible colored light instead, not a
+   quiet one, the same hue-vs-lightness mismatch behind the GlowCard
+   outer-glow fix just above. One shared, brand-independent formula now:
+   a soft white/Mist glow for both, so the "warm lamp shining down" effect
+   reads the same regardless of which brand is active. Fixed attachment
+   so the wash reads as the page's own surface, not something that
+   scrolls with content. No separate dark-mode values needed, this same
+   formula already reads as a soft, warm light against a dark backdrop:
+   #f1f5f9 is high-luminance enough to glow gently rather than disappear,
+   but the low 75%-into-transparent mix keeps it a soft bloom rather than
+   a harsh, sharply-edged patch. */
+body {
   background-color: var(--background);
   background-image: radial-gradient(
     ellipse 90% 60% at 50% -10%,
     color-mix(in oklch, #f1f5f9 75%, transparent),
-    transparent 70%
-  );
-  background-attachment: fixed;
-}
-
-html[data-brand="lbsworks"] body {
-  background-color: var(--background);
-  background-image: radial-gradient(
-    ellipse 90% 60% at 50% -10%,
-    color-mix(in oklch, #4f46e5 8%, transparent),
     transparent 70%
   );
   background-attachment: fixed;
@@ -321,6 +323,23 @@ html[data-brand="lbsworks"] body {
      (.dark .glow-card below); this lighter default value is light mode's
      own, more restrained so it doesn't read as a rendering artifact. */
   --outer-glow-strength: 20%;
+  /* Later ask again: this wide bleed is a "background wash sitting
+     behind the container", distinct from the border/edge-ring layers
+     right above (which stay on --glow-color, that edge IS meant to be
+     visible/on-brand). Its own color variable, separate from
+     --glow-color, so a brand can desaturate just this one wash without
+     touching the border. Needed because the same alpha% reads
+     completely differently depending on the underlying hue's lightness:
+     Iron Charcoal (LBsTransformation's --primary) is dark and
+     desaturated, close in luminance to the page's own dark-mode
+     background, so it was already blending in "for free"; Build Indigo
+     (LBsWorks' --primary) is bright and saturated, so the identical
+     outer-glow layer read as a distinct colored bloom instead, not a
+     bug in the logic, just two very different hues fed through one
+     formula. Default here is var(--glow-color) (every existing card's
+     behavior, unchanged); the LBsWorks-neutral override below is the
+     one exception. */
+  --outer-glow-color: var(--glow-color);
   /* Refinement 6 (grain): opacity of .glow-card-grain below, its own
      variable rather than a literal on that rule so [data-text-heavy]
      can dial it back the same way as the other three. */
@@ -354,7 +373,7 @@ html[data-brand="lbsworks"] body {
     0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
     0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent),
     0 0 22px -4px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
-    0 0 48px 8px color-mix(in oklch, var(--glow-color) var(--outer-glow-strength), transparent),
+    0 0 48px 8px color-mix(in oklch, var(--outer-glow-color) var(--outer-glow-strength), transparent),
     inset 3px 3px 9px 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
     inset -3px -3px 9px 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   animation: card-breathe 6s ease-in-out infinite;
@@ -368,23 +387,48 @@ html[data-brand="lbsworks"] body {
 
 /* Generic app-chrome variant (glow-card.tsx's neutral prop): --glow-color
    is already swapped to var(--primary) via inline style, that alone
-   covers the border/rim-light/halo/outer-glow/emboss system, all of
-   which read --glow-color already. The one piece that inline style can't
-   reach is the plain background fill, so this is the one CSS override
-   still needed, a flat Mist-grey tint (#F1F5F9, docs/brand-tokens.md's
-   shared light-background neutral, same hex the light-mode body wash
-   above already uses) instead of the near-white translucent glass every
-   pillar-colored card gets, "smooth light grey" rather than "pure white
-   glass" being the whole point of this variant. Dark mode's card tone
-   was never pillar-tinted to begin with (only the border/shadow layers
-   read glow-color, not this background property), so it just keeps the
-   normal formula, nothing to swap out there. */
+   covers the border/rim-light/halo/emboss system (and the outer glow
+   too, by default, via --outer-glow-color falling back to --glow-color
+   above). The one piece that inline style can't reach is the plain
+   background fill, so this is the one CSS override still needed, a flat
+   Mist-grey tint (#F1F5F9, docs/brand-tokens.md's shared light-background
+   neutral, same hex the light-mode body wash above already uses) instead
+   of the near-white translucent glass every pillar-colored card gets,
+   "smooth light grey" rather than "pure white glass" being the whole
+   point of this variant. Dark mode's card tone was never pillar-tinted
+   to begin with (only the border/shadow layers read glow-color, not this
+   background property), so it just keeps the normal formula, nothing to
+   swap out there. */
 .glow-card[data-neutral="true"] {
   background: color-mix(in oklch, #f1f5f9 60%, var(--card) 40%);
 }
 
 .dark .glow-card[data-neutral="true"] {
   background: color-mix(in oklch, var(--card) 55%, transparent);
+}
+
+/* LBsWorks-specific: neutral cards' --glow-color is var(--primary), Build
+   Indigo, a bright saturated hue that made the wide outer-glow "wash"
+   layer read as a distinct colored bloom instead of the quiet, blended-in
+   quality Iron Charcoal gives LBsTransformation's own neutral cards for
+   free (see --outer-glow-color's definition above). Overridden here to
+   the same Mist tone the neutral background itself uses, so the wash
+   reads as a soft, brand-neutral light rather than a saturated color
+   cast, matching LBsTransformation's understated quality without
+   touching the border/edge ring, which stays on Build Indigo, still
+   meant to read as this card's brand accent. Strength is dialed down
+   alongside the color swap, not just the hue: a light tone at the
+   default 20%/42% (light/dark) alpha reads as a bright bloom rather than
+   a quiet wash, white has far higher luminance contrast against a dark
+   backdrop than the indigo it replaces, so matching perceived "quiet"
+   quality needs a lower strength here, not just a different hue. */
+html[data-brand="lbsworks"] .glow-card[data-neutral="true"] {
+  --outer-glow-color: #f1f5f9;
+  --outer-glow-strength: 10%;
+}
+
+html[data-brand="lbsworks"].dark .glow-card[data-neutral="true"] {
+  --outer-glow-strength: 16%;
 }
 
 /* Same card-type scoping as the rest of this pass: dial every one of
@@ -609,7 +653,7 @@ html[data-brand="lbsworks"] body {
       0 0 0 1px color-mix(in oklch, var(--glow-color) 25%, transparent),
       0 6px 24px -14px color-mix(in oklch, var(--glow-color) 45%, transparent),
       0 0 22px -4px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
-      0 0 48px 8px color-mix(in oklch, var(--glow-color) var(--outer-glow-strength), transparent),
+      0 0 48px 8px color-mix(in oklch, var(--outer-glow-color) var(--outer-glow-strength), transparent),
       inset 3px 3px 9px 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
       inset -3px -3px 9px 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   }
@@ -618,7 +662,7 @@ html[data-brand="lbsworks"] body {
       0 0 0 1px color-mix(in oklch, var(--glow-color) 50%, transparent),
       0 10px 34px -12px color-mix(in oklch, var(--glow-color) 65%, transparent),
       0 0 30px -2px color-mix(in oklch, var(--glow-color) var(--halo-strength), transparent),
-      0 0 68px 14px color-mix(in oklch, var(--glow-color) var(--outer-glow-strength), transparent),
+      0 0 68px 14px color-mix(in oklch, var(--outer-glow-color) var(--outer-glow-strength), transparent),
       inset 3px 3px 9px 0 rgba(255, 255, 255, var(--emboss-light-alpha)),
       inset -3px -3px 9px 0 rgba(0, 0, 0, var(--emboss-dark-alpha));
   }
@@ -677,6 +721,21 @@ html[data-brand="lbsworks"] body {
    per-instance 1/2/3 picks, this marks "the current page" as one
    consistent accent, not a decorative variety pick. */
 .nav-link-active {
+  background: color-mix(in oklch, var(--popover) 55%, transparent);
+  border: 1px solid color-mix(in oklch, var(--glow-1) 55%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--glow-1) 30%, transparent),
+    0 0 14px -2px color-mix(in oklch, var(--glow-1) 70%, transparent);
+}
+
+/* Later ask: the brand switcher (src/components/brand-switcher.tsx) reads
+   as static chrome next to it, one of its two pills is always "active",
+   so give its own outer pill container the same glass + brand-glow
+   language rather than the plain border-border it had. Same --glow-1,
+   always-on formula as .nav-link-active just above, for the same reason:
+   this marks "brand switching lives here" as one consistent accent, not
+   a decorative variety pick. */
+.brand-switcher {
   background: color-mix(in oklch, var(--popover) 55%, transparent);
   border: 1px solid color-mix(in oklch, var(--glow-1) 55%, var(--border));
   box-shadow:
