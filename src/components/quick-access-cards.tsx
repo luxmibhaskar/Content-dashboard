@@ -22,7 +22,16 @@ export function QuickAccessCards() {
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {CARDS.map(({ href, label, description, icon: Icon }) => (
         <Link key={href} href={href}>
-          <GlowCard neutral className="p-3 transition-colors duration-150 hover:bg-muted/30">
+          {/* pb-5, not the plain p-3 every side else uses: .glow-card::after
+              (globals.css) insets 18px from the bottom, a bare p-3 (12px)
+              sat inside that zone, reading as the description line
+              crowding the card's own decorative inner pane. Same defect
+              CollapsibleSection's default padding had (collapsible-section.tsx),
+              fixed the same way, just per-instance here since GlowCard's
+              own default (p-4 at most call sites) isn't uniformly tight
+              enough everywhere to justify changing app-wide, this one
+              compact 3-line card genuinely was. */}
+          <GlowCard neutral className="p-3 pb-5 transition-colors duration-150 hover:bg-muted/30">
             {/* Refinement 5: icon + label are this card's "nearer" plane
                 (a couple px of extra parallax shift), the description
                 stays still as the body plane beneath it. */}

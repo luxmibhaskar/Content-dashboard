@@ -16,7 +16,9 @@ export async function ServicesPanel({ backupStatuses }: { backupStatuses: BrandB
   return (
     <div className="space-y-4">
       {/* neutral on both: infrastructure/system status, nothing to do
-          with any pillar. */}
+          with any pillar. The bottom-padding fix these two were first
+          noticed on now lives in CollapsibleSection's own default
+          (collapsible-section.tsx), not opted into per call site here. */}
       <CollapsibleSection title="System & Services" defaultOpen={false} neutral>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
