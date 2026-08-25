@@ -83,11 +83,28 @@ one page, `?entry=manual` branches which one renders):
 
 ## 2. Topic page: three tabs, not five sections
 
-**⚠ Updated**: originally exactly two tabs (Research & Copy, Scripts).
-Reference Videos (builder-brief.md Section 10.2.1) is a third, same pill
-styling, added after the original two-tab build; it was never meant to
-be cut, it just went silently unwired for a stretch and has since been
-restored. See Tab 3 below.
+**⚠ Updated twice.** Originally exactly two tabs (Research & Copy,
+Scripts). Reference Videos (builder-brief.md Section 10.2.1) became a
+third, same pill styling, added after the original two-tab build; it
+was never meant to be cut, it just went silently unwired for a stretch
+and has since been restored. See Tab 3 below.
+
+**⚠ Restructured again, see `docs/manual-workflow-redesign.md`.** The
+flat three-tab pill this section describes is now the AI side only. Top
+level is a Manual/AI toggle (same pill styling) plus Reference Videos
+alongside it, since Reference Videos belongs to neither side, not a
+third flat tab anymore:
+
+- **AI** (selected by default): Tab 1 "Research & Copy" and Tab 2
+  "Scripts" below, exactly as this section describes, unchanged.
+- **Manual**: a separate phase-gated Research/Packaging/Scripting
+  workflow, replacing the Manual paste-panel that used to sit side by
+  side with AI inside Tab 1/Tab 2 (still there as of this note, removing
+  it is a separate pending decision, not yet done). Full spec in
+  `docs/manual-workflow-redesign.md`.
+- **Reference Videos**: unchanged, still Tab 3 as described below, just
+  positioned alongside the Manual/AI toggle now instead of inside the
+  same flat pill as Tab 1/Tab 2.
 
 Remove entirely as separate sections: Creator Input, Audience Strategy,
 Viewer POV, Normal POV, Recording Section. Replace with tabs styled

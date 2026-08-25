@@ -16,6 +16,7 @@ import {
   PRODUCTION_STATUSES,
   VIABILITY_STATUSES,
   type ContentCalendarDetail,
+  type ManualWorkflowPhaseRow,
   type ReferenceVideo,
   type ResearchCopyVersion,
   type ScriptsVersion,
@@ -90,6 +91,7 @@ export default async function TopicPage({
     { data: researchCopyVersions },
     { data: scriptsVersions },
     { data: referenceVideos },
+    { data: manualWorkflowPhases },
     structure,
   ] = await Promise.all([
     item.derived_from_content_id
@@ -121,6 +123,12 @@ export default async function TopicPage({
       .select("id, content_id, url, hook_note, rehook_note, cta_note, date_added")
       .eq("content_id", id)
       .order("date_added", { ascending: false }),
+    // docs/manual-workflow-redesign.md: at most one row per phase, gating
+    // only needs to know whether parsed_data is set on each.
+    supabase
+      .from("manual_workflow_phases")
+      .select("id, phase, raw_pasted_text, parsed_data, status")
+      .eq("content_id", id),
     getMergedPillarStructure(item.brand),
   ]);
 
@@ -383,6 +391,7 @@ export default async function TopicPage({
           researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
           scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
           referenceVideos={(referenceVideos ?? []) as ReferenceVideo[]}
+          manualWorkflowPhases={(manualWorkflowPhases ?? []) as ManualWorkflowPhaseRow[]}
         />
       </div>
     </div>

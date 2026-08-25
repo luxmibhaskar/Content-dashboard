@@ -258,6 +258,33 @@ export type ScriptsVersion = {
   is_live: boolean;
 };
 
+// docs/manual-workflow-redesign.md: the Manual side's three-phase
+// Research -> Packaging -> Scripting workflow (supabase/migrations/
+// 0017_manual_workflow_phases.sql), replacing the old two-part Manual
+// structure that used to live inside Research & Copy/Scripts
+// (ResearchCopyVersion/ScriptsVersion, source==="manual"). One row per
+// (content_id, phase), phase-gated: Packaging requires a Research row
+// with parsed_data set, Scripting requires the same of Packaging.
+export const MANUAL_WORKFLOW_PHASES = ["research", "packaging", "scripting"] as const;
+export type ManualWorkflowPhase = (typeof MANUAL_WORKFLOW_PHASES)[number];
+
+// The template's own end-of-phase line. Packaging's template has no
+// equivalent (approval there happens by the user typing the next-phase
+// instruction, not a parsed field), so packaging rows leave this null.
+export type ManualWorkflowStatus = "approved" | "needs_revision" | "rejected";
+
+// parsed_data's shape is phase-specific (ResearchPhaseData /
+// PackagingPhaseData / ScriptingPhaseData, each defined alongside that
+// phase's own parser as it's built), unknown for now since nothing
+// parses it yet, Phase A only needs to gate on whether it's set.
+export type ManualWorkflowPhaseRow = {
+  id: string;
+  phase: ManualWorkflowPhase;
+  raw_pasted_text: string | null;
+  parsed_data: unknown | null;
+  status: ManualWorkflowStatus | null;
+};
+
 // Section 10.2.2/10.2.3: Research Snapshots (append-only, latest drives
 // Potential Data, all rows together drive History)
 export type YouTubeVideoSignal = {

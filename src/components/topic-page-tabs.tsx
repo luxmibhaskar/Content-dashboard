@@ -5,24 +5,38 @@ import { Button } from "@/components/ui/button";
 import { ResearchAndCopyTab } from "@/components/research-and-copy-tab";
 import { ScriptsTab } from "@/components/scripts-tab";
 import { ReferenceVideosSection } from "@/components/reference-videos-section";
-import type { ReferenceVideo, ResearchCopyVersion, ScriptsVersion } from "@/lib/types";
+import { ManualWorkflowPanel } from "@/components/manual-workflow-panel";
+import type {
+  ManualWorkflowPhaseRow,
+  ReferenceVideo,
+  ResearchCopyVersion,
+  ScriptsVersion,
+} from "@/lib/types";
 
-type Tab = "research" | "scripts" | "videos";
+type Area = "ai" | "manual" | "videos";
+type AiTab = "research" | "scripts";
 
-const TAB_LABELS: Record<Tab, string> = {
+const AI_TAB_LABELS: Record<AiTab, string> = {
   research: "Research & Copy",
   scripts: "Scripts",
-  videos: "Reference Videos",
 };
 
-// docs/topic-page-redesign.md Section 2 originally specified exactly two
-// tabs; Reference Videos (Section 10.2.1) is a third, restored here after
-// going silently unwired rather than ever being deliberately cut (unlike
-// Competitor Benchmarks, which topic-page-redesign.md Section 9 records
-// as an intentional removal). Same pill-toggle styling (solid/ghost
-// Button swap) as the original two, not the sliding-indicator style used
-// for Publishing/Recording elsewhere on this app, per the spec's explicit
-// visual reference.
+// docs/manual-workflow-redesign.md: restructures the topic page's top
+// level from the flat Research & Copy / Scripts / Reference Videos pill
+// (docs/topic-page-redesign.md Section 2, as amended for Reference
+// Videos) to a Manual/AI toggle plus Reference Videos alongside it,
+// since Reference Videos belongs to neither side. Under AI: the existing
+// Research & Copy and Scripts tabs below, unchanged. Under Manual: the
+// new phase-gated Research/Packaging/Scripting workflow
+// (manual-workflow-panel.tsx). Same pill-toggle styling (solid/ghost
+// Button swap) both levels already used, not the sliding-indicator style
+// used for Publishing/Recording elsewhere on this app, per the spec's
+// explicit visual reference.
+//
+// Phase A note: the old Manual paste-panel that already lives inside
+// ResearchAndCopyTab/ScriptsTab (source==="manual") is untouched here,
+// still reachable under AI exactly as before. The new Manual workflow is
+// purely additive for now; removing the old one is a separate decision.
 export function TopicPageTabs({
   contentId,
   briefIntent,
@@ -30,6 +44,7 @@ export function TopicPageTabs({
   researchCopyVersions,
   scriptsVersions,
   referenceVideos,
+  manualWorkflowPhases,
 }: {
   contentId: string;
   briefIntent: string | null;
@@ -37,8 +52,10 @@ export function TopicPageTabs({
   researchCopyVersions: ResearchCopyVersion[];
   scriptsVersions: ScriptsVersion[];
   referenceVideos: ReferenceVideo[];
+  manualWorkflowPhases: ManualWorkflowPhaseRow[];
 }) {
-  const [tab, setTab] = useState<Tab>("research");
+  const [area, setArea] = useState<Area>("ai");
+  const [aiTab, setAiTab] = useState<AiTab>("research");
   // Section 7: Scripts' Run reads whichever research version is
   // currently active, "active" means what it says, full stop, not
   // always the AI one.
@@ -46,36 +63,84 @@ export function TopicPageTabs({
 
   return (
     <div>
-      <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
-        {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
           <Button
-            key={t}
             type="button"
             size="sm"
-            variant={tab === t ? "default" : "ghost"}
-            onClick={() => setTab(t)}
+            variant={area === "manual" ? "default" : "ghost"}
+            onClick={() => setArea("manual")}
           >
-            {TAB_LABELS[t]}
+            Manual
           </Button>
-        ))}
+          <Button
+            type="button"
+            size="sm"
+            variant={area === "ai" ? "default" : "ghost"}
+            onClick={() => setArea("ai")}
+          >
+            AI
+          </Button>
+        </div>
+
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+          <Button
+            type="button"
+            size="sm"
+            variant={area === "videos" ? "default" : "ghost"}
+            onClick={() => setArea("videos")}
+          >
+            Reference Videos
+          </Button>
+        </div>
       </div>
 
-      <div className={tab === "research" ? "mt-4" : "mt-4 hidden"}>
-        <ResearchAndCopyTab
-          contentId={contentId}
-          briefIntent={briefIntent}
-          keywords={keywords}
-          versions={researchCopyVersions}
-        />
-      </div>
+      {area === "ai" && (
+        <div className="mt-4">
+          <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+            {(Object.keys(AI_TAB_LABELS) as AiTab[]).map((t) => (
+              <Button
+                key={t}
+                type="button"
+                size="sm"
+                variant={aiTab === t ? "default" : "ghost"}
+                onClick={() => setAiTab(t)}
+              >
+                {AI_TAB_LABELS[t]}
+              </Button>
+            ))}
+          </div>
 
-      <div className={tab === "scripts" ? "mt-4" : "mt-4 hidden"}>
-        <ScriptsTab contentId={contentId} activeResearchCopy={activeResearchCopy} versions={scriptsVersions} />
-      </div>
+          <div className={aiTab === "research" ? "mt-4" : "mt-4 hidden"}>
+            <ResearchAndCopyTab
+              contentId={contentId}
+              briefIntent={briefIntent}
+              keywords={keywords}
+              versions={researchCopyVersions}
+            />
+          </div>
 
-      <div className={tab === "videos" ? "mt-4" : "mt-4 hidden"}>
-        <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
-      </div>
+          <div className={aiTab === "scripts" ? "mt-4" : "mt-4 hidden"}>
+            <ScriptsTab
+              contentId={contentId}
+              activeResearchCopy={activeResearchCopy}
+              versions={scriptsVersions}
+            />
+          </div>
+        </div>
+      )}
+
+      {area === "manual" && (
+        <div className="mt-4">
+          <ManualWorkflowPanel contentId={contentId} phases={manualWorkflowPhases} />
+        </div>
+      )}
+
+      {area === "videos" && (
+        <div className="mt-4">
+          <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
+        </div>
+      )}
     </div>
   );
 }
