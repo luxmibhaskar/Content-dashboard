@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ResearchPhaseContent } from "@/components/research-phase-content";
 import { PackagingPhaseContent } from "@/components/packaging-phase-content";
 import { ScriptingPhaseContent } from "@/components/scripting-phase-content";
+import { PhaseNav } from "@/components/manual-workflow-ui";
 import type {
   ResearchPhaseData,
   PackagingPhaseData,
@@ -65,20 +64,13 @@ export function ManualWorkflowPanel({
 
   return (
     <div>
-      <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
-        {MANUAL_WORKFLOW_PHASES.map((phase) => (
-          <Button
-            key={phase}
-            type="button"
-            size="sm"
-            variant={activePhase === phase ? "default" : "ghost"}
-            onClick={() => setActivePhase(phase)}
-          >
-            {locked[phase] && <Lock className="size-3" aria-hidden="true" />}
-            {PHASE_LABELS[phase]}
-          </Button>
-        ))}
-      </div>
+      <PhaseNav
+        phases={MANUAL_WORKFLOW_PHASES}
+        labels={PHASE_LABELS}
+        active={activePhase}
+        locked={locked}
+        onSelect={setActivePhase}
+      />
 
       {/* max-h + overflow-y-auto, not just growing with content: the
           outer page chrome (brand switcher, top bar, the phase pills

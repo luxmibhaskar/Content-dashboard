@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
+import { Field } from "@/components/manual-workflow-ui";
 import { RESEARCH_PASTE_TEMPLATE_HINT } from "@/lib/paste-import";
 import type {
   ResearchCopyContainer,
@@ -23,10 +24,6 @@ import {
   deepenResearchFromManual,
   getResearchProgress,
   updateResearchInput,
-  useResearchTitle,
-  useResearchDescription,
-  useResearchKeywordTags,
-  useResearchQuestionTags,
   importResearchCopyPaste,
   setActiveResearchCopyVersion,
   type RunResearchState,
@@ -43,10 +40,13 @@ const VERSION_LABELS: Record<VersionSource, string> = {
   ai: "AI Research",
 };
 
-// Polled every 3s while Run is pending (see the effect below), a separate
-// concurrent request from Run's own, so it can see progress checkpoints
-// land in Supabase in real time even though Run itself is still one long
-// blocking call. Real per-piece status instead of one opaque spinner.
+// Same progress-polling display as before this reorg, still shared by
+// both Run and Go Deeper below, still shows all three of the AI call's
+// internal steps (including "Titles & Tags") even though this phase
+// only displays the summary/sources half of what that call produces,
+// the underlying call is one atomic pass either way (see
+// ai-workflow-panel.tsx's own comment on why Packaging has no Run of
+// its own).
 function ProgressSteps({ progress }: { progress: ResearchProgress }) {
   return (
     <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -92,47 +92,6 @@ function SourceLinks({ sources }: { sources: ResearchSource[] }) {
   );
 }
 
-function TagContainer({
-  label,
-  tags,
-  contentId,
-  kind,
-}: {
-  label: string;
-  tags: string[];
-  contentId: string;
-  kind: "keyword" | "question";
-}) {
-  const action = kind === "keyword" ? useResearchKeywordTags : useResearchQuestionTags;
-  const boundAction = action.bind(null, contentId, tags);
-  return (
-    <GlowCard glow={1} className="space-y-2 p-4" textHeavy>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">{label}</p>
-        <form action={boundAction}>
-          <Button type="submit" size="xs" variant="outline">
-            Use This
-          </Button>
-        </form>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {tags.length === 0 ? (
-          <p className="text-xs text-muted-foreground">None found.</p>
-        ) : (
-          tags.map((t, i) => (
-            <span
-              key={i}
-              className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground"
-            >
-              {t}
-            </span>
-          ))
-        )}
-      </div>
-    </GlowCard>
-  );
-}
-
 function SourceContainer({ container }: { container: ResearchCopyContainer }) {
   return (
     <GlowCard glow={2} className="space-y-3 p-4" textHeavy>
@@ -164,15 +123,15 @@ function SourceContainer({ container }: { container: ResearchCopyContainer }) {
   );
 }
 
-// docs/topic-page-redesign.md Section 7: Manual and AI Research coexist
-// as two separate, always-visible panels, one is_live/"active" (radio-
-// exclusive, same concept as title_variants/hook_variants/
-// thumbnail_variants) but both stay fully visible and usable, active
-// only decides what Scripts' Run reads from. Each panel is a complete,
-// independent copy of the summary/sources/titles/description/tags/
-// containers breakdown, "Use This" buttons act on that panel's own
-// data regardless of which one is active.
-function VersionPanel({
+// The Research-half of what used to be research-and-copy-tab.tsx's
+// VersionPanel: summary, global sources, and per-source containers
+// (competitor/discussion coverage) only, titles/description/tags moved
+// to ai-packaging-phase-content.tsx's own version panel. Active/Make
+// active and Go Deeper stay here rather than duplicated in Packaging
+// too: this is the phase that actually runs the generation call, "Use
+// This" title/description/tag actions in Packaging don't depend on
+// which version is active, only Scripts' own Run does.
+function ResearchVersionPanel({
   contentId,
   source,
   version,
@@ -181,16 +140,9 @@ function VersionPanel({
   source: VersionSource;
   version: ResearchCopyVersion | undefined;
 }) {
-  const boundUseTitle = useResearchTitle.bind(null, contentId);
-  const boundUseDescription = useResearchDescription.bind(null, contentId);
   const boundSetActive = setActiveResearchCopyVersion.bind(null, contentId, source);
   const researchCopy = version?.data;
 
-  // "Go deeper" (Manual only): a real AI research pass seeded from the
-  // pasted content already here, not a fresh independent one, see
-  // deepenResearchFromManual. Same useActionState/polling shape as the
-  // top-level Run above, scoped to this one panel, meaningless on the
-  // AI panel (nothing to deepen from there, that's just Run Again).
   const initialDeepenState: RunResearchState = { error: null };
   const [deepenState, deepenAction, isDeepenPending] = useActionState(
     deepenResearchFromManual.bind(null, contentId),
@@ -210,7 +162,7 @@ function VersionPanel({
         const next = await getResearchProgress(contentId);
         if (!cancelled) setDeepenProgress(next);
       } catch (err) {
-        console.error("[research-and-copy] deepen progress poll failed:", err);
+        console.error("[ai-research-phase] deepen progress poll failed:", err);
       }
     };
     poll();
@@ -271,61 +223,12 @@ function VersionPanel({
           )}
 
           <GlowCard glow={2} className="space-y-2 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Summary</p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{researchCopy.summary}</p>
+            <Field label="Summary" value={researchCopy.summary} />
           </GlowCard>
 
           <CollapsibleSection title={`Sources (${researchCopy.globalSources.length})`} glow={1}>
             <SourceLinks sources={researchCopy.globalSources} />
           </CollapsibleSection>
-
-          <GlowCard glow={3} className="space-y-2 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Titles</p>
-            <div className="space-y-2">
-              {researchCopy.titles.map((t, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-2 rounded-md border border-border p-2"
-                >
-                  <p className="text-sm">{t}</p>
-                  <form action={boundUseTitle}>
-                    <input type="hidden" name="value" value={t} />
-                    <Button type="submit" size="xs" variant="outline">
-                      Use This
-                    </Button>
-                  </form>
-                </div>
-              ))}
-            </div>
-          </GlowCard>
-
-          <GlowCard glow={1} className="space-y-2 p-3.5" textHeavy>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <form action={boundUseDescription}>
-                <input type="hidden" name="value" value={researchCopy.description} />
-                <Button type="submit" size="xs" variant="outline">
-                  Use This
-                </Button>
-              </form>
-            </div>
-            <p className="text-sm">{researchCopy.description}</p>
-          </GlowCard>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TagContainer
-              label="Keyword tags"
-              tags={researchCopy.keywordTags}
-              contentId={contentId}
-              kind="keyword"
-            />
-            <TagContainer
-              label="Question tags"
-              tags={researchCopy.questionTags}
-              contentId={contentId}
-              kind="question"
-            />
-          </div>
 
           {researchCopy.containers.length > 0 && (
             <div className="space-y-3">
@@ -340,12 +243,14 @@ function VersionPanel({
   );
 }
 
-// docs/topic-page-redesign.md Section 2, Tab 1 "Research & Copy". One
-// Run, full depth from the start, no separate shallow-then-deep step.
-// The Brief Description/Keywords fields live here (not a full Creator
-// Input section) since Run needs something to search against, and a
-// re-run should be refinable without leaving the tab.
-export function ResearchAndCopyTab({
+// AI side's Research phase (see docs/manual-workflow-redesign.md's
+// three-phase structure, now applied to the AI side too per the
+// reorganization this component is part of): the Brief Description/
+// Keywords input, Run/Run Again, and Paste from AI chat all live here
+// since this is the AI call's actual entry point, same generation call
+// as before this reorg (synthesizeResearchAndCopy), just no longer
+// sharing one flat tab with the titles/tags half of its own output.
+export function AiResearchPhaseContent({
   contentId,
   briefIntent,
   keywords,
@@ -362,25 +267,12 @@ export function ResearchAndCopyTab({
   const boundUpdateInput = updateResearchInput.bind(null, contentId);
   const boundImportPaste = importResearchCopyPaste.bind(null, contentId);
 
-  // useActionState instead of a plain bound action: this call can take
-  // minutes (real web search) and can now time out client-side (see
-  // src/lib/anthropic.ts), so Run needs its own precise pending state
-  // and a place to show the resulting error inline rather than crashing
-  // the page or leaving the button silently stuck.
   const initialRunState: RunResearchState = { error: null };
   const [runState, runAction, isRunPending] = useActionState(
     runResearchAndCopy.bind(null, contentId),
     initialRunState,
   );
 
-  // Belt-and-suspenders against a double-fired Run: the button's own
-  // `loading`/disabled state depends on React committing isRunPending
-  // to the DOM, which isn't instant. A very fast second submit (or a
-  // Strict-Mode-style dev double-invoke) can land before that commit.
-  // Once a server action is in flight there's no way to cancel it
-  // server-side, a duplicate here means real API cost, so this ref
-  // check runs synchronously on the submit event itself, no render
-  // cycle involved, and is reset only once the pending action settles.
   const isSubmittingRef = useRef(false);
   useEffect(() => {
     if (!isRunPending) {
@@ -388,9 +280,6 @@ export function ResearchAndCopyTab({
     }
   }, [isRunPending]);
 
-  // Runs as its own request, independent of Run's, so it observes
-  // research_progress checkpoints landing in Supabase in real time
-  // instead of only finding out once Run's own promise finally resolves.
   const [progress, setProgress] = useState<ResearchProgress | null>(null);
   useEffect(() => {
     if (!isRunPending) return;
@@ -400,7 +289,7 @@ export function ResearchAndCopyTab({
         const next = await getResearchProgress(contentId);
         if (!cancelled) setProgress(next);
       } catch (err) {
-        console.error("[research-and-copy] progress poll failed:", err);
+        console.error("[ai-research-phase] progress poll failed:", err);
       }
     };
     poll();
@@ -414,10 +303,6 @@ export function ResearchAndCopyTab({
   return (
     <div className="space-y-5">
       <GlowCard glow={1} className="space-y-3 p-4" textHeavy>
-        {/* Two sibling forms, not nested, HTML doesn't allow nesting
-            forms (same reasoning as the Use This actions further down):
-            Save persists Brief Description/Keywords, Run kicks off the
-            research pass, independent actions. */}
         <form id="research-input-form" action={boundUpdateInput} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="brief_intent">Brief Description</Label>
@@ -463,8 +348,8 @@ export function ResearchAndCopyTab({
         </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <VersionPanel contentId={contentId} source="manual" version={manual} />
-          <VersionPanel contentId={contentId} source="ai" version={ai} />
+          <ResearchVersionPanel contentId={contentId} source="manual" version={manual} />
+          <ResearchVersionPanel contentId={contentId} source="ai" version={ai} />
         </div>
       )}
     </div>

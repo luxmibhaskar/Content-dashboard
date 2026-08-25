@@ -1,16 +1,18 @@
+import { Lock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { ManualWorkflowStatus } from "@/lib/types";
 
-// Shared display primitives for the Manual workflow's three phase
-// content components (research-phase-content.tsx, packaging-phase-
-// content.tsx, and Scripting's when Phase D lands). Extracted here
-// rather than left duplicated in research-phase-content.tsx once a
-// second phase needed the same pieces: Field/ListField render this
-// template's common "Label: value"/"Label: list" shape, ScoreBadge the
-// 0-10 scores every phase has at least one of (Content Opportunities'
-// five, Packaging's carousel suitability, Scripting's short-form
-// suitability), and StatusBadge the APPROVED/NEEDS REVISION/REJECTED
-// line Research and Scripting both end with (Packaging has none, so its
-// content component simply never renders one).
+// Shared display primitives, originally built for the Manual workflow's
+// three phase content components (research-phase-content.tsx,
+// packaging-phase-content.tsx, scripting-phase-content.tsx) and now also
+// reused by the AI side's own phase-gated reorganization
+// (ai-workflow-panel.tsx and friends): Field/ListField render the
+// common "Label: value"/"Label: list" shape, ScoreBadge the 0-10 scores
+// (Manual-only, nothing on the AI side has these), StatusBadge the
+// APPROVED/NEEDS REVISION/REJECTED line (also Manual-only), MarkerText
+// the anti-fabrication bracket markers (Manual-only, the AI prompts
+// never emit these literally), and PhaseNav the pill-switcher-with-
+// lock-icons pattern both sides' top-level phase navigation uses.
 
 const STATUS_LABELS: Record<ManualWorkflowStatus, string> = {
   approved: "Approved",
@@ -124,6 +126,43 @@ export function ListField({ label, items }: { label: string; items: string[] }) 
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// The pill-switcher-with-lock-icons pattern both Manual's and AI's
+// top-level phase navigation use (manual-workflow-panel.tsx,
+// ai-workflow-panel.tsx): a phase list, which one's active, and which
+// are locked, generic over the specific phase union each side defines
+// since "research"/"packaging"/"scripting" happen to read the same as
+// labels but are two unrelated string-literal types.
+export function PhaseNav<P extends string>({
+  phases,
+  labels,
+  active,
+  locked,
+  onSelect,
+}: {
+  phases: readonly P[];
+  labels: Record<P, string>;
+  active: P;
+  locked: Record<P, boolean>;
+  onSelect: (phase: P) => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+      {phases.map((phase) => (
+        <Button
+          key={phase}
+          type="button"
+          size="sm"
+          variant={active === phase ? "default" : "ghost"}
+          onClick={() => onSelect(phase)}
+        >
+          {locked[phase] && <Lock className="size-3" aria-hidden="true" />}
+          {labels[phase]}
+        </Button>
+      ))}
     </div>
   );
 }

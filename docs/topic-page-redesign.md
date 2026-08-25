@@ -89,18 +89,28 @@ third, same pill styling, added after the original two-tab build; it
 was never meant to be cut, it just went silently unwired for a stretch
 and has since been restored. See Tab 3 below.
 
-**⚠ Restructured again, see `docs/manual-workflow-redesign.md`.** The
-flat three-tab pill this section describes is now the AI side only. Top
-level is a Manual/AI toggle (same pill styling) plus Reference Videos
-alongside it, since Reference Videos belongs to neither side, not a
-third flat tab anymore:
+**⚠ Restructured twice since, see `docs/manual-workflow-redesign.md`.**
+The flat three-tab pill this section describes no longer exists in
+either form. Top level is a Manual/AI toggle (same pill styling) plus
+Reference Videos alongside it, since Reference Videos belongs to
+neither side, not a third flat tab:
 
-- **AI** (selected by default): Tab 1 "Research & Copy" and Tab 2
-  "Scripts" below, exactly as this section describes, unchanged.
-- **Manual**: a separate phase-gated Research/Packaging/Scripting
-  workflow, replacing the Manual paste-panel that used to sit side by
-  side with AI inside Tab 1/Tab 2 (still there as of this note, removing
-  it is a separate pending decision, not yet done). Full spec in
+- **AI** (selected by default): the same phase-gated Research/
+  Packaging/Scripting pill switcher Manual uses (see below), applied to
+  the AI side's own content in a later reorganization pass. Tab 1
+  "Research & Copy"'s content is split across two phases: Research shows
+  summary/sources/competitor-coverage, Packaging shows titles/
+  description/tags, both from the same single `runResearchAndCopy` call
+  (or paste) as before, no new generation, no new cost, gating and
+  display just reorganized. Tab 2 "Scripts" becomes the Scripting phase
+  verbatim, unchanged, it already matched 1:1. No AI-generated thumbnail
+  suggestions exist anywhere in this pipeline, unlike Manual's Packaging
+  phase which has them from its own template; the AI Packaging phase
+  omits thumbnails rather than fabricate a new generation call.
+- **Manual**: the phase-gated Research/Packaging/Scripting workflow,
+  replacing the Manual paste-panel that used to sit side by side with AI
+  inside Tab 1/Tab 2 (still there as of this note, removing it is a
+  separate pending decision, not yet done). Full spec in
   `docs/manual-workflow-redesign.md`.
 - **Reference Videos**: unchanged, still Tab 3 as described below, just
   positioned alongside the Manual/AI toggle now instead of inside the
