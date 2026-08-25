@@ -97,11 +97,6 @@ export async function updateContentItem(id: string, formData: FormData) {
       shares: num(formData, "shares"),
       saves: num(formData, "saves"),
       conversions: num(formData, "conversions"),
-
-      // Copy-Ready Panel
-      final_description: str(formData, "final_description"),
-      plain_keyword_tags: lines(formData, "plain_keyword_tags"),
-      question_style_tags: lines(formData, "question_style_tags"),
     })
     .eq("id", id);
 

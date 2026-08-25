@@ -3,41 +3,22 @@
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import type { ResearchCopyVersion, VersionSource } from "@/lib/types";
-import {
-  useResearchTitle,
-  useResearchDescription,
-  useResearchKeywordTags,
-  useResearchQuestionTags,
-} from "@/app/(app)/calendar/[id]/research-copy-actions";
+import { useResearchTitle } from "@/app/(app)/calendar/[id]/research-copy-actions";
 
 const VERSION_LABELS: Record<VersionSource, string> = {
   manual: "Manual",
   ai: "AI Research",
 };
 
-function TagContainer({
-  label,
-  tags,
-  contentId,
-  kind,
-}: {
-  label: string;
-  tags: string[];
-  contentId: string;
-  kind: "keyword" | "question";
-}) {
-  const action = kind === "keyword" ? useResearchKeywordTags : useResearchQuestionTags;
-  const boundAction = action.bind(null, contentId, tags);
+// Description/Keyword tags/Question tags stay display-only here, no
+// "Use This": their only destination was the Copy-Ready panel on the
+// main content form, now removed as redundant (that same input lives
+// in this Research/Packaging structure already). Titles keeps its
+// "Use This" since final_title is still very much a live field.
+function TagContainer({ label, tags }: { label: string; tags: string[] }) {
   return (
     <GlowCard glow={1} className="space-y-2 p-4" textHeavy>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">{label}</p>
-        <form action={boundAction}>
-          <Button type="submit" size="xs" variant="outline">
-            Use This
-          </Button>
-        </form>
-      </div>
+      <p className="text-sm font-medium">{label}</p>
       <div className="flex flex-wrap gap-1.5">
         {tags.length === 0 ? (
           <p className="text-xs text-muted-foreground">None found.</p>
@@ -76,7 +57,6 @@ function PackagingVersionPanel({
   version: ResearchCopyVersion | undefined;
 }) {
   const boundUseTitle = useResearchTitle.bind(null, contentId);
-  const boundUseDescription = useResearchDescription.bind(null, contentId);
   const researchCopy = version?.data;
 
   return (
@@ -117,31 +97,13 @@ function PackagingVersionPanel({
           </GlowCard>
 
           <GlowCard glow={1} className="space-y-2 p-3.5" textHeavy>
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">Description</p>
-              <form action={boundUseDescription}>
-                <input type="hidden" name="value" value={researchCopy.description} />
-                <Button type="submit" size="xs" variant="outline">
-                  Use This
-                </Button>
-              </form>
-            </div>
+            <p className="text-xs font-medium text-muted-foreground">Description</p>
             <p className="text-sm">{researchCopy.description}</p>
           </GlowCard>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <TagContainer
-              label="Keyword tags"
-              tags={researchCopy.keywordTags}
-              contentId={contentId}
-              kind="keyword"
-            />
-            <TagContainer
-              label="Question tags"
-              tags={researchCopy.questionTags}
-              contentId={contentId}
-              kind="question"
-            />
+            <TagContainer label="Keyword tags" tags={researchCopy.keywordTags} />
+            <TagContainer label="Question tags" tags={researchCopy.questionTags} />
           </div>
         </div>
       )}

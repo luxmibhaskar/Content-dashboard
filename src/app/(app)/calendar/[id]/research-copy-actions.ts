@@ -241,9 +241,6 @@ function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "") || null;
 }
 
-// "Use This" actions, non-destructive by convention (matches the old
-// Research Output pattern): each writes one Copy-Ready field, never
-// auto-applied, the creator picks.
 // Tab 1's own small input fields (Creator Input's full field set is
 // gone, but Run still needs a brief description and keywords to search
 // against, and those should stay editable in place so a re-run can be
@@ -261,6 +258,12 @@ export async function updateResearchInput(contentId: string, formData: FormData)
   revalidatePath(`/calendar/${contentId}`);
 }
 
+// "Use This", non-destructive by convention: writes final_title, never
+// auto-applied, the creator picks. Used to have three siblings here
+// (Description, Keyword tags, Question tags) feeding the Copy-Ready
+// panel on the main content form; that panel's gone now (redundant with
+// this same Research/Packaging structure), so those three are gone too,
+// only Title survives since final_title is still a live field.
 export async function useResearchTitle(contentId: string, formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -271,32 +274,3 @@ export async function useResearchTitle(contentId: string, formData: FormData) {
   revalidatePath(`/calendar/${contentId}`);
 }
 
-export async function useResearchDescription(contentId: string, formData: FormData) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("content_calendar")
-    .update({ final_description: str(formData, "value") })
-    .eq("id", contentId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/calendar/${contentId}`);
-}
-
-export async function useResearchKeywordTags(contentId: string, tags: string[]) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("content_calendar")
-    .update({ plain_keyword_tags: tags })
-    .eq("id", contentId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/calendar/${contentId}`);
-}
-
-export async function useResearchQuestionTags(contentId: string, tags: string[]) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("content_calendar")
-    .update({ question_style_tags: tags })
-    .eq("id", contentId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/calendar/${contentId}`);
-}

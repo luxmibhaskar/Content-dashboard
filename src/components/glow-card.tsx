@@ -143,8 +143,8 @@ export function GlowCard({
   // (docs/dashboard-redesign.md Phase 4: "every genuine standalone
   // card/panel", including the topic page's text-heavy work surfaces):
   // full effect on glanceable cards (KPI tiles, list rows, Quick
-  // Access), restrained here on dense text panels (Copy-Ready, Research
-  // & Copy, Scripts, Competitor Benchmarks) where a second moving
+  // Access), restrained here on dense text panels (Research & Copy,
+  // Scripts, Competitor Benchmarks) where a second moving
   // highlight competes with reading rather than reading as polish. Skips
   // the tighter specular highlight entirely and dials back the rim
   // light/inner layer's opacity, the embossed inset shadows, the grain,

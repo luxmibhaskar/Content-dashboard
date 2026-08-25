@@ -154,8 +154,9 @@ Log, Ideas, Collaborators, Competitors, Quick Capture), the Command
 Center graphs, the topic page's Reference Videos tab (Section 10.2.1;
 restored after going silently unwired for a stretch, see topic-page-
 redesign.md), and every distinct form/section panel on the topic page
-(Copy-Ready, Research & Copy, Scripts, Competitor Benchmarks) including
-the text-heavy work surfaces named in the original ask. Deliberately
+(Research & Copy, Scripts, Competitor Benchmarks, Copy-Ready as of this
+note but since removed as redundant, see topic-page-redesign.md)
+including the text-heavy work surfaces named in the original ask. Deliberately
 *not* applied to: tiny nested form-field wrappers and inline edit rows
 (e.g. a single goal's inline edit form, the streak-log popover),
 tab/nav chrome (the pill toggles, top bar), and modal dialogs

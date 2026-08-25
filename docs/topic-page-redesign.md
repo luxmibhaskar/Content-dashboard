@@ -410,11 +410,13 @@ no concurrent writers to race against.
   own text. Gating it on "active only" would mean a competitor mentioned
   in the non-active version never surfaces until someone happens to
   flip it active later.
-- **Copy-Ready panel's "Use This" buttons need no active concept at
-  all**: each version's panel renders its own complete set of Use This
-  buttons (title/description/keyword tags/question tags), already
-  non-destructive and creator-picked per field before this change, that
-  extends unchanged to two panels instead of one.
+- **⚠ Superseded.** The Copy-Ready panel this bullet originally described
+  is gone (redundant with the Research/Packaging structure both sides
+  now have, see the "+ New" and phase-structure notes elsewhere in this
+  doc); only Title's own "Use This" survives, `final_title` is still a
+  live field. No active concept needed there either, same reasoning:
+  each version's Packaging panel renders its own Titles list independent
+  of which version is active.
 - **`research_progress`** (the AI Run's own step-by-step polling status)
   stays tied to the Run process specifically, Paste never touches it,
   there's nothing to poll for a synchronous parse.
