@@ -3,7 +3,7 @@
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { StatusBadge, ScoreBadge, Field, ListField } from "@/components/manual-workflow-ui";
+import { StatusBadge, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
 import {
   RESEARCH_PHASE_PASTE_TEMPLATE_HINT,
   type ContentOpportunity,
@@ -72,7 +72,11 @@ function SourceClaimRow({ source }: { source: ResearchSourceClaim }) {
       {source.publicationDate && (
         <p className="mt-0.5 text-xs text-muted-foreground">{source.publicationDate}</p>
       )}
-      {source.claimSupported && <p className="mt-1 text-sm">{source.claimSupported}</p>}
+      {source.claimSupported && (
+        <p className="mt-1 text-sm">
+          <MarkerText text={source.claimSupported} />
+        </p>
+      )}
     </div>
   );
 }
@@ -190,7 +194,7 @@ export function ResearchPhaseContent({
                 <StatusBadge status={status} />
               </div>
               <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap">
-                {data.researchQualityStatusText}
+                <MarkerText text={data.researchQualityStatusText} />
               </p>
             </div>
           </GlowCard>

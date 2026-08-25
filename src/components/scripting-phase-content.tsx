@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { StatusBadge, ScoreBadge, Field, ListField } from "@/components/manual-workflow-ui";
+import { StatusBadge, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
 import {
   SCRIPTING_PASTE_TEMPLATE_HINT,
   type LongFormScriptSection,
@@ -203,7 +203,9 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">Script Status</p>
         </div>
-        <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap">{data.scriptStatusText}</p>
+        <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap">
+          <MarkerText text={data.scriptStatusText} />
+        </p>
       </div>
     </GlowCard>
   );
