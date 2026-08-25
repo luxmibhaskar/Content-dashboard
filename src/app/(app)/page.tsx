@@ -109,10 +109,15 @@ export default async function TodayPage() {
             Log on top (moved here from its old nav position), Content
             Output Tracker below it. */}
         <div className="flex flex-col gap-6 lg:h-[640px]">
-          <GlowCard glow={2} fill className="min-h-0 flex-1 p-4">
+          {/* neutral, not a pillar-cycled glow: these are aggregate
+              sidebar widgets (recent Journey Log entries across every
+              pillar, output counts across every pillar), not one piece
+              of pillar-tagged content, so a pillar color here implied a
+              categorization that isn't real. */}
+          <GlowCard neutral fill className="min-h-0 flex-1 p-4">
             <JourneyLogWidget entries={(journeyRows ?? []) as JourneyEntry[]} />
           </GlowCard>
-          <GlowCard glow={3} fill className="min-h-0 flex-1 p-4">
+          <GlowCard neutral fill className="min-h-0 flex-1 p-4">
             <ContentOutputTracker counts={outputCounts} breakdown={outputBreakdown} />
           </GlowCard>
         </div>
@@ -159,7 +164,9 @@ export default async function TodayPage() {
               </p>
             ) : (
               <Link href="/review" className="mt-8 block">
-                <GlowCard glow={1} className="p-4 transition-colors hover:bg-muted/30">
+                {/* neutral: a generic reminder banner, not a piece of
+                    pillar-tagged content. */}
+                <GlowCard neutral className="p-4 transition-colors hover:bg-muted/30">
                   <p className="text-sm font-medium">It&apos;s Sunday - Weekly Review time</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     15-20 minutes: scan the week, check pillar balance, glance at retention notes,

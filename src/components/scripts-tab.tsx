@@ -36,9 +36,13 @@ function PointerList({ points }: { points: ScriptPointer[] }) {
   );
 }
 
+// neutral, not a cycled glow index: every short here is atomized from
+// the same one topic (one pillar, if any), the shorts themselves don't
+// each carry a distinct pillar, so cycling colors across them implied a
+// per-item categorization that isn't real.
 function AtomizedShortCard({ short, index }: { short: AtomizedShort; index: number }) {
   return (
-    <GlowCard glow={((index % 3) + 1) as 1 | 2 | 3} className="space-y-2 p-4" textHeavy>
+    <GlowCard neutral className="space-y-2 p-4" textHeavy>
       <p className="text-sm font-medium">
         Short {index + 1}: {short.title}
       </p>

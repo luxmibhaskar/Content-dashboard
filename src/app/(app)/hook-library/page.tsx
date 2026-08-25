@@ -189,14 +189,19 @@ export default async function HookLibraryPage() {
         {/* Independently collapsible (CollapsibleSection, same component
             as the aggregation section below), each defaulting open: on
             small devices a long Visual list no longer has to be scrolled
-            past to reach Text or Verbal, each collapses on its own. */}
+            past to reach Text or Verbal, each collapses on its own.
+            neutral, not a cycled glow index: Visual/Text/Verbal is a
+            delivery-mode categorization, unrelated to the Body/Mind/Soul
+            (or Build/Sell/Scale) pillar taxonomy those glow colors
+            actually represent, cycling them here implied a pillar
+            distinction that was never being made. */}
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {HOOK_LIBRARY_TYPES.map((type, i) => (
+          {HOOK_LIBRARY_TYPES.map((type) => (
             <CollapsibleSection
               key={type}
               title={`${type[0].toUpperCase()}${type.slice(1)} (${entriesByType[type].length})`}
               defaultOpen
-              glow={((i % 3) + 1) as 1 | 2 | 3}
+              neutral
             >
               <div className="space-y-2">
                 {entriesByType[type].map((entry) => (

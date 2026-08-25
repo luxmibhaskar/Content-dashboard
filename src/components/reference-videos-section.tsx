@@ -34,8 +34,12 @@ export function ReferenceVideosSection({
       </form>
 
       <div className="mt-4 space-y-3">
-        {videos.map((v, i) => (
-          <GlowCard key={v.id} glow={((i % 3) + 1) as 1 | 2 | 3} className="p-3">
+        {/* neutral, not cycled: every video here belongs to this one
+            topic (one pillar, if any), the videos themselves have no
+            pillar of their own to differ by, so cycling colors across
+            them implied a per-item categorization that isn't real. */}
+        {videos.map((v) => (
+          <GlowCard key={v.id} neutral className="p-3">
             <div className="flex items-center justify-between gap-2">
               <a
                 href={v.url}

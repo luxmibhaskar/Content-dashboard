@@ -15,7 +15,9 @@ import type { BrandBackupStatus } from "@/lib/backup-status";
 export async function ServicesPanel({ backupStatuses }: { backupStatuses: BrandBackupStatus[] }) {
   return (
     <div className="space-y-4">
-      <CollapsibleSection title="System & Services" defaultOpen={false}>
+      {/* neutral on both: infrastructure/system status, nothing to do
+          with any pillar. */}
+      <CollapsibleSection title="System & Services" defaultOpen={false} neutral>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -42,7 +44,7 @@ export async function ServicesPanel({ backupStatuses }: { backupStatuses: BrandB
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Live Status & Backup" defaultOpen={false}>
+      <CollapsibleSection title="Live Status & Backup" defaultOpen={false} neutral>
         <LiveStatusSection />
 
         <div className="border-t border-border pt-3">

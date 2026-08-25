@@ -97,7 +97,9 @@ export function AudienceGraphsPanel({
   }
 
   return (
-    <GlowCard glow={2} fill className="h-full p-4">
+    // neutral: an aggregate graph panel, not one piece of pillar-tagged
+    // content.
+    <GlowCard neutral fill className="h-full p-4">
       {/* Layout follow-up: this card now stretches to fill whatever
           height page.tsx gives it (matching the sidebar's height, see
           the comment there). The two graphs below now stretch to fill

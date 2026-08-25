@@ -126,44 +126,45 @@ export default async function AnalyticsPage({
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <KpiCard glow={1} label="Total Published" value={kpis.totalPublished.toLocaleString()} />
-        <KpiCard glow={2} label="Total Views" value={kpis.totalViews.toLocaleString()} />
-        <KpiCard glow={3} label="Total Engagement" value={kpis.totalEngagement.toLocaleString()} />
+        <KpiCard label="Total Published" value={kpis.totalPublished.toLocaleString()} />
+        <KpiCard label="Total Views" value={kpis.totalViews.toLocaleString()} />
+        <KpiCard label="Total Engagement" value={kpis.totalEngagement.toLocaleString()} />
         <KpiCard
-          glow={1}
           label="Avg Engagement Rate"
           value={kpis.avgEngagementRate !== null ? `${kpis.avgEngagementRate.toFixed(1)}%` : "-"}
         />
         {kpis.hasConversions && (
           <>
-            <KpiCard glow={2} label="Total Conversions" value={kpis.totalConversions.toLocaleString()} />
+            <KpiCard label="Total Conversions" value={kpis.totalConversions.toLocaleString()} />
             <KpiCard
-              glow={3}
               label="Avg Conversion Rate"
               value={kpis.avgConversionRate !== null ? `${kpis.avgConversionRate.toFixed(1)}%` : "-"}
             />
           </>
         )}
-        <KpiCard glow={1} label="Current Streak" value={`${walkStreak} walk / ${postStreak} post`} />
+        <KpiCard label="Current Streak" value={`${walkStreak} walk / ${postStreak} post`} />
       </div>
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted-foreground">Content Performance Over Time</h2>
-        <GlowCard glow={1} className="mt-2 p-4">
+        {/* neutral throughout this page's graph panels: aggregate charts
+            over all content, not one piece of pillar-tagged content, a
+            pillar color implied a categorization that isn't real. */}
+        <GlowCard neutral className="mt-2 p-4">
           <PerformanceOverTimeChart data={overTime} />
         </GlowCard>
       </section>
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted-foreground">Performance by Pillar</h2>
-        <GlowCard glow={2} className="mt-2 p-4">
+        <GlowCard neutral className="mt-2 p-4">
           <PerformanceByPillarChart data={byPillar} />
         </GlowCard>
       </section>
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-muted-foreground">Pillar Balance / Consistency</h2>
-        <GlowCard glow={3} className="mt-2 p-4">
+        <GlowCard neutral className="mt-2 p-4">
           <PillarBalanceChart data={balance.data} />
           {balance.overPosting && (
             <p className="mt-3 text-sm text-amber-600">
@@ -182,31 +183,31 @@ export default async function AnalyticsPage({
       {/* Section 6.4: worth having once there's enough volume, not the
           first thing to see on this page, collapsed by default. */}
       <div className="mt-8">
-        <CollapsibleSection title="Secondary Graphs (Month 2+)">
+        <CollapsibleSection title="Secondary Graphs (Month 2+)" neutral>
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Top Sub-topics</h3>
-            <GlowCard glow={1} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <NamedMetricBarChart data={topSubTopics} emptyLabel="No sub-topic data in this range yet." />
             </GlowCard>
           </section>
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Content Output Volume Over Time</h3>
-            <GlowCard glow={2} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <OutputVolumeChart data={outputVolume.data} pillars={outputVolume.pillars} />
             </GlowCard>
           </section>
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Funnel: Reach &rarr; Engagement &rarr; Conversion</h3>
-            <GlowCard glow={3} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <ReachFunnelChart data={funnel} />
             </GlowCard>
           </section>
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Top Performing Content</h3>
-            <GlowCard glow={1} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <TopPerformingList items={topPerforming} />
             </GlowCard>
           </section>
@@ -214,7 +215,7 @@ export default async function AnalyticsPage({
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Research-based vs Custom Performance</h3>
             <p className="mt-0.5 text-xs text-muted-foreground">By each item&apos;s live title variant source.</p>
-            <GlowCard glow={2} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <NamedMetricBarChart
                 data={researchVsCustom}
                 emptyLabel="No live title variants tracked in this range yet."
@@ -224,7 +225,7 @@ export default async function AnalyticsPage({
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Retention Drop Patterns</h3>
-            <GlowCard glow={3} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               {retentionDrops.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No retention drop notes logged in this range yet.</p>
               ) : (
@@ -247,21 +248,21 @@ export default async function AnalyticsPage({
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Streak History</h3>
-            <GlowCard glow={1} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <StreakHeatmap cells={streakHeatmap} />
             </GlowCard>
           </section>
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Idea Source Performance</h3>
-            <GlowCard glow={2} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <NamedMetricBarChart data={ideaSourcePerformance} emptyLabel="No idea source data in this range yet." />
             </GlowCard>
           </section>
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Repurposing Performance</h3>
-            <GlowCard glow={3} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               {repurposing.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nothing in this range yet.</p>
               ) : (
@@ -288,7 +289,7 @@ export default async function AnalyticsPage({
 
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Best Time to Post</h3>
-            <GlowCard glow={1} className="mt-2 p-4">
+            <GlowCard neutral className="mt-2 p-4">
               <BestTimeToPostChart data={bestTimeToPost} />
             </GlowCard>
           </section>

@@ -28,7 +28,7 @@ function progressLabel(goal: Goal) {
   return `${current.toLocaleString()}/${goal.target_value.toLocaleString()} reached`;
 }
 
-export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 | 3 }) {
+export function PlatformGoalCard({ goal }: { goal: Goal }) {
   const [isPending, startTransition] = useTransition();
   const [backfillOpen, setBackfillOpen] = useState(false);
   const [isBackfillPending, startBackfillTransition] = useTransition();
@@ -44,7 +44,7 @@ export function PlatformGoalCard({ goal, glow = 1 }: { goal: Goal; glow?: 1 | 2 
   const label = progressLabel(goal);
 
   return (
-    <GlowCard glow={glow} className="p-4">
+    <GlowCard neutral className="p-4">
       <form action={(formData) => startTransition(() => boundUpdate(formData))} className="space-y-3">
         <div className="flex items-center gap-2">
           <PlatformIconPicker name="icon_slug" defaultSlug={goal.icon_slug} />

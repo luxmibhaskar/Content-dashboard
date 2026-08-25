@@ -133,8 +133,12 @@ export function StreakGoalsModal({
           </div>
 
           <div className={tab === "goals" ? "mt-4 space-y-3" : "mt-4 hidden"}>
-            {goals.map((g, i) => (
-              <PlatformGoalCard key={g.id} goal={g} glow={((i % 3) + 1) as 1 | 2 | 3} />
+            {/* neutral, not a cycled glow index: platform goals (Instagram,
+                TikTok, Newsletter...) aren't tied to any pillar, cycling
+                pillar colors across them implied a categorization that
+                isn't real. */}
+            {goals.map((g) => (
+              <PlatformGoalCard key={g.id} goal={g} />
             ))}
             {goals.length === 0 && (
               <p className="text-sm text-muted-foreground">No goals yet, add your first one below.</p>
