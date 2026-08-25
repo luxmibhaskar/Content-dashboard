@@ -47,39 +47,33 @@ concept, not a 5th card stage.
 
 ## 1. "+ New" content item form
 
-Two clearly labeled entry points on the Content Calendar page, not one
-button with a hidden toggle, genuinely different flows now, not two
-label variants of the same form (`src/app/(app)/calendar/new/page.tsx`,
-one page, `?entry=manual` branches which one renders):
+**⚠ Superseded, see `docs/manual-workflow-redesign.md`.** The two-
+entry-point version this section originally described (a condensed
+Title/Brief Description/Keywords form on one side, a paste-first,
+create-on-successful-parse flow on the other, `/calendar/new` with an
+`?entry=manual` branch) is gone. Once both the Manual and AI sides
+gained their own Research phase with that same input already collected
+there (Manual's per `manual-workflow-redesign.md`, AI's own reorganized
+onto the same three-phase structure), collecting it a second time
+before the item even existed became pure duplication, and the old
+Manual entry point's premise (create the item only once a paste parses,
+title from that parse) had nothing left to defer creation on, since no
+paste happens before the item exists anymore either way.
 
-- **"+ New (AI Research)"** (`entry` unset): unchanged, the original
-  flow. Condensed to three fields only, shown centered in a comfortably
-  proportioned layout, not full-width stretched: Title, Brief
-  Description, Keywords, this is context only, nothing else collects
-  input here. Submitting ("Run") creates the item
-  (`createContentItem`) and lands on the topic page with Run leading,
-  same as it always has.
-- **"+ New (Manual)"** (`entry=manual`): paste-first, no
-  Title/Brief Description/Keywords form at all, replaces the earlier
-  "collect three fields, then Continue, then land on the topic page
-  with Paste expanded" flow rather than sitting alongside it (that
-  earlier flow's `leadWithPaste` plumbing through `TopicPageTabs` →
-  `ResearchAndCopyTab` → `PasteImportSection` is gone, nothing sets it
-  anymore). Tapping the button goes straight to a paste prompt
-  (`CreateFromPasteForm`, same template as Section 7's "Paste from AI
-  chat"). The item genuinely doesn't exist until the paste parses
-  confidently: `createContentItemFromPaste`
-  (`src/app/(app)/calendar/actions.ts`) parses first, and only on a
-  confident match creates the `content_calendar` row, writes the parsed
-  result as the Manual `research_copy_versions` source (auto-activated,
-  it's always the item's first version), runs Competitor
-  auto-population, and redirects to the new topic page, landing already
-  populated. Title comes from the parsed research's own first title
-  option (`parseResearchCopyPaste` guarantees at least one whenever it
-  returns non-null), not collected separately, still editable on the
-  topic page afterward like any other title. On a low-confidence parse,
-  same fallback UX as Section 7's own paste import: the raw text stays
-  right there, editable, with an inline message, nothing gets created.
+Now: a single "+ New" button on the Content Calendar page
+(`createBlankContentItem`, `src/app/(app)/calendar/actions.ts`). No
+form, no route to visit first. It inserts a blank `content_calendar`
+row with a literal `"Untitled"` title (not left null: an empty header
+on a row that's already real underneath reads as broken, not as "not
+polished yet", same reasoning the Idea Panel's `ensureMigrated` already
+established) and redirects straight to that item's topic page.
+`TopicPageTabs` already defaults every topic page to the AI area
+regardless of how the item was created, so landing there needs no entry
+param, it's already where things land. The creator fills in a real
+title however they'd fill in any other field on a freshly created
+item: typing directly into the always-editable Title field, or, on the
+AI side, clicking "Use This" once Research/Packaging has generated
+title options.
 
 ## 2. Topic page: three tabs, not five sections
 

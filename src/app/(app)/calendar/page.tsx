@@ -6,6 +6,7 @@ import { computeRange, type CalendarRange } from "@/lib/date-range";
 import { CalendarList } from "@/components/calendar-list";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { createBlankContentItem } from "./actions";
 import type { ContentCalendarItem } from "@/lib/types";
 
 const SELECT_COLUMNS =
@@ -52,19 +53,15 @@ export default async function CalendarPage({
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">Content Calendar</h1>
-        {/* Two clearly labeled entry points, not one button with a
-            hidden toggle: both collect the same three fields
-            (docs/topic-page-redesign.md Section 1), they only differ in
-            what the topic page leads with once you land there, see the
-            `entry` param handling on that page. */}
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/calendar/new?entry=manual">+ New (Manual)</Link>
+        {/* docs/topic-page-redesign.md Section 1: one button, no
+            pre-form. Creates a blank item and redirects straight to its
+            topic page, Title/Brief Description/Keywords now live there
+            instead. */}
+        <form action={createBlankContentItem}>
+          <Button type="submit" size="sm">
+            + New
           </Button>
-          <Button asChild size="sm">
-            <Link href="/calendar/new">+ New (AI Research)</Link>
-          </Button>
-        </div>
+        </form>
       </div>
 
       <div className="mt-4 flex items-center gap-2">
