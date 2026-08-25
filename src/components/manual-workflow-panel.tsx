@@ -5,7 +5,12 @@ import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResearchPhaseContent } from "@/components/research-phase-content";
 import { PackagingPhaseContent } from "@/components/packaging-phase-content";
-import type { ResearchPhaseData, PackagingPhaseData } from "@/lib/manual-workflow-parsing";
+import { ScriptingPhaseContent } from "@/components/scripting-phase-content";
+import type {
+  ResearchPhaseData,
+  PackagingPhaseData,
+  ScriptingPhaseData,
+} from "@/lib/manual-workflow-parsing";
 import {
   MANUAL_WORKFLOW_PHASES,
   type ManualWorkflowPhase,
@@ -28,8 +33,9 @@ const LOCK_MESSAGE: Record<ManualWorkflowPhase, string> = {
 // that used to live inside Research & Copy/Scripts (still there for now,
 // see topic-page-tabs.tsx) with a phase-gated Research -> Packaging ->
 // Scripting workflow matching docs/research-packaging-scripting-template.txt
-// in full. Phase C (this pass): Research and Packaging both have full
-// parsing/display wired up; Scripting stays a placeholder until Phase D.
+// in full. Phase D (this pass): all three phases now have full
+// parsing/display wired up, the build's original four phases (A-D) are
+// complete.
 //
 // Gating reads parsed_data specifically, not just row presence: a row
 // can exist (e.g. a raw paste that failed to parse, per the doc's own
@@ -55,6 +61,7 @@ export function ManualWorkflowPanel({
 
   const researchRow = rowFor("research");
   const packagingRow = rowFor("packaging");
+  const scriptingRow = rowFor("scripting");
 
   return (
     <div>
@@ -76,13 +83,15 @@ export function ManualWorkflowPanel({
       {/* max-h + overflow-y-auto, not just growing with content: the
           outer page chrome (brand switcher, top bar, the phase pills
           right above this) stays put in the normal document flow, only
-          this box scrolls once a phase's content (Scripting especially,
-          two full script versions) outgrows it. Plain border, not a
-          GlowCard: each phase's own content below is a stack of GlowCards
-          (research-phase-content.tsx, packaging-phase-content.tsx),
-          nesting those inside another GlowCard here would be
+          this box scrolls once a phase's content outgrows it. Scripting
+          adds its own inner sub-tabs on top of this same box
+          (scripting-phase-content.tsx) since two full script versions
+          plus short-form/carousel/closing is too much to reasonably
+          scroll through as one flat list, even bounded. Plain border,
+          not a GlowCard: each phase's own content below is a stack of
+          GlowCards, nesting those inside another GlowCard here would be
           glow-in-glow. */}
-      <div className="mt-4 max-h-[70vh] overflow-y-auto rounded-lg border border-border p-4">
+      <div className="relative mt-4 max-h-[70vh] overflow-y-auto rounded-lg border border-border p-4">
         {locked[activePhase] ? (
           <p className="text-sm text-muted-foreground">{LOCK_MESSAGE[activePhase]}</p>
         ) : activePhase === "research" ? (
@@ -99,10 +108,12 @@ export function ManualWorkflowPanel({
             hasExistingImport={packagingRow != null}
           />
         ) : (
-          <p className="text-sm text-muted-foreground">
-            Scripting phase content, parsing, and its own &ldquo;Paste from AI chat&rdquo; import land
-            in Phase D of the build.
-          </p>
+          <ScriptingPhaseContent
+            contentId={contentId}
+            data={(scriptingRow?.parsed_data as ScriptingPhaseData | null) ?? null}
+            status={scriptingRow?.status ?? null}
+            hasExistingImport={scriptingRow != null}
+          />
         )}
       </div>
     </div>

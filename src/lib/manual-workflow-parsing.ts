@@ -608,3 +608,275 @@ export function parsePackagingPhasePaste(text: string): PackagingPhaseData | nul
     },
   };
 }
+
+// ---------------------------------------------------------------------
+// Scripting phase (docs/research-packaging-scripting-template.txt Phase 3)
+// ---------------------------------------------------------------------
+
+export type LongFormScriptSection = {
+  sectionTitle: string;
+  purpose: string;
+  exactNarration: string;
+  visualDirection: string;
+  onScreenText: string;
+  bRollOrDemonstration: string;
+  transition: string;
+  approximateTiming: string;
+  sourceMarkers: string;
+};
+
+export type PointerScriptSection = {
+  sectionTitle: string;
+  mainPointer: string;
+  briefDescription: string;
+  whyItMatters: string;
+  keyInformation: string;
+  exampleToInclude: string;
+  questionAnswered: string;
+  mistakeToAvoid: string;
+  transitionIdea: string;
+  approximateTiming: string;
+  sourceMarker: string;
+};
+
+export type ShortFormSuitability = {
+  suitable: string;
+  score: number;
+  reason: string;
+  bestStandaloneInsight: string;
+  bestSectionToConvert: string;
+  bestPlatform: string;
+  recommendedDuration: string;
+  recommendedConversionMethod: string;
+  contextRisk: string;
+  accuracyProtection: string;
+};
+
+export type ShortFormScript = {
+  title: string;
+  hook: string;
+  viewerProblem: string;
+  oneClearInsight: string;
+  example: string;
+  practicalTakeaway: string;
+  spokenScript: string;
+  visualPlan: string;
+  onScreenText: string;
+  bRoll: string;
+  briefDescription: string;
+  ctaOptions: string[];
+  sourceMarkers: string;
+};
+
+export type CarouselScriptSlide = {
+  slideNumber: string;
+  headline: string;
+  body: string;
+  visualDirection: string;
+  designNote: string;
+  sourceMarker: string;
+};
+
+export type ScriptingPhaseData = {
+  longFormScript: LongFormScriptSection[];
+  pointerScript: PointerScriptSection[];
+  shortFormSuitability: ShortFormSuitability;
+  // null when the suitability score is under 6 (the template's own
+  // gate: "If the suitability score is 6 or higher, create...") or the
+  // paste simply didn't include one, not something this parser decides
+  // on its own.
+  thirtySecondScript: ShortFormScript | null;
+  sixtySecondScript: ShortFormScript | null;
+  additionalShortFormConcepts: ShortFormScript[];
+  // Empty when Packaging didn't recommend a carousel, same reasoning.
+  carouselScript: CarouselScriptSlide[];
+  scriptStrengths: string;
+  claimsRequiringVerification: string;
+  missingExamples: string;
+  personalInformationNeeded: string;
+  recommendedProductionStep: string;
+  // Raw text of the field, same pattern as Research's
+  // researchQualityStatusText: the actual APPROVED/NEEDS
+  // REVISION/REJECTED classification is pulled out separately by
+  // extractApprovalStatus into manual_workflow_phases.status.
+  scriptStatusText: string;
+};
+
+export const SCRIPTING_PASTE_TEMPLATE_HINT = `Expects these headers, each on its own line (case-insensitive, optional
+leading #/##/### or number, optional trailing colon), matching
+docs/research-packaging-scripting-template.txt Phase 3: Long-Form
+Script / Pointer Script / Short-Form Suitability / 30-Second Script /
+60-Second Script / Additional Short-Form Concepts / Carousel Script /
+Closing. 30-Second Script, 60-Second Script, and Additional Short-Form
+Concepts are optional (only present when the suitability score is 6 or
+higher); Carousel Script is optional (only when Packaging recommended
+one).
+Under Long-Form Script, each of the 16 sections starts its own "Section
+N: <title>" line, then "Label: value" lines for Purpose, Exact
+narration, Visual direction, On-screen text, B-roll or demonstration,
+Transition, Approximate timing, Source markers.
+Under Pointer Script, each point starts its own "Section N: <title>"
+line, then "Label: value" lines for Main pointer, Brief description,
+Why it matters, Key information, Example to include, Question answered,
+Mistake to avoid, Transition idea, Approximate timing, Source marker.
+Under 30-Second Script / 60-Second Script and each concept under
+Additional Short-Form Concepts (each starting its own "Concept N: <title>"
+line): "Label: value" lines for Title, Hook, Viewer problem, One clear
+insight, Example, Practical takeaway, Spoken script, Visual plan,
+On-screen text, B-roll, Brief description, Source markers, plus a "CTA
+options:" line followed by its own three bulleted lines.
+Under Carousel Script, each slide starts its own "Slide N: <headline>"
+line, then "Label: value" lines for Headline, Body, Visual direction,
+Design note, Source marker.
+Under Closing: "Label: value" lines for Script strengths, Claims
+requiring verification, Missing examples, Personal information needed,
+Recommended production step, Script status.`;
+
+const SCRIPT_SECTION_START_RE = /^(?:#{1,3}\s*)?(?:Section\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+
+function sectionTitleFrom(startLine: string): string {
+  const m = startLine.trim().match(SCRIPT_SECTION_START_RE);
+  return (m?.[1] ?? m?.[3] ?? "Untitled section").trim();
+}
+
+function parseLongFormScript(lines: string[] | undefined): LongFormScriptSection[] {
+  return splitBlocks(lines, SCRIPT_SECTION_START_RE).map((block) => ({
+    sectionTitle: labeled(block, "Section title") ?? sectionTitleFrom(block[0]),
+    purpose: labeled(block, "Purpose") ?? "",
+    exactNarration: labeled(block, "Exact narration") ?? "",
+    visualDirection: labeled(block, "Visual direction") ?? "",
+    onScreenText: labeled(block, "On-screen text") ?? "",
+    bRollOrDemonstration: labeled(block, "B-roll or demonstration", "B-roll") ?? "",
+    transition: labeled(block, "Transition") ?? "",
+    approximateTiming: labeled(block, "Approximate timing") ?? "",
+    sourceMarkers: labeled(block, "Source markers", "Source marker") ?? "",
+  }));
+}
+
+function parsePointerScript(lines: string[] | undefined): PointerScriptSection[] {
+  return splitBlocks(lines, SCRIPT_SECTION_START_RE).map((block) => ({
+    sectionTitle: labeled(block, "Section title") ?? sectionTitleFrom(block[0]),
+    mainPointer: labeled(block, "Main pointer") ?? "",
+    briefDescription: labeled(block, "Brief description") ?? "",
+    whyItMatters: labeled(block, "Why it matters to the viewer", "Why it matters") ?? "",
+    keyInformation: labeled(block, "Key information that must be covered", "Key information") ?? "",
+    exampleToInclude: labeled(block, "Example to include") ?? "",
+    questionAnswered: labeled(block, "Question this point answers", "Question answered") ?? "",
+    mistakeToAvoid: labeled(block, "Mistake to avoid") ?? "",
+    transitionIdea: labeled(block, "Transition idea") ?? "",
+    approximateTiming: labeled(block, "Approximate timing") ?? "",
+    sourceMarker: labeled(block, "Source marker", "Source markers") ?? "",
+  }));
+}
+
+function parseShortFormSuitability(lines: string[] | undefined): ShortFormSuitability {
+  const block = lines ?? [];
+  return {
+    suitable: labeled(block, "Suitable") ?? "",
+    score: labeledScore(block, "Score"),
+    reason: labeled(block, "Reason") ?? "",
+    bestStandaloneInsight: labeled(block, "Best standalone insight") ?? "",
+    bestSectionToConvert: labeled(block, "Best section to convert") ?? "",
+    bestPlatform: labeled(block, "Best platform") ?? "",
+    recommendedDuration: labeled(block, "Recommended duration") ?? "",
+    recommendedConversionMethod: labeled(block, "Recommended conversion method") ?? "",
+    contextRisk: labeled(block, "Context risk") ?? "",
+    accuracyProtection: labeled(block, "Accuracy protection") ?? "",
+  };
+}
+
+// Shared by the 30/60-second scripts (each its own whole section) and
+// each concept block under Additional Short-Form Concepts (already
+// split into per-concept blocks by the caller). null when the block has
+// no Title line at all, the caller's signal that this optional section
+// simply wasn't in the paste (30/60-second scripts are conditional on
+// the suitability score, per the template).
+function parseShortFormScriptBlock(lines: string[]): ShortFormScript | null {
+  const title = labeled(lines, "Title");
+  if (!title) return null;
+  return {
+    title,
+    hook: labeled(lines, "Hook") ?? "",
+    viewerProblem: labeled(lines, "Viewer problem") ?? "",
+    oneClearInsight: labeled(lines, "One clear insight", "Clear insight") ?? "",
+    example: labeled(lines, "Example") ?? "",
+    practicalTakeaway: labeled(lines, "Practical takeaway") ?? "",
+    spokenScript: labeled(lines, "Spoken script") ?? "",
+    visualPlan: labeled(lines, "Visual plan") ?? "",
+    onScreenText: labeled(lines, "On-screen text") ?? "",
+    bRoll: labeled(lines, "B-roll") ?? "",
+    briefDescription: labeled(lines, "Brief description") ?? "",
+    ctaOptions: labeledSublist(lines, "CTA options"),
+    sourceMarkers: labeled(lines, "Source markers", "Source marker") ?? "",
+  };
+}
+
+const CONCEPT_START_RE = /^(?:#{1,3}\s*)?(?:Concept\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+
+function parseAdditionalShortFormConcepts(lines: string[] | undefined): ShortFormScript[] {
+  return splitBlocks(lines, CONCEPT_START_RE)
+    .map((block) => parseShortFormScriptBlock(block))
+    .filter((s): s is ShortFormScript => s !== null);
+}
+
+const SLIDE_START_RE = /^(?:#{1,3}\s*)?(?:Slide\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+
+function parseCarouselScript(lines: string[] | undefined): CarouselScriptSlide[] {
+  return splitBlocks(lines, SLIDE_START_RE).map((block, i) => {
+    const startMatch = block[0].trim().match(SLIDE_START_RE);
+    const inlineHeadline = (startMatch?.[1] ?? startMatch?.[3] ?? "").trim();
+    return {
+      slideNumber: labeled(block, "Slide number") ?? String(i + 1),
+      headline: labeled(block, "Headline") ?? inlineHeadline,
+      body: labeled(block, "Body") ?? "",
+      visualDirection: labeled(block, "Visual direction") ?? "",
+      designNote: labeled(block, "Design note") ?? "",
+      sourceMarker: labeled(block, "Source marker", "Source markers") ?? "",
+    };
+  });
+}
+
+const SCRIPTING_CORE_HEADERS = [
+  "LONG-FORM SCRIPT",
+  "POINTER SCRIPT",
+  "SHORT-FORM SUITABILITY",
+  "CLOSING",
+] as const;
+
+const SCRIPTING_HEADERS = [
+  "LONG-FORM SCRIPT",
+  "POINTER SCRIPT",
+  "SHORT-FORM SUITABILITY",
+  "30-SECOND SCRIPT",
+  "60-SECOND SCRIPT",
+  "ADDITIONAL SHORT-FORM CONCEPTS",
+  "CAROUSEL SCRIPT",
+  "CLOSING",
+] as const;
+
+export function parseScriptingPhasePaste(text: string): ScriptingPhaseData | null {
+  const sections = splitSections(text, SCRIPTING_HEADERS);
+  if (!SCRIPTING_CORE_HEADERS.every((h) => sections.has(h))) return null;
+
+  const longFormScript = parseLongFormScript(sections.get("LONG-FORM SCRIPT"));
+  const pointerScript = parsePointerScript(sections.get("POINTER SCRIPT"));
+  const closingLines = sections.get("CLOSING") ?? [];
+  const scriptStatusText = labeled(closingLines, "Script status") ?? "";
+  if (longFormScript.length === 0 || pointerScript.length === 0 || !scriptStatusText) return null;
+
+  return {
+    longFormScript,
+    pointerScript,
+    shortFormSuitability: parseShortFormSuitability(sections.get("SHORT-FORM SUITABILITY")),
+    thirtySecondScript: parseShortFormScriptBlock(sections.get("30-SECOND SCRIPT") ?? []),
+    sixtySecondScript: parseShortFormScriptBlock(sections.get("60-SECOND SCRIPT") ?? []),
+    additionalShortFormConcepts: parseAdditionalShortFormConcepts(sections.get("ADDITIONAL SHORT-FORM CONCEPTS")),
+    carouselScript: parseCarouselScript(sections.get("CAROUSEL SCRIPT")),
+    scriptStrengths: labeled(closingLines, "Script strengths") ?? "",
+    claimsRequiringVerification: labeled(closingLines, "Claims requiring verification") ?? "",
+    missingExamples: labeled(closingLines, "Missing examples") ?? "",
+    personalInformationNeeded: labeled(closingLines, "Personal information needed") ?? "",
+    recommendedProductionStep: labeled(closingLines, "Recommended production step") ?? "",
+    scriptStatusText,
+  };
+}

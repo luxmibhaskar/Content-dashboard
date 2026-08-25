@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   parseResearchPhasePaste,
   parsePackagingPhasePaste,
+  parseScriptingPhasePaste,
   extractApprovalStatus,
 } from "@/lib/manual-workflow-parsing";
 
@@ -91,6 +92,48 @@ export async function importPackagingPhase(
       raw_pasted_text: pastedText,
       parsed_data: parsed,
       status: null,
+    },
+    { onConflict: "content_id,phase" },
+  );
+
+  revalidatePath(`/calendar/${contentId}`);
+  return { fallbackRaw: null };
+}
+
+// docs/manual-workflow-redesign.md Phase D. Status extraction, same as
+// Research: the template's own Script status line (APPROVED / NEEDS
+// REVISION / REJECTED) becomes this row's typed status column too.
+export async function importScriptingPhase(
+  contentId: string,
+  _prevState: ImportManualPhaseState,
+  formData: FormData,
+): Promise<ImportManualPhaseState> {
+  const pastedText = String(formData.get("pasted_text") ?? "");
+  const parsed = parseScriptingPhasePaste(pastedText);
+  if (!parsed) {
+    return { fallbackRaw: pastedText };
+  }
+
+  const supabase = await createClient();
+  const { data: item, error: itemError } = await supabase
+    .from("content_calendar")
+    .select("brand")
+    .eq("id", contentId)
+    .single();
+  if (itemError || !item) {
+    return { fallbackRaw: pastedText };
+  }
+
+  const status = extractApprovalStatus(parsed.scriptStatusText);
+
+  await supabase.from("manual_workflow_phases").upsert(
+    {
+      content_id: contentId,
+      brand: item.brand,
+      phase: "scripting",
+      raw_pasted_text: pastedText,
+      parsed_data: parsed,
+      status,
     },
     { onConflict: "content_id,phase" },
   );
