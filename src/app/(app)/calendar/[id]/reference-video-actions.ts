@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 function str(formData: FormData, key: string) {
@@ -28,6 +28,14 @@ async function getContentBrand(supabase: Awaited<ReturnType<typeof createClient>
 
 // Section 10.2.1: manually-added TikTok/IG links, there's no reliable API
 // for either platform (Section 16), so this stays paste-a-link plus notes.
+// revalidatePath, not redirect: Reference Videos is a tab on the topic
+// page now (topic-page-tabs.tsx), same as Research & Copy and Scripts,
+// which both revalidate the same `/calendar/${contentId}` route rather
+// than navigating anywhere. This file used to redirect to the standalone
+// `/calendar/[id]/research` subpage that predated the tabbed redesign;
+// that route was removed entirely (topic-page-redesign.md Section 2),
+// so the leftover redirect() calls were bouncing every Add/Remove/Save
+// here to a dead route (404) instead of just refreshing in place.
 export async function addReferenceVideo(contentId: string, formData: FormData) {
   const url = str(formData, "url");
   if (url) {
@@ -35,7 +43,7 @@ export async function addReferenceVideo(contentId: string, formData: FormData) {
     const brand = await getContentBrand(supabase, contentId);
     await exec(supabase.from("reference_videos").insert({ content_id: contentId, brand, url }));
   }
-  redirect(`/calendar/${contentId}/research`);
+  revalidatePath(`/calendar/${contentId}`);
 }
 
 export async function updateReferenceVideoNotes(contentId: string, videoId: string, formData: FormData) {
@@ -50,11 +58,11 @@ export async function updateReferenceVideoNotes(contentId: string, videoId: stri
       })
       .eq("id", videoId),
   );
-  redirect(`/calendar/${contentId}/research`);
+  revalidatePath(`/calendar/${contentId}`);
 }
 
 export async function deleteReferenceVideo(contentId: string, videoId: string) {
   const supabase = await createClient();
   await exec(supabase.from("reference_videos").delete().eq("id", videoId));
-  redirect(`/calendar/${contentId}/research`);
+  revalidatePath(`/calendar/${contentId}`);
 }
