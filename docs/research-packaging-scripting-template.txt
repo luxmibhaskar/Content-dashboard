@@ -1,0 +1,665 @@
+﻿You will work through three phases:
+
+
+PHASE 1: RESEARCH
+PHASE 2: PACKAGING
+PHASE 3: SCRIPTING
+
+
+Complete only one phase at a time.
+
+
+Do not complete all three phases in one response.
+Do not move to the next phase automatically.
+Stop after each phase and wait for my approval.
+
+
+Use the Brand Master Prompt already provided in context.
+Follow the selected brand’s rules, pillars, tone, audience, and safety requirements.
+
+
+
+
+
+
+
+
+GENERAL RULES
+
+
+- Improve the rough title only when necessary.
+- Preserve the original idea unless research shows it is weak.
+- Do not invent facts, statistics, sources, quotes, comments,
+  trends, case studies, or personal experiences.
+- Mark uncertain claims as [VERIFY].
+- Use [PERSONAL INPUT NEEDED] when my personal experience is required.
+- Use reliable, relevant, and current sources.
+- Separate facts, opinions, predictions, observations, and interpretation.
+- Do not copy competitor wording, titles, thumbnails, or ideas.
+- Focus on the viewer’s problem and desired result.
+- Explain difficult topics in simple language.
+- Do not use unsupported health, financial, business, or technology claims.
+- Keep research, packaging, and scripting separate.
+- Do not place script content inside the Research phase.
+- Do not place packaging content inside the Research phase.
+- Use the result of the previous approved phase in the next phase.
+- If important information is missing, ask me before continuing.
+
+
+==================================================
+PHASE 1: RESEARCH
+==================================================
+
+
+CURRENT PHASE: RESEARCH
+
+
+Perform Research only.
+
+
+Do not create:
+
+
+- Final titles
+- Descriptions
+- Keywords
+- Thumbnails
+- Hooks
+- CTAs
+- Long-form scripts
+- Pointer-based scripts
+- Short-form scripts
+- Carousel scripts
+
+
+Research the rough content idea and closely related topics.
+
+
+Find:
+
+
+1. What is happening around this topic?
+2. Why does it matter?
+3. What problem does the audience have?
+4. What does the audience want?
+5. What are viewers confused about?
+6. What recent developments matter?
+7. What useful examples exist?
+8. What facts are verified?
+9. What expert opinions exist?
+10. What predictions or uncertain claims exist?
+
+
+Use relevant sources such as:
+
+
+- YouTube
+- TikTok
+- Instagram
+- Reddit
+- LinkedIn
+- X
+- Google Trends
+- Official websites
+- Research papers
+- Industry reports
+- News websites
+- Product websites
+- App stores
+- GitHub
+- Public audience discussions
+
+
+For every important factual claim, provide:
+
+
+- Source title
+- Direct URL
+- Publication or update date
+- Claim supported
+- Confidence level
+
+
+COMPETITOR RESEARCH
+
+
+Find content that is:
+
+
+- About the exact keyword.
+- About similar keywords.
+- Solving the same audience problem.
+- Targeting the same audience.
+- Using a similar content format.
+- Offering a competing solution.
+- Discussing the same trend, tool, product, or idea.
+
+
+For each important competitor, explain:
+
+
+- Creator or organization.
+- Platform.
+- Title.
+- URL.
+- Publication date.
+- Main promise.
+- Main argument.
+- Key points covered.
+- Strengths.
+- Weaknesses.
+- What they missed.
+- What was oversimplified.
+- What evidence was missing.
+- What viewers may still not understand.
+
+
+AUDIENCE QUESTIONS AND COMMENTS
+
+
+Analyze publicly available comments and discussions.
+
+
+Find:
+
+
+- Frequently asked questions.
+- Unanswered questions.
+- Viewer confusion.
+- Viewer frustration.
+- Viewer pain points.
+- Viewer objections.
+- Viewer misunderstandings.
+- Requests for examples.
+- Requests for demonstrations.
+- Requests for comparisons.
+- Requests for updated information.
+- Beginner questions.
+- Advanced questions.
+- Viewer failures.
+- Viewer successes.
+- Suggestions for future content.
+
+
+If comment access is limited, state:
+
+
+“Comment analysis is based on the publicly accessible sample reviewed,
+not the entire comment section.”
+
+
+CONTENT GAP ANALYSIS
+
+
+Compare:
+
+
+- Topic research.
+- Competitor research.
+- Audience questions.
+- Audience comments.
+- Viewer pain points.
+
+
+Identify:
+
+
+1. What competitors explain well.
+2. What competitors explain poorly.
+3. What competitors completely miss.
+4. What questions remain unanswered.
+5. What pain point is most important.
+6. What examples are missing.
+7. What demonstrations are missing.
+8. What comparisons are missing.
+9. What beginner explanation is missing.
+10. What advanced explanation is missing.
+11. What evidence is missing.
+12. What information is outdated.
+13. What regional perspective is missing.
+14. What practical or personal perspective is missing.
+
+
+Complete this sentence:
+
+
+“Existing content mostly does [X],
+but viewers still need [Y].
+A useful content opportunity is [Z]
+because [REASON].”
+
+
+Create five possible content opportunities.
+
+
+For each opportunity include:
+
+
+- Opportunity name.
+- Viewer problem.
+- Viewer desire.
+- Unanswered question.
+- What competitors missed.
+- Evidence supporting the opportunity.
+- Missing example.
+- Missing demonstration.
+- Why it provides value.
+- Risk of becoming generic.
+- Relevance score from 0 to 10.
+- Evidence score from 0 to 10.
+- Novelty score from 0 to 10.
+- Evergreen value score from 0 to 10.
+- Visual potential score from 0 to 10.
+
+
+Select the strongest opportunity and explain why.
+
+
+RESEARCH OUTPUT
+
+
+Return only:
+
+
+1. Topic Definition
+2. Primary Pillar and Subtopic
+3. Main Audience Problem
+4. Audience Desire
+5. Audience Confusion
+6. Current Developments
+7. Important Findings
+8. Direct Competitor Content
+9. Related Content
+10. Competitor Strengths
+11. Competitor Weaknesses
+12. What Competitors Missed
+13. Frequently Asked Questions
+14. Unanswered Questions
+15. Viewer Pain Points
+16. Viewer Objections
+17. Viewer Misunderstandings
+18. Viewer Requests
+19. Viewer Suggestions
+20. Content Gap Analysis
+21. Five Content Opportunities
+22. Recommended Opportunity
+23. Viewer Transformation or Desired Outcome
+24. Sources
+25. Research Limitations
+26. Research Quality Status
+
+
+At the end, choose one:
+
+
+- APPROVED
+- NEEDS REVISION
+- REJECTED
+
+
+END OF PHASE 1
+
+
+Stop now.
+
+
+Do not start Packaging automatically.
+Wait for me to write:
+
+
+“Research approved. Start Phase 2: Packaging.”
+
+
+==================================================
+PHASE 2: PACKAGING
+==================================================
+
+
+Start this phase only after I write:
+
+
+“Approved or ask me in the end of response”
+
+
+Use only the approved Research result.
+
+
+Perform Packaging only.
+
+
+Do not create:
+
+
+- Detailed long-form scripts.
+- Pointer-based long-form structures.
+- Short-form scripts.
+- Carousel scripts.
+
+
+Create exactly three research-backed title options.
+
+
+For every title include:
+
+
+- Title.
+- Research support.
+- Viewer problem addressed.
+- Promise made.
+- Reason the viewer may click.
+- Risk of misleading the viewer.
+
+
+Create copy-ready versions for:
+
+
+1. YouTube video description.
+2. Short-form caption.
+3. Instagram caption.
+4. TikTok caption.
+5. YouTube Shorts caption.
+6. X caption.
+7. Threads caption.
+
+
+Each version must:
+
+
+- Explain what the content covers.
+- Include the key points.
+- Explain who it is for.
+- Explain the viewer benefit.
+- Use natural keywords.
+- Include an appropriate CTA.
+- Match the platform.
+- Be ready to copy and paste.
+
+
+Create:
+
+
+SHORT KEYWORDS:
+5–10 keywords containing one or two words.
+
+
+SEARCH PHRASES:
+5–10 longer phrases a viewer may search.
+
+
+Create three thumbnail suggestions.
+
+
+For each thumbnail include:
+
+
+- Main visual.
+- Subject action or expression.
+- Thumbnail text of 3–5 words.
+- Color direction.
+- Emotional trigger.
+- Why it fits.
+- What to avoid.
+
+
+Create exactly two options for each:
+
+
+VISUAL HOOKS:
+Two options.
+
+
+TEXTUAL HOOKS:
+Two options.
+
+
+VERBAL HOOKS:
+Two options.
+
+
+Evaluate whether the topic is suitable for a carousel of 4–7 slides.
+
+
+Return:
+
+
+- Carousel recommendation: Yes, No, or Maybe.
+- Suitability score from 0 to 10.
+- Reason.
+- Recommended slide count.
+- Best carousel angle.
+- Best platform.
+- Three carousel title options.
+- Design direction.
+- Color direction.
+- Final-slide CTA.
+- Viewer takeaway.
+
+
+Create exactly three CTA options:
+
+
+1. Engagement CTA.
+2. Save/share CTA.
+3. Follow, subscribe, resource, or conversion CTA.
+
+
+Recommend:
+
+
+- Strongest title.
+- Strongest visual hook.
+- Strongest textual hook.
+- Strongest verbal hook.
+- Strongest thumbnail.
+- Strongest CTA.
+
+
+END OF PHASE 2
+
+
+Stop now.
+
+
+Do not start Scripting automatically.
+Wait for me to write:
+
+
+“Packaging approved. Start Phase 3: Scripting.”
+
+
+==================================================
+PHASE 3: SCRIPTING
+==================================================
+
+
+Start this phase only after I write:
+
+
+“Approved or ask me in the end of response”
+
+
+
+
+Use only:
+
+
+- Approved Research.
+- Approved Packaging.
+- Selected title.
+- Selected hook.
+- Selected audience.
+- Selected platform.
+- Selected content format.
+
+
+Do not redo the complete Research phase.
+Do not silently change the approved Packaging.
+Do not invent facts, examples, case studies, or personal experiences.
+
+
+VERSION 1: DETAILED LONG-FORM SCRIPT
+
+
+Create a complete record-ready script.
+
+
+Use this sequence:
+
+
+1. Opening hook.
+2. Viewer problem.
+3. Clear promise.
+4. Necessary context.
+5. Main explanation.
+6. Key point one.
+7. Example for key point one.
+8. Key point two.
+9. Example for key point two.
+10. Key point three.
+11. Example for key point three.
+12. Common mistake or misunderstanding.
+13. Practical solution.
+14. Demonstration, case study, or personal connection.
+15. Summary.
+16. Final CTA.
+
+
+For every section include:
+
+
+- Section title.
+- Purpose.
+- Exact narration.
+- Visual direction.
+- On-screen text.
+- B-roll or demonstration.
+- Transition.
+- Approximate timing.
+- Source markers where needed.
+
+
+VERSION 2: POINTER-BASED LONG-FORM STRUCTURE
+
+
+Do not write full narration.
+
+
+For every major point include:
+
+
+- Section title.
+- Main pointer.
+- Brief description.
+- Why it matters to the viewer.
+- Key information that must be covered.
+- Example to include.
+- Question this point answers.
+- Mistake to avoid.
+- Transition idea.
+- Approximate timing.
+- Source marker where needed.
+
+
+The “Key information that must be covered” section must clearly explain
+what I need to say or demonstrate to make the point valuable.
+
+
+If an example is unavailable, write [EXAMPLE NEEDED].
+Do not invent personal examples.
+
+
+SHORT-FORM SUITABILITY
+
+
+Evaluate whether the long-form idea can become useful short-form content.
+
+
+Check for:
+
+
+- One strong standalone insight.
+- One surprising idea.
+- One practical step.
+- One mistake.
+- One comparison.
+- One visual demonstration.
+- One clear answer.
+- One strong story.
+- One before-and-after result.
+
+
+Return:
+
+
+- Suitable: Yes, No, or Maybe.
+- Score from 0 to 10.
+- Reason.
+- Best standalone insight.
+- Best section to convert.
+- Best platform.
+- Recommended duration.
+- Recommended conversion method.
+- Context risk.
+- Accuracy protection.
+
+
+If the suitability score is 6 or higher, create:
+
+
+1. One 30-second script.
+2. One 60-second script.
+3. Three additional short-form concepts.
+
+
+Each short-form script must include:
+
+
+- Title.
+- Hook.
+- Viewer problem.
+- One clear insight.
+- Example.
+- Practical takeaway.
+- Spoken script.
+- Visual plan.
+- On-screen text.
+- B-roll.
+- Brief description.
+- Three CTA options.
+- Source markers where needed.
+
+
+If Packaging recommended a carousel, create a carousel script
+with 4–7 slides.
+
+
+For every slide include:
+
+
+- Slide number.
+- Headline.
+- Body.
+- Visual direction.
+- Design note.
+- Source marker where needed.
+
+
+At the end, include:
+
+
+- Script strengths.
+- Claims requiring verification.
+- Missing examples.
+- Personal information needed.
+- Recommended production step.
+- Script status: APPROVED, NEEDS REVISION, or REJECTED.
+
+
+END OF PHASE 3
+
+
+Stop now.
+
+
+Do not start Publishing or Scheduling automatically.
+Wait for my next instruction.
