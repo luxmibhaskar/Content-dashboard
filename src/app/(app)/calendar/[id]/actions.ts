@@ -83,11 +83,10 @@ export async function updateContentItem(id: string, brand: string, formData: For
       // out of the removed System & Production section, still submitted
       // by this same form (src/app/(app)/calendar/[id]/page.tsx), the
       // one field that section held which fed something outside itself.
-      views: num(formData, "views"),
-      likes: num(formData, "likes"),
-      comments: num(formData, "comments"),
-      shares: num(formData, "shares"),
-      saves: num(formData, "saves"),
+      // views/likes/comments/shares/saves used to be written here too,
+      // superseded by per-platform check-ins (content_platform_posts /
+      // content_platform_stats_snapshots) and dropped in Phase G
+      // (supabase/migrations/0019_drop_legacy_content_metrics.sql).
       conversions: num(formData, "conversions"),
     })
     .eq("id", id);

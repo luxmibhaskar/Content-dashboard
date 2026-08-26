@@ -48,7 +48,7 @@ const SELECT_COLUMNS = `
   success_metric_focus, follow_up_content_ideas, analytics_review_date,
   retention_drop_timestamp, retention_drop_note, earned_the_click, earned_click_note,
   derived_from_content_id,
-  views, likes, comments, shares, saves, conversions,
+  conversions,
   final_description, plain_keyword_tags, question_style_tags,
   core_tags, detailed_viewer_search_phrase_tags
 `;
@@ -314,41 +314,24 @@ export default async function TopicPage({
             inputs would have silently nulled them out on the next Save
             for any unrelated reason. The columns themselves stay in the
             schema, unused, per this project's "superseded field stays
-            schema-only" convention, nothing already stored is deleted. */}
+            schema-only" convention, nothing already stored is deleted.
+
+            docs/platform-performance-tracking.md Phase G: views/likes/
+            comments/shares/saves used to live here too, superseded by
+            per-platform check-ins (PlatformAnalyticsSection below) and
+            removed along with the columns themselves
+            (supabase/migrations/0019_drop_legacy_content_metrics.sql).
+            Conversions has no per-platform equivalent (a business
+            outcome, not a platform engagement signal, per the explicit
+            Phase F decision), stays here on its own column. */}
         <div className="space-y-1.5 border-t border-border pt-4">
           <Label>Performance metrics</Label>
           <p className="text-xs text-muted-foreground">
-            Leave a field blank if it&apos;s not tracked yet, that&apos;s different
-            from entering 0, Analytics Overview hides KPIs it has no data for
-            rather than showing a misleading zero.
+            Leave blank if not tracked yet, that&apos;s different from entering
+            0, Analytics Overview hides KPIs it has no data for rather than
+            showing a misleading zero.
           </p>
           <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="views">Views</Label>
-              <Input id="views" name="views" type="number" min={0} defaultValue={item.views ?? ""} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="likes">Likes</Label>
-              <Input id="likes" name="likes" type="number" min={0} defaultValue={item.likes ?? ""} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="comments">Comments</Label>
-              <Input
-                id="comments"
-                name="comments"
-                type="number"
-                min={0}
-                defaultValue={item.comments ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="shares">Shares</Label>
-              <Input id="shares" name="shares" type="number" min={0} defaultValue={item.shares ?? ""} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="saves">Saves</Label>
-              <Input id="saves" name="saves" type="number" min={0} defaultValue={item.saves ?? ""} />
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="conversions">Conversions</Label>
               <Input
