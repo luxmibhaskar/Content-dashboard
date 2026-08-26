@@ -471,20 +471,28 @@ longer be set from the topic page. The read-only "Repurposed from: X" /
 still reads whatever was set before.
 
 **⚠ Format/Platform updated since, see `format-platform-fields.tsx`.**
-Format's own dropdown narrowed to Short/Long only (full reasoning and
-the Analytics/Content-Output-Tracker linkage check that shaped it is in
-`calendar/[id]/page.tsx`'s own comment history, not repeated here). New:
-picking Short reveals a second field, "Posted on (select all that
-apply)", a toggle-pill multiselect writing into the previously-unused
-`content_calendar.platform` column (YouTube/Instagram/TikTok/Threads/
-Facebook/X/Carousel/Article, `CONTENT_POST_PLATFORMS` in
-`src/lib/types.ts`, deliberately its own list, not the shared
-`PLATFORMS` that Competitor Benchmarks/Collaborators/Competitors use).
-Exists so Analytics can eventually count only the platforms a Short
-actually went out on, not assume every Short reached everywhere.
-Clears automatically if Format is switched away from Short and the item
-is saved in that state, on purpose: the field's only meaning is
-short-form distribution.
+Format's own dropdown narrowed to Short/Long only, no legacy fallback
+option (a pre-restriction value like "Reel" no longer has a way to
+render in the select, full reasoning and the Analytics/Content-Output-
+Tracker linkage check that shaped the Short/Long narrowing is in
+`calendar/[id]/page.tsx`'s own comment history, not repeated here).
+New: picking either Short or Long reveals a second field, "Posted on
+(select all that apply)", a toggle-pill multiselect (selected state uses
+the `Button` component's solid `default` variant for readability, same
+pattern as `PhaseNav`) writing into the previously-unused
+`content_calendar.platform` column. Its option list is
+`CONTENT_POST_PLATFORMS` (`src/lib/types.ts`, deliberately its own list,
+not the shared `PLATFORMS` that Competitor Benchmarks/Collaborators/
+Competitors use) unioned with whatever platform names exist in
+`goals.platform_name` for the brand, minus the "Views" pseudo-goal
+(`isViewsGoal`, `src/lib/goals.ts`) — so a platform typed into Streak &
+Goals' "Add a platform goal" form becomes selectable here too, in both
+Short and Long, with no separate platforms-registry table. Exists so
+Analytics can eventually count only the platforms an item actually went
+out on, not assume every item reached everywhere. Clears automatically
+if Format is switched away from Short/Long and the item is saved in
+that state, on purpose: the field's only meaning is per-platform
+distribution tracking.
 
 **Competitor Benchmarks section removed** from the topic page
 (`CompetitorBenchmarksSection`, both its auto-populated results display

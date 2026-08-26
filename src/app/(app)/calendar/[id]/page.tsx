@@ -10,6 +10,7 @@ import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { FormatPlatformFields } from "@/components/format-platform-fields";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
+import { isViewsGoal } from "@/lib/goals";
 import {
   PRODUCTION_STATUSES,
   VIABILITY_STATUSES,
@@ -91,6 +92,7 @@ export default async function TopicPage({
     { data: referenceVideos },
     { data: manualWorkflowPhases },
     structure,
+    { data: goalRows },
   ] = await Promise.all([
     item.derived_from_content_id
       ? supabase
@@ -128,12 +130,28 @@ export default async function TopicPage({
       .select("id, phase, raw_pasted_text, parsed_data, status")
       .eq("content_id", id),
     getMergedPillarStructure(item.brand),
+    // Format's "Posted on" picker unions this with CONTENT_POST_PLATFORMS
+    // (format-platform-fields.tsx), so a platform typed into Streak &
+    // Goals' "add a platform goal" form shows up here too, no dedicated
+    // platforms-registry table needed.
+    supabase
+      .from("goals")
+      .select("platform_name")
+      .eq("brand", item.brand)
+      .not("platform_name", "is", null),
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id);
   const publishDateValue = item.publish_date
     ? new Date(item.publish_date).toISOString().slice(0, 16)
     : "";
+  const knownPlatforms = [
+    ...new Set(
+      (goalRows ?? [])
+        .map((g) => g.platform_name)
+        .filter((p): p is string => !!p && !isViewsGoal(p)),
+    ),
+  ];
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
@@ -233,6 +251,7 @@ export default async function TopicPage({
           initialFormat={item.format ?? ""}
           initialPlatforms={item.platform ?? []}
           publishDateValue={publishDateValue}
+          knownPlatforms={knownPlatforms}
         />
 
         {/* Follow-up: relocated out of the removed System & Production

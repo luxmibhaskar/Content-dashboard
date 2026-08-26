@@ -150,8 +150,8 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   core_tags: string[] | null;
   detailed_viewer_search_phrase_tags: string[] | null;
 
-  // "Posted on" for Short-format items (format-platform-fields.tsx),
-  // always [] otherwise, not surfaced anywhere until this field.
+  // "Posted on" for Short and Long Video items (format-platform-fields.tsx),
+  // always [] for any other format, not surfaced anywhere until this field.
   platform: string[] | null;
 
   printable_marketing_hooks: PrintableMarketingHooks | null;
