@@ -19,6 +19,7 @@ import {
   computeFunnel,
   computeTopPerformingContent,
   computeResearchVsCustomPerformance,
+  computeHookTypePerformance,
   computeIdeaSourcePerformance,
   computeRepurposingPerformance,
   computeContentPostedTime,
@@ -29,6 +30,7 @@ import {
 import { aggregateByContentId } from "@/lib/platform-analytics";
 import { computeRetentionDropTrends, formatSecondsAsTimestamp, type RetentionDropPost } from "@/lib/retention-drop";
 import { computeStreak, computeStreakHeatmap, type StreakRow } from "@/lib/streaks";
+import type { HookLibraryType } from "@/lib/types";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GlowCard } from "@/components/glow-card";
@@ -73,8 +75,13 @@ export default async function AnalyticsPage({
   const streakSince = new Date();
   streakSince.setDate(streakSince.getDate() - 16 * 7);
 
-  const [{ data: contentRows }, { data: streakRows }, { data: liveTitleRows }, { data: platformPostRows }] =
-    await Promise.all([
+  const [
+    { data: contentRows },
+    { data: streakRows },
+    { data: liveTitleRows },
+    { data: liveHookRows },
+    { data: platformPostRows },
+  ] = await Promise.all([
       contentQuery,
       supabase
         .from("daily_streaks")
@@ -82,6 +89,16 @@ export default async function AnalyticsPage({
         .eq("brand", brand)
         .gte("streak_date", localDateKey(streakSince)),
       supabase.from("title_variants").select("content_id, source").eq("brand", brand).eq("is_live", true),
+      // Analytics audit (2026-08-27) Phase 4: same is_live-only, brand-
+      // wide, not date-filtered shape as liveTitleRows above - Hook Type
+      // Performance is about which hook type an item actually used, not
+      // scoped to when it was published.
+      supabase
+        .from("hook_variants")
+        .select("content_id, hook_type")
+        .eq("brand", brand)
+        .eq("is_live", true)
+        .not("hook_type", "is", null),
       // docs/platform-performance-tracking.md Migration section: the
       // views/engagement source for every KPI and graph below, replacing
       // content_calendar.views/likes/comments/shares/saves. Fetched
@@ -181,6 +198,10 @@ export default async function AnalyticsPage({
   const topPerforming = computeTopPerformingContent(extendedRows);
   const liveTitleSourceById = new Map((liveTitleRows ?? []).map((r) => [r.content_id, r.source]));
   const researchVsCustom = computeResearchVsCustomPerformance(extendedRows, liveTitleSourceById);
+  const hookTypeByContentId = new Map(
+    (liveHookRows ?? []).map((r) => [r.content_id, r.hook_type as HookLibraryType]),
+  );
+  const hookTypePerformance = computeHookTypePerformance(extendedRows, hookTypeByContentId);
   const ideaSourcePerformance = computeIdeaSourcePerformance(extendedRows);
   const repurposing = computeRepurposingPerformance(extendedRows);
 
@@ -295,11 +316,20 @@ export default async function AnalyticsPage({
         </GlowCard>
       </section>
 
-      <p className="mt-8 text-xs text-muted-foreground">
-        Hook Type Performance isn&apos;t built yet. Real hook-used data exists now
-        (hook_variants.is_live, set by each Packaging hook&apos;s &quot;Use&quot; action), this
-        graph itself just hasn&apos;t been built on top of it.
-      </p>
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-muted-foreground">Hook Type Performance</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          By each item&apos;s live hook variant type (hook_variants.is_live), the hook actually
+          used, not a suggestion. Only hooks &quot;Used&quot; since this was built carry a type,
+          earlier ones show up as untyped and won&apos;t appear here.
+        </p>
+        <GlowCard neutral className="mt-2 p-4">
+          <NamedMetricBarChart
+            data={hookTypePerformance}
+            emptyLabel="No live hook variant has a recorded type yet, use a hook from Packaging to start tracking this."
+          />
+        </GlowCard>
+      </section>
 
       {/* Section 6.4: worth having once there's enough volume, not the
           first thing to see on this page, collapsed by default. */}

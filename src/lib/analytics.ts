@@ -1,5 +1,6 @@
 import type { ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
 import { currentStatsOf } from "@/lib/platform-analytics";
+import type { HookLibraryType } from "@/lib/types";
 
 // docs/platform-performance-tracking.md Migration section: views and
 // engagement are pre-aggregated (aggregateByContentId, src/lib/platform-
@@ -237,6 +238,32 @@ export function computeResearchVsCustomPerformance(
   sourceByContentId: Map<string, string>,
 ): NamedMetric[] {
   return groupPerformance(rows, (r) => sourceByContentId.get(r.id) ?? null);
+}
+
+// Section 6.3: Hook Type Performance. "X: hook_type - not a separately
+// maintained field. This pulls from whichever hook_variants row has
+// is_live = true for that content item, the hook type of what was
+// actually published, not a suggestion." An empty shell since Phase 1
+// of this build (the placeholder text this replaces said so honestly);
+// hookTypeByContentId comes from hook_variants.hook_type
+// (0021_hook_variants_type.sql), stored starting Phase 4 of the
+// analytics audit (2026-08-27) - hookType existed at useHook's own call
+// site the whole time (hook-actions.ts), just never got saved before
+// now, so only hooks "Used" from this point on carry a type.
+const HOOK_TYPE_LABELS: Record<HookLibraryType, string> = {
+  visual: "Visual",
+  text: "Textual",
+  verbal: "Verbal",
+};
+
+export function computeHookTypePerformance(
+  rows: ExtendedMetricsRow[],
+  hookTypeByContentId: Map<string, HookLibraryType>,
+): NamedMetric[] {
+  return groupPerformance(rows, (r) => {
+    const hookType = hookTypeByContentId.get(r.id);
+    return hookType ? HOOK_TYPE_LABELS[hookType] : null;
+  });
 }
 
 // 6. Retention Drop Patterns retired here (analytics audit, 2026-08-27,

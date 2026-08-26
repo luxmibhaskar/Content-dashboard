@@ -52,9 +52,14 @@ export async function useHook(
     throw new Error(unsetError.message);
   }
 
+  // Analytics audit (2026-08-27) Phase 4: hookType was always received
+  // here, right at the moment a hook gets marked live, and thrown away -
+  // stored now so Analytics Overview's Hook Type Performance
+  // (docs/builder-brief.md Section 6.3, an empty shell since Phase 1)
+  // has something real to read (0021_hook_variants_type.sql).
   const { error: insertError } = await supabase
     .from("hook_variants")
-    .insert({ content_id: contentId, brand, variant_text: hookText, source: "Custom", is_live: true });
+    .insert({ content_id: contentId, brand, variant_text: hookText, source: "Custom", is_live: true, hook_type: hookType });
   if (insertError) {
     throw new Error(insertError.message);
   }
