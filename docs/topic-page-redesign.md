@@ -480,14 +480,20 @@ New: picking either Short or Long reveals a second field, "Posted on
 (select all that apply)", a toggle-pill multiselect (selected state uses
 the `Button` component's solid `default` variant for readability, same
 pattern as `PhaseNav`) writing into the previously-unused
-`content_calendar.platform` column. Its option list is
-`CONTENT_POST_PLATFORMS` (`src/lib/types.ts`, deliberately its own list,
-not the shared `PLATFORMS` that Competitor Benchmarks/Collaborators/
-Competitors use) unioned with whatever platform names exist in
-`goals.platform_name` for the brand, minus the "Views" pseudo-goal
-(`isViewsGoal`, `src/lib/goals.ts`) — so a platform typed into Streak &
-Goals' "Add a platform goal" form becomes selectable here too, in both
-Short and Long, with no separate platforms-registry table. Exists so
+`content_calendar.platform` column. Its option list is exactly whatever
+platform names exist in `goals.platform_name` for the brand, minus the
+"Views" pseudo-goal (`isViewsGoal`, `src/lib/goals.ts`) — no separate
+static list (the old `CONTENT_POST_PLATFORMS` in `src/lib/types.ts` is
+gone), and deliberately not the shared `PLATFORMS` that Competitor
+Benchmarks/Collaborators/Competitors use either. So a platform added via
+Streak & Goals' "Add a platform goal" form becomes selectable here on
+next load, in both Short and Long, and deleting that goal removes it
+from here too, with no separate platforms-registry table. The item's
+already-saved platform values are unioned in as well so a value never
+silently disappears from its own picker after its goal is deleted
+elsewhere, that union is case-insensitively deduped (e.g. a "TikTok"
+goal and a "Tiktok" one, or an old saved value in different casing than
+its current goal, collapse to one pill, first match wins). Exists so
 Analytics can eventually count only the platforms an item actually went
 out on, not assume every item reached everywhere. Clears automatically
 if Format is switched away from Short/Long and the item is saved in

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CONTENT_POST_PLATFORMS } from "@/lib/types";
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
 
@@ -21,9 +20,14 @@ const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
 // topic page's own outer <form>, its inputs (format, publish_date,
 // platform x N) submit as part of that same Save. knownPlatforms comes
 // from goals.platform_name (Streak & Goals' "add a platform goal" form
-// is the one place platform names get typed in freely), so a brand-new
-// platform added there shows up here automatically, in both Short and
-// Long, without a dedicated platforms-registry table or UI.
+// is the one place platform names get typed in freely) and is the only
+// source for this list, no static fallback list, per explicit direction:
+// the option pool here is meant to be exactly what Goals shows, add or
+// delete a platform goal there and this picker reflects it on next load,
+// in both Short and Long. initialPlatforms is unioned in too, but only
+// so a value already saved on this item never silently disappears from
+// its own picker after its goal is deleted elsewhere, not as a second
+// source of new options.
 export function FormatPlatformFields({
   initialFormat,
   initialPlatforms,
@@ -48,9 +52,21 @@ export function FormatPlatformFields({
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   }
 
-  const platformOptions = [
-    ...new Set([...CONTENT_POST_PLATFORMS, ...knownPlatforms, ...initialPlatforms]),
-  ];
+  // Case-insensitive dedupe: goals aren't constrained to one casing per
+  // platform (e.g. "TikTok" vs "Tiktok" from two different goals, or an
+  // old saved selection that predates a since-renamed goal), so a plain
+  // Set on the raw strings would show what looks like the same platform
+  // twice. First match wins, knownPlatforms (Goals, the source of truth)
+  // takes priority over initialPlatforms (only there so an already-saved
+  // value doesn't vanish once its goal is gone).
+  const seenPlatformKeys = new Set<string>();
+  const platformOptions: string[] = [];
+  for (const p of [...knownPlatforms, ...initialPlatforms]) {
+    const key = p.trim().toLowerCase();
+    if (!key || seenPlatformKeys.has(key)) continue;
+    seenPlatformKeys.add(key);
+    platformOptions.push(p);
+  }
 
   return (
     <>
@@ -86,23 +102,29 @@ export function FormatPlatformFields({
             platform that isn&apos;t listed? Add it from Streak &amp; Goals&apos; &quot;Add a
             platform goal&quot; form, it&apos;ll show up here too.
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {platformOptions.map((p) => {
-              const selected = platforms.includes(p);
-              return (
-                <Button
-                  key={p}
-                  type="button"
-                  size="xs"
-                  variant={selected ? "default" : "outline"}
-                  aria-pressed={selected}
-                  onClick={() => togglePlatform(p)}
-                >
-                  {p}
-                </Button>
-              );
-            })}
-          </div>
+          {platformOptions.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {platformOptions.map((p) => {
+                const selected = platforms.includes(p);
+                return (
+                  <Button
+                    key={p}
+                    type="button"
+                    size="xs"
+                    variant={selected ? "default" : "outline"}
+                    aria-pressed={selected}
+                    onClick={() => togglePlatform(p)}
+                  >
+                    {p}
+                  </Button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              No platforms in Streak &amp; Goals yet, add one there first.
+            </p>
+          )}
           {platforms.map((p) => (
             <input key={p} type="hidden" name="platform" value={p} />
           ))}

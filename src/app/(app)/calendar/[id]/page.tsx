@@ -130,10 +130,11 @@ export default async function TopicPage({
       .select("id, phase, raw_pasted_text, parsed_data, status")
       .eq("content_id", id),
     getMergedPillarStructure(item.brand),
-    // Format's "Posted on" picker unions this with CONTENT_POST_PLATFORMS
-    // (format-platform-fields.tsx), so a platform typed into Streak &
-    // Goals' "add a platform goal" form shows up here too, no dedicated
-    // platforms-registry table needed.
+    // The only source for Format's "Posted on" picker's option list
+    // (format-platform-fields.tsx), by design, no static fallback: a
+    // platform typed into Streak & Goals' "add a platform goal" form
+    // shows up here, and deleting that goal removes it from here too,
+    // no dedicated platforms-registry table needed.
     supabase
       .from("goals")
       .select("platform_name")
