@@ -10,6 +10,10 @@ function num(formData: FormData, key: string): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
 }
 
+function str(formData: FormData, key: string): string | null {
+  return String(formData.get(key) ?? "") || null;
+}
+
 // docs/platform-performance-tracking.md Section 4: the per-item
 // Analytics section's "Log a check-in" mini form, one per platform-post,
 // same spirit as logPastPlatformSnapshot (src/app/actions/platforms.ts)
@@ -43,6 +47,11 @@ export async function logPlatformStatsSnapshot(
       saves: num(formData, "saves"),
       shares: num(formData, "shares"),
       reposts: num(formData, "reposts"),
+      // Analytics audit (2026-08-27) Phase 3: free text, e.g. "2:15",
+      // one reading per check-in so it's possible to see the drop point
+      // move earlier or later over time (src/lib/retention-drop.ts).
+      retention_drop_timestamp: str(formData, "retention_drop_timestamp"),
+      retention_drop_note: str(formData, "retention_drop_note"),
     },
     { onConflict: "content_platform_post_id,snapshot_date" },
   );

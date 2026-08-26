@@ -148,8 +148,6 @@ export type ExtendedMetricsRow = ContentMetricsRow & {
   format: string | null;
   idea_source: string | null;
   derived_from_content_id: string | null;
-  retention_drop_timestamp: string | null;
-  retention_drop_note: string | null;
 };
 
 export type NamedMetric = { name: string; Views: number; Engagement: number; count: number };
@@ -241,24 +239,14 @@ export function computeResearchVsCustomPerformance(
   return groupPerformance(rows, (r) => sourceByContentId.get(r.id) ?? null);
 }
 
-// 6. Retention Drop Patterns, a list, not a chart.
-export type RetentionDropRow = {
-  id: string;
-  final_title: string;
-  retention_drop_timestamp: string | null;
-  retention_drop_note: string;
-};
-
-export function computeRetentionDropPatterns(rows: ExtendedMetricsRow[]): RetentionDropRow[] {
-  return rows
-    .filter((r): r is ExtendedMetricsRow & { retention_drop_note: string } => Boolean(r.retention_drop_note))
-    .map((r) => ({
-      id: r.id,
-      final_title: r.final_title || "Untitled",
-      retention_drop_timestamp: r.retention_drop_timestamp,
-      retention_drop_note: r.retention_drop_note,
-    }));
-}
+// 6. Retention Drop Patterns retired here (analytics audit, 2026-08-27,
+// Phase 3): it read content_calendar.retention_drop_note/timestamp,
+// whose only UI setter was removed in topic-page-redesign.md Section 9
+// and never came back, so this list could only ever show whatever
+// grandfathered data existed before that removal, permanently dead for
+// anything published since. Replaced by computeRetentionDropTrends
+// (src/lib/retention-drop.ts), sourced from the new, real, per-check-in
+// field on content_platform_stats_snapshots instead.
 
 // 8. Idea Source Performance
 export function computeIdeaSourcePerformance(rows: ExtendedMetricsRow[]): NamedMetric[] {

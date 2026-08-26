@@ -129,7 +129,7 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     supabase
       .from("content_platform_posts")
       .select(
-        "id, content_id, platform, published_at, retention_drop_note, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+        "id, content_id, platform, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts, retention_drop_timestamp, retention_drop_note)",
       )
       .eq("brand", brand),
   ]);

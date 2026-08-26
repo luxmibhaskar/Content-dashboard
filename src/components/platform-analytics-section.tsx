@@ -153,6 +153,25 @@ function PlatformAnalyticsCard({
             <Input name="saves" type="number" min={0} placeholder="Saves" className="h-8 w-24 text-sm" />
             <Input name="shares" type="number" min={0} placeholder="Shares" className="h-8 w-24 text-sm" />
             <Input name="reposts" type="number" min={0} placeholder="Reposts" className="h-8 w-24 text-sm" />
+            {/* Analytics audit (2026-08-27) Phase 3: one retention drop
+                reading per check-in now, not one per item, so it's
+                possible to see whether the drop point is moving later
+                (improving) or earlier (worsening) across check-ins
+                (src/lib/retention-drop.ts, Analytics Overview's
+                Retention Drop Trends). Free text, same "timestamp + a
+                short note" shape the old per-item field always used. */}
+            <Input
+              name="retention_drop_timestamp"
+              type="text"
+              placeholder="Drop point, e.g. 2:15"
+              className="h-8 w-32 text-sm"
+            />
+            <Input
+              name="retention_drop_note"
+              type="text"
+              placeholder="What was happening there"
+              className="h-8 w-40 text-sm"
+            />
             <Button type="submit" size="xs" variant="outline" loading={isPending}>
               Save
             </Button>

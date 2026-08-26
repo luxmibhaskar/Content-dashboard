@@ -19,7 +19,6 @@ import {
   computeFunnel,
   computeTopPerformingContent,
   computeResearchVsCustomPerformance,
-  computeRetentionDropPatterns,
   computeIdeaSourcePerformance,
   computeRepurposingPerformance,
   computeContentPostedTime,
@@ -27,7 +26,8 @@ import {
   type ExtendedMetricsRow,
   type ContentPlatformPostWithFormat,
 } from "@/lib/analytics";
-import { aggregateByContentId, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
+import { aggregateByContentId } from "@/lib/platform-analytics";
+import { computeRetentionDropTrends, formatSecondsAsTimestamp, type RetentionDropPost } from "@/lib/retention-drop";
 import { computeStreak, computeStreakHeatmap, type StreakRow } from "@/lib/streaks";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
@@ -61,7 +61,7 @@ export default async function AnalyticsPage({
   let contentQuery = supabase
     .from("content_calendar")
     .select(
-      "id, final_title, pillar, sub_topic, format, publish_date, production_status, idea_source, derived_from_content_id, retention_drop_timestamp, retention_drop_note, conversions",
+      "id, final_title, pillar, sub_topic, format, publish_date, production_status, idea_source, derived_from_content_id, conversions",
     )
     .eq("brand", brand)
     .eq("is_archived", false);
@@ -101,17 +101,46 @@ export default async function AnalyticsPage({
       // rows (archive-lifecycle.ts), so without this join an archived
       // item's posts kept counting toward day-of-week averages while
       // being correctly invisible everywhere else on the page.
+      // platform and content_calendar's final_title are new selections
+      // (analytics audit, 2026-08-27, Phase 3) - platform wasn't fetched
+      // at all before despite ContentPlatformPostWithSnapshots' own type
+      // requiring it (harmless until now, nothing here read .platform),
+      // needed now to label Retention Drop Trends by platform;
+      // final_title needed to link each trend row back to its item.
       supabase
         .from("content_platform_posts")
         .select(
-          "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts), content_calendar!inner(format, is_archived)",
+          "content_id, platform, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts, retention_drop_timestamp, retention_drop_note), content_calendar!inner(format, is_archived, final_title)",
         )
         .eq("brand", brand)
         .eq("content_calendar.is_archived", false),
     ]);
 
-  type PlatformPostRow = ContentPlatformPostWithSnapshots & {
-    content_calendar: { format: string | null } | { format: string | null }[] | null;
+  // Described locally rather than extending ContentPlatformPostWithSnapshots
+  // (src/lib/platform-analytics.ts): that shared type's snapshot shape
+  // doesn't carry the two retention fields, and every other consumer of
+  // it (competitors/page.tsx, layout.tsx, backup.ts) doesn't select
+  // them, so it stays as-is rather than growing fields only this page
+  // needs.
+  type PlatformPostRow = {
+    content_id: string;
+    platform: string;
+    published_at: string;
+    content_platform_stats_snapshots: {
+      snapshot_date: string;
+      views: number | null;
+      likes: number | null;
+      comments: number | null;
+      saves: number | null;
+      shares: number | null;
+      reposts: number | null;
+      retention_drop_timestamp: string | null;
+      retention_drop_note: string | null;
+    }[];
+    content_calendar:
+      | { format: string | null; final_title: string | null }
+      | { format: string | null; final_title: string | null }[]
+      | null;
   };
   const platformPosts = (platformPostRows ?? []) as unknown as PlatformPostRow[];
   const statsByContentId = aggregateByContentId(platformPosts);
@@ -152,7 +181,6 @@ export default async function AnalyticsPage({
   const topPerforming = computeTopPerformingContent(extendedRows);
   const liveTitleSourceById = new Map((liveTitleRows ?? []).map((r) => [r.content_id, r.source]));
   const researchVsCustom = computeResearchVsCustomPerformance(extendedRows, liveTitleSourceById);
-  const retentionDrops = computeRetentionDropPatterns(extendedRows);
   const ideaSourcePerformance = computeIdeaSourcePerformance(extendedRows);
   const repurposing = computeRepurposingPerformance(extendedRows);
 
@@ -172,6 +200,21 @@ export default async function AnalyticsPage({
     format: Array.isArray(p.content_calendar) ? (p.content_calendar[0]?.format ?? null) : (p.content_calendar?.format ?? null),
   }));
   const contentPostedTime = computeContentPostedTime(postsWithFormat);
+
+  // Analytics audit (2026-08-27) Phase 3: full history, not scoped to
+  // the range filter, same reasoning as the KPIs above - a trend across
+  // check-ins is inherently about everything logged so far, not just
+  // what happened to publish in the selected window. Only archived-
+  // excluded (already true of platformPosts itself, Phase 2's fix).
+  const retentionDropPosts: RetentionDropPost[] = platformPosts.map((p) => ({
+    content_id: p.content_id,
+    final_title: Array.isArray(p.content_calendar)
+      ? (p.content_calendar[0]?.final_title ?? null)
+      : (p.content_calendar?.final_title ?? null),
+    platform: p.platform,
+    content_platform_stats_snapshots: p.content_platform_stats_snapshots,
+  }));
+  const retentionDropTrends = computeRetentionDropTrends(retentionDropPosts);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
@@ -302,21 +345,41 @@ export default async function AnalyticsPage({
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-muted-foreground">Retention Drop Patterns</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">Retention Drop Trends</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Earliest vs. latest logged drop point per platform-post (content_platform_stats_snapshots.
+              retention_drop_timestamp), full history regardless of the range filter above. Needs at
+              least two check-ins with a drop point logged to show a trend.
+            </p>
             <GlowCard neutral className="mt-2 p-4">
-              {retentionDrops.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No retention drop notes logged in this range yet.</p>
+              {retentionDropTrends.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No platform-post has two check-ins with a drop point logged yet.
+                </p>
               ) : (
                 <ul className="space-y-2">
-                  {retentionDrops.map((d) => (
-                    <li key={d.id} className="text-sm">
-                      <Link href={`/calendar/${d.id}`} className="font-medium hover:underline">
-                        {d.final_title}
+                  {retentionDropTrends.map((t) => (
+                    <li key={`${t.contentId}-${t.platform}`} className="text-sm">
+                      <Link href={`/calendar/${t.contentId}`} className="font-medium hover:underline">
+                        {t.finalTitle}
                       </Link>
-                      {d.retention_drop_timestamp && (
-                        <span className="text-muted-foreground"> @ {d.retention_drop_timestamp}</span>
-                      )}
-                      <p className="text-muted-foreground">{d.retention_drop_note}</p>
+                      <span className="text-muted-foreground"> &middot; {t.platform} &middot; </span>
+                      <span
+                        className={
+                          t.direction === "improving"
+                            ? "text-emerald-600"
+                            : t.direction === "worsening"
+                              ? "text-amber-600"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {formatSecondsAsTimestamp(t.points[0].seconds)} &rarr;{" "}
+                        {formatSecondsAsTimestamp(t.points[t.points.length - 1].seconds)} ({t.direction})
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {" "}
+                        &middot; {t.points.length} check-ins
+                      </span>
                     </li>
                   ))}
                 </ul>

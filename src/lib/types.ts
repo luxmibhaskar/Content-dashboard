@@ -590,6 +590,13 @@ export type Goal = {
 // embedded content_platform_stats_snapshots child collection (Supabase
 // FK embed, same pattern competitors/page.tsx already uses in reverse),
 // one row per check-in, repeatable over time.
+// Analytics audit (2026-08-27) Phase 3: retention_drop_timestamp/note
+// moved here, one reading per check-in, from content_calendar's old
+// one-per-item fields (never had a UI setter after topic-page-redesign.md
+// Section 9, stays there unused) and from content_platform_posts' own
+// retention_drop_note (0018_content_platform_posts.sql, never had a
+// write path at all, dropped in 0020_retention_drop_check_ins.sql
+// rather than compete with this, the real version).
 export type ContentPlatformStatsSnapshot = {
   snapshot_date: string;
   views: number | null;
@@ -598,13 +605,14 @@ export type ContentPlatformStatsSnapshot = {
   saves: number | null;
   shares: number | null;
   reposts: number | null;
+  retention_drop_timestamp: string | null;
+  retention_drop_note: string | null;
 };
 
 export type ContentPlatformPost = {
   id: string;
   platform: string;
   published_at: string;
-  retention_drop_note: string | null;
   content_platform_stats_snapshots: ContentPlatformStatsSnapshot[];
 };
 

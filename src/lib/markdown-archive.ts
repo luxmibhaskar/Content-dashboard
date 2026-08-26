@@ -49,6 +49,11 @@ function buildPerformanceSection(posts: ContentPlatformPost[], conversions: numb
       field("Saves", latest?.saves),
       field("Shares", latest?.shares),
       field("Reposts", latest?.reposts),
+      // Analytics audit (2026-08-27) Phase 3: one reading per check-in
+      // now (src/lib/retention-drop.ts), same latest-snapshot-wins rule
+      // as every other field in this block.
+      field("Retention drop", latest?.retention_drop_timestamp),
+      field("Retention drop note", latest?.retention_drop_note),
     ].filter((l): l is string => Boolean(l));
     return [`### ${p.platform}`, ...lines].join("\n");
   });

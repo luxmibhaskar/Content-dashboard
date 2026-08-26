@@ -98,11 +98,11 @@ export async function updateContentItem(id: string, brand: string, formData: For
   // docs/platform-performance-tracking.md Section 3: each platform
   // actually posted to gets its own content_platform_posts row. Upsert
   // with ignoreDuplicates so an already-tracked platform's published_at
-  // (set once, when it was first added) and retention_drop_note are
-  // never touched by a later, unrelated Save; removing a platform from
-  // the picker deliberately does not delete its row here either, once
-  // posted it stays a real historical record even if the multiselect
-  // toggle is later turned back off.
+  // (set once, when it was first added) is never touched by a later,
+  // unrelated Save; removing a platform from the picker deliberately
+  // does not delete its row here either, once posted it stays a real
+  // historical record even if the multiselect toggle is later turned
+  // back off.
   if (platforms.length > 0) {
     const { error: postsError } = await supabase.from("content_platform_posts").upsert(
       platforms.map((platform) => ({ content_id: id, brand, platform })),
