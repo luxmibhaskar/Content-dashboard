@@ -32,6 +32,7 @@ type Area = "ai" | "manual" | "videos";
 // ai-workflow-panel.tsx's own comment for the gating specifics.
 export function TopicPageTabs({
   contentId,
+  brand,
   briefIntent,
   keywords,
   researchCopyVersions,
@@ -40,6 +41,7 @@ export function TopicPageTabs({
   manualWorkflowPhases,
 }: {
   contentId: string;
+  brand: string;
   briefIntent: string | null;
   keywords: string | null;
   researchCopyVersions: ResearchCopyVersion[];
@@ -97,7 +99,7 @@ export function TopicPageTabs({
 
       {area === "manual" && (
         <div className="mt-4">
-          <ManualWorkflowPanel contentId={contentId} phases={manualWorkflowPhases} />
+          <ManualWorkflowPanel contentId={contentId} brand={brand} phases={manualWorkflowPhases} />
         </div>
       )}
 

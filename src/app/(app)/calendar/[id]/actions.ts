@@ -72,6 +72,11 @@ export async function updateContentItem(id: string, brand: string, formData: For
       // "field's only meaning is short-form" reasoning as platform used
       // to have before platform itself grew to cover Long Form too.
       final_description: str(formData, "final_description"),
+      // docs/platform-performance-tracking.md Section 6: the derived-
+      // from picker (DerivedFromPicker, format-platform-fields.tsx),
+      // Short-only for the same reason, a Long Form item doesn't derive
+      // from anything.
+      derived_from_content_id: str(formData, "derived_from_content_id"),
 
       // Performance metrics (Section 6.2 KPIs). Left blank = untracked
       // (null), not 0, so Analytics can tell the two apart. Relocated

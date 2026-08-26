@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PasteImportSection } from "@/components/paste-import-section";
@@ -11,6 +12,9 @@ import {
   type ThumbnailSuggestion,
 } from "@/lib/manual-workflow-parsing";
 import { importPackagingPhase } from "@/app/(app)/calendar/[id]/manual-workflow-actions";
+import { useResearchTitle } from "@/app/(app)/calendar/[id]/research-copy-actions";
+import { useHook } from "@/app/(app)/calendar/[id]/hook-actions";
+import type { HookLibraryType } from "@/lib/types";
 
 const PLATFORM_COPY_LABELS: Record<keyof PackagingPhaseData["platformCopy"], string> = {
   youtubeDescription: "YouTube Description",
@@ -22,12 +26,28 @@ const PLATFORM_COPY_LABELS: Record<keyof PackagingPhaseData["platformCopy"], str
   threadsCaption: "Threads Caption",
 };
 
-function TitleOptionCard({ option, index }: { option: PackagingTitleOption; index: number }) {
+function TitleOptionCard({
+  option,
+  index,
+  boundUseTitle,
+}: {
+  option: PackagingTitleOption;
+  index: number;
+  boundUseTitle: (formData: FormData) => Promise<void>;
+}) {
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        Title {index + 1}: {option.title}
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold">
+          Title {index + 1}: {option.title}
+        </p>
+        <form action={boundUseTitle}>
+          <input type="hidden" name="value" value={option.title} />
+          <Button type="submit" size="xs" variant="outline" className="shrink-0">
+            Use
+          </Button>
+        </form>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Research support" value={option.researchSupport} />
         <Field label="Viewer problem addressed" value={option.viewerProblemAddressed} />
@@ -36,6 +56,43 @@ function TitleOptionCard({ option, index }: { option: PackagingTitleOption; inde
       </div>
       <Field label="Risk of misleading" value={option.riskOfMisleading} />
     </GlowCard>
+  );
+}
+
+// docs/platform-performance-tracking.md Section 7: each hook gets a
+// "Use" action, same visual pattern as the AI side's Titles "Use This"
+// (ai-packaging-phase-content.tsx) - a tiny per-item form, not a bulk
+// action, so using one hook doesn't require touching the others.
+function HookListField({
+  label,
+  items,
+  boundUse,
+}: {
+  label: string;
+  items: string[];
+  boundUse: (formData: FormData) => Promise<void>;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      {items.length === 0 ? (
+        <p className="mt-0.5 text-sm text-muted-foreground">None found.</p>
+      ) : (
+        <div className="mt-1 space-y-1.5">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-start justify-between gap-2 rounded-md border border-border p-2">
+              <p className="text-sm leading-relaxed">{item}</p>
+              <form action={boundUse}>
+                <input type="hidden" name="value" value={item} />
+                <Button type="submit" size="xs" variant="outline" className="shrink-0">
+                  Use
+                </Button>
+              </form>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -68,14 +125,18 @@ function ThumbnailCard({ thumbnail, index }: { thumbnail: ThumbnailSuggestion; i
 // (see manual-workflow-actions.ts's importPackagingPhase comment).
 export function PackagingPhaseContent({
   contentId,
+  brand,
   data,
   hasExistingImport,
 }: {
   contentId: string;
+  brand: string;
   data: PackagingPhaseData | null;
   hasExistingImport: boolean;
 }) {
   const boundImportAction = importPackagingPhase.bind(null, contentId);
+  const boundUseTitle = useResearchTitle.bind(null, contentId);
+  const boundUseHook = (type: HookLibraryType) => useHook.bind(null, contentId, brand, type);
 
   return (
     <div className="space-y-4">
@@ -96,7 +157,7 @@ export function PackagingPhaseContent({
               <p className="text-xs font-medium text-muted-foreground">Titles ({data.titles.length})</p>
               <div className="space-y-2">
                 {data.titles.map((t, i) => (
-                  <TitleOptionCard key={i} option={t} index={i} />
+                  <TitleOptionCard key={i} option={t} index={i} boundUseTitle={boundUseTitle} />
                 ))}
               </div>
             </div>
@@ -134,10 +195,13 @@ export function PackagingPhaseContent({
 
           <GlowCard glow={3} className="space-y-3 p-3.5" textHeavy>
             <p className="text-xs font-medium text-muted-foreground">Hooks</p>
+            <p className="text-xs text-muted-foreground">
+              &quot;Use&quot; adds a hook to Hook Library and marks it as the one used on this item.
+            </p>
             <div className="grid gap-3 sm:grid-cols-3">
-              <ListField label="Visual Hooks" items={data.visualHooks} />
-              <ListField label="Textual Hooks" items={data.textualHooks} />
-              <ListField label="Verbal Hooks" items={data.verbalHooks} />
+              <HookListField label="Visual Hooks" items={data.visualHooks} boundUse={boundUseHook("visual")} />
+              <HookListField label="Textual Hooks" items={data.textualHooks} boundUse={boundUseHook("text")} />
+              <HookListField label="Verbal Hooks" items={data.verbalHooks} boundUse={boundUseHook("verbal")} />
             </div>
           </GlowCard>
 

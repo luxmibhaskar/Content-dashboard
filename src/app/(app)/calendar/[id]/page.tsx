@@ -8,7 +8,7 @@ import { ProductionStatusTracker } from "@/components/production-status-tracker"
 import { CopyButton } from "@/components/copy-button";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
-import { FormatPlatformFields } from "@/components/format-platform-fields";
+import { FormatPlatformFields, type LongFormTopicOption } from "@/components/format-platform-fields";
 import { PlatformAnalyticsSection } from "@/components/platform-analytics-section";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
@@ -96,6 +96,8 @@ export default async function TopicPage({
     structure,
     { data: goalRows },
     { data: platformPosts },
+    { data: longFormTopics },
+    { data: liveHook },
   ] = await Promise.all([
     item.derived_from_content_id
       ? supabase
@@ -156,6 +158,27 @@ export default async function TopicPage({
       )
       .eq("content_id", id)
       .order("published_at", { ascending: true }),
+    // docs/platform-performance-tracking.md Section 6: the derived-from
+    // picker's own option pool (format-platform-fields.tsx), filtered
+    // and sliced to latest-5-per-pillar client-side, cheap at this app's
+    // real data volume.
+    supabase
+      .from("content_calendar")
+      .select("id, final_title, pillar, created_at")
+      .eq("brand", item.brand)
+      .eq("format", "Long Video")
+      .order("created_at", { ascending: false }),
+    // docs/platform-performance-tracking.md Sections 4 and 7: the "hook
+    // used" surfaced in the Analytics section, is_live is the same
+    // exclusive-flag pattern title_variants/thumbnail_variants use, set
+    // by useHook (hook-actions.ts) when a Manual Packaging hook's "Use"
+    // fires.
+    supabase
+      .from("hook_variants")
+      .select("variant_text, performance_rating")
+      .eq("content_id", id)
+      .eq("is_live", true)
+      .maybeSingle(),
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id, item.brand);
@@ -270,6 +293,10 @@ export default async function TopicPage({
           initialDescription={item.final_description ?? ""}
           publishDateValue={publishDateValue}
           knownPlatforms={knownPlatforms}
+          structure={structure}
+          longFormTopics={(longFormTopics ?? []) as LongFormTopicOption[]}
+          initialPillar={item.pillar ?? ""}
+          initialDerivedFromContentId={item.derived_from_content_id ?? ""}
         />
 
         {/* Follow-up: relocated out of the removed System & Production
@@ -354,6 +381,7 @@ export default async function TopicPage({
           format={item.format ?? ""}
           platforms={(platformPosts ?? []) as ContentPlatformPost[]}
           sourceItem={sourceItem}
+          liveHook={liveHook}
         />
       </div>
 
@@ -364,6 +392,7 @@ export default async function TopicPage({
       <div className="mt-5">
         <TopicPageTabs
           contentId={item.id}
+          brand={item.brand}
           briefIntent={item.brief_intent}
           keywords={item.raw_keywords_topics}
           researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}

@@ -42,9 +42,11 @@ const LOCK_MESSAGE: Record<ManualWorkflowPhase, string> = {
 // input for the next one.
 export function ManualWorkflowPanel({
   contentId,
+  brand,
   phases,
 }: {
   contentId: string;
+  brand: string;
   phases: ManualWorkflowPhaseRow[];
 }) {
   const [activePhase, setActivePhase] = useState<ManualWorkflowPhase>("research");
@@ -96,6 +98,7 @@ export function ManualWorkflowPanel({
         ) : activePhase === "packaging" ? (
           <PackagingPhaseContent
             contentId={contentId}
+            brand={brand}
             data={(packagingRow?.parsed_data as PackagingPhaseData | null) ?? null}
             hasExistingImport={packagingRow != null}
           />

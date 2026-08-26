@@ -37,12 +37,14 @@ export function PlatformAnalyticsSection({
   format,
   platforms,
   sourceItem,
+  liveHook,
 }: {
   contentId: string;
   brand: string;
   format: string;
   platforms: ContentPlatformPost[];
   sourceItem: { id: string; final_title: string | null } | null;
+  liveHook: { variant_text: string; performance_rating: number | null } | null;
 }) {
   return (
     <CollapsibleSection title="Analytics" neutral>
@@ -55,10 +57,24 @@ export function PlatformAnalyticsSection({
         </p>
       )}
 
-      {/* docs/platform-performance-tracking.md Sections 4 and 7: "which
-          hook was used and its performance" belongs here too, deferred
-          until Phase E adds a hook-used association to content_calendar,
-          there's nothing to read yet. */}
+      {/* docs/platform-performance-tracking.md Sections 4 and 7: which
+          hook was used and its performance. liveHook comes from
+          hook_variants where is_live, set by useHook (hook-actions.ts,
+          Manual Packaging's "Use" action) - Manual-only for now, AI's
+          Packaging phase has no categorized hook fields to use from
+          (confirmed before building Section 7, see hook-actions.ts). No
+          rating UI exists anywhere yet (same as Hook Library's own
+          aggregation), so "not yet rated" is the honest state, not a
+          placeholder. */}
+      {liveHook && (
+        <p className="text-sm text-muted-foreground">
+          Hook used: <span className="font-medium text-foreground">{liveHook.variant_text}</span>
+          {" · "}
+          {liveHook.performance_rating !== null
+            ? `rated ${liveHook.performance_rating}/10`
+            : "not yet rated"}
+        </p>
+      )}
 
       {platforms.length === 0 ? (
         <p className="text-sm text-muted-foreground">

@@ -5,6 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import type { PillarStructure } from "@/lib/pillars";
+
+export type LongFormTopicOption = {
+  id: string;
+  final_title: string | null;
+  pillar: string | null;
+  created_at: string;
+};
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
 
@@ -35,12 +43,20 @@ export function FormatPlatformFields({
   initialDescription,
   publishDateValue,
   knownPlatforms,
+  structure,
+  longFormTopics,
+  initialPillar,
+  initialDerivedFromContentId,
 }: {
   initialFormat: string;
   initialPlatforms: string[];
   initialDescription: string;
   publishDateValue: string;
   knownPlatforms: string[];
+  structure: PillarStructure;
+  longFormTopics: LongFormTopicOption[];
+  initialPillar: string;
+  initialDerivedFromContentId: string;
 }) {
   const [format, setFormat] = useState(initialFormat);
   // Kept independent of Format's own value (not reset when Format
@@ -115,6 +131,21 @@ export function FormatPlatformFields({
         </div>
       )}
 
+      {/* docs/platform-performance-tracking.md Section 6: a proper picker
+          on top of the already-working derived_from_content_id field
+          (previously read-only, no UI setter since topic-page-redesign.md
+          Section 9 removed System & Production). Short-only, matching the
+          doc's own scoping: a Long Form item doesn't derive from
+          anything. */}
+      {format === "Short" && (
+        <DerivedFromPicker
+          structure={structure}
+          longFormTopics={longFormTopics}
+          initialPillar={initialPillar}
+          initialValue={initialDerivedFromContentId}
+        />
+      )}
+
       {(format === "Short" || format === "Long Video") && (
         <div className="space-y-1.5">
           <Label>Posted on (select all that apply)</Label>
@@ -152,5 +183,81 @@ export function FormatPlatformFields({
         </div>
       )}
     </>
+  );
+}
+
+// docs/platform-performance-tracking.md Section 6: filterable by pillar,
+// latest 5 Long Form topics for that pillar. longFormTopics is the
+// brand's full Long Form list (fetched once, server-side), filtered and
+// sliced here client-side rather than round-tripping per pillar change,
+// cheap at this app's real data volume. Pillar filter defaults to
+// whichever pillar this item (or, if unset, its already-linked source
+// item) belongs to, but is independently browsable, since finding a
+// repurposing source can come before this item's own pillar is decided.
+function DerivedFromPicker({
+  structure,
+  longFormTopics,
+  initialPillar,
+  initialValue,
+}: {
+  structure: PillarStructure;
+  longFormTopics: LongFormTopicOption[];
+  initialPillar: string;
+  initialValue: string;
+}) {
+  const pillars = Object.keys(structure);
+  const alreadyLinked = longFormTopics.find((t) => t.id === initialValue);
+  const defaultFilterPillar = initialPillar || alreadyLinked?.pillar || "";
+  const [pillarFilter, setPillarFilter] = useState(defaultFilterPillar);
+
+  const latestFive = longFormTopics.filter((t) => !pillarFilter || t.pillar === pillarFilter).slice(0, 5);
+  // Same "never silently lose an already-set value" reasoning as
+  // Format's own legacy-value handling: if the currently-linked topic
+  // isn't in the latest-5-for-this-pillar slice (a newer topic bumped it
+  // out, or it belongs to a different pillar than the current filter),
+  // it stays selectable as its own extra option while the filter is on
+  // its original pillar, rather than a re-save silently clearing the
+  // link.
+  const onOriginalFilter = pillarFilter === defaultFilterPillar;
+  const options =
+    onOriginalFilter && alreadyLinked && !latestFive.some((t) => t.id === alreadyLinked.id)
+      ? [alreadyLinked, ...latestFive]
+      : latestFive;
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="derived_from_content_id">Idea derived from</Label>
+      <div className="grid grid-cols-2 gap-2">
+        <select
+          id="derived_from_pillar_filter"
+          aria-label="Filter by pillar"
+          value={pillarFilter}
+          onChange={(e) => setPillarFilter(e.target.value)}
+          className={SELECT_CLASSNAME}
+        >
+          <option value="">All pillars</option>
+          {pillars.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <select
+          key={pillarFilter}
+          id="derived_from_content_id"
+          name="derived_from_content_id"
+          defaultValue={onOriginalFilter ? initialValue : ""}
+          className={SELECT_CLASSNAME}
+        >
+          <option value="">None</option>
+          {options.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.final_title || "Untitled"}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="text-xs text-muted-foreground">Latest 5 Long Form topics for the selected pillar.</p>
+    </div>
   );
 }
