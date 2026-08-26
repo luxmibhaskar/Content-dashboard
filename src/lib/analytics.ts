@@ -1,12 +1,23 @@
+import type { ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
+import { currentStatsOf } from "@/lib/platform-analytics";
+
+// docs/platform-performance-tracking.md Migration section: views and
+// engagement are pre-aggregated (aggregateByContentId, src/lib/platform-
+// analytics.ts, latest snapshot per platform-post, summed across a
+// content item's platform-posts) before reaching any function in this
+// file, not read from content_calendar directly anymore. conversions is
+// the one field left reading the old column, deliberately not migrated:
+// the new per-platform tables have no conversions field at all, a real
+// design decision (conversions is a business outcome, not a platform
+// engagement signal, doesn't obviously belong in a per-platform time-
+// series model the same way views/likes/comments/saves/shares do), left
+// for Phase G to resolve properly rather than as a side effect here.
 export type ContentMetricsRow = {
   pillar: string | null;
   publish_date: string | null;
   production_status: string | null;
-  views: number | null;
-  likes: number | null;
-  comments: number | null;
-  shares: number | null;
-  saves: number | null;
+  viewsAgg: number;
+  engagementAgg: number;
   conversions: number | null;
 };
 
@@ -20,10 +31,6 @@ export type AnalyticsKpis = {
   hasConversions: boolean;
 };
 
-function engagementOf(r: ContentMetricsRow): number {
-  return (r.likes ?? 0) + (r.comments ?? 0) + (r.shares ?? 0) + (r.saves ?? 0);
-}
-
 // Section 6.2. Conversions hide gracefully when nothing in range tracks
 // them; views/engagement always show since a genuinely fresh channel with
 // zero views is a normal state, not an "untracked" one.
@@ -36,8 +43,8 @@ export function computeKpis(rows: ContentMetricsRow[]): AnalyticsKpis {
   let hasConversions = false;
 
   for (const r of rows) {
-    totalViews += r.views ?? 0;
-    totalEngagement += engagementOf(r);
+    totalViews += r.viewsAgg;
+    totalEngagement += r.engagementAgg;
     if (r.conversions !== null) {
       hasConversions = true;
       totalConversions += r.conversions;
@@ -67,8 +74,8 @@ export function computePerformanceOverTime(rows: ContentMetricsRow[]): OverTimeP
     if (!r.publish_date) continue;
     const day = r.publish_date.slice(0, 10);
     const entry = byDate.get(day) ?? { date: day, Views: 0, Engagement: 0 };
-    entry.Views += r.views ?? 0;
-    entry.Engagement += engagementOf(r);
+    entry.Views += r.viewsAgg;
+    entry.Engagement += r.engagementAgg;
     byDate.set(day, entry);
   }
 
@@ -83,8 +90,8 @@ export function computePerformanceByPillar(rows: ContentMetricsRow[]): PillarPoi
   for (const r of rows) {
     const pillar = r.pillar || "Unassigned";
     const entry = byPillar.get(pillar) ?? { pillar, Views: 0, Engagement: 0 };
-    entry.Views += r.views ?? 0;
-    entry.Engagement += engagementOf(r);
+    entry.Views += r.viewsAgg;
+    entry.Engagement += r.engagementAgg;
     byPillar.set(pillar, entry);
   }
 
@@ -138,8 +145,8 @@ function groupPerformance(
     const key = keyFn(r);
     if (!key) continue;
     const entry = map.get(key) ?? { name: key, Views: 0, Engagement: 0, count: 0 };
-    entry.Views += r.views ?? 0;
-    entry.Engagement += engagementOf(r);
+    entry.Views += r.viewsAgg;
+    entry.Engagement += r.engagementAgg;
     entry.count += 1;
     map.set(key, entry);
   }
@@ -196,14 +203,14 @@ export type TopContentItem = { id: string; final_title: string; views: number; e
 
 export function computeTopPerformingContent(rows: ExtendedMetricsRow[], limit = 10): TopContentItem[] {
   return [...rows]
-    .filter((r) => (r.views ?? 0) > 0)
-    .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+    .filter((r) => r.viewsAgg > 0)
+    .sort((a, b) => b.viewsAgg - a.viewsAgg)
     .slice(0, limit)
     .map((r) => ({
       id: r.id,
       final_title: r.final_title || "Untitled",
-      views: r.views ?? 0,
-      engagement: engagementOf(r),
+      views: r.viewsAgg,
+      engagement: r.engagementAgg,
     }));
 }
 
@@ -242,7 +249,11 @@ export function computeIdeaSourcePerformance(rows: ExtendedMetricsRow[]): NamedM
 
 // 9. Repurposing Performance: originals (no derived_from_content_id) vs
 // what's been derived from them. Flags Long Video originals with zero
-// derivatives as untapped repurposing opportunities.
+// derivatives as untapped repurposing opportunities. docs/platform-
+// performance-tracking.md Section 8: "stays conceptually the same...
+// but should now show real performance comparison using the new per-
+// platform data" - same shape as before, viewsAgg is the only thing
+// that changed under it.
 export type RepurposingRow = {
   id: string;
   final_title: string;
@@ -268,33 +279,55 @@ export function computeRepurposingPerformance(rows: ExtendedMetricsRow[]): Repur
       return {
         id: r.id,
         final_title: r.final_title || "Untitled",
-        views: r.views ?? 0,
+        views: r.viewsAgg,
         derivativeCount: derivatives.length,
-        derivativeViews: derivatives.reduce((sum, d) => sum + (d.views ?? 0), 0),
+        derivativeViews: derivatives.reduce((sum, d) => sum + d.viewsAgg, 0),
         isUntappedLongForm: derivatives.length === 0 && r.format === "Long Video",
       };
     })
     .sort((a, b) => b.views - a.views);
 }
 
-// 10. Best Time to Post, by day of week (publish_date already carries
-// full date+time, Section 10.1.6).
+// 10. docs/platform-performance-tracking.md Section 8: "Best Time to
+// Post" renamed "Content Posted Time", sourced from
+// content_platform_posts.published_at (real date+time a specific
+// platform post actually went out, not publish_date's vague
+// approximation), shown separately for Long Form and Short Form since
+// they're different posting rhythms. Each platform-post's own current
+// views (its latest snapshot, src/lib/platform-analytics.ts) is what
+// gets averaged per day-of-week, not the parent item's total across
+// every platform - "which day performed best" is inherently a per-post
+// question once a single item can have several posts.
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export type DayOfWeekPoint = { day: string; "Avg Views": number };
 
-export function computeBestTimeToPost(rows: ExtendedMetricsRow[]): DayOfWeekPoint[] {
+export type ContentPlatformPostWithFormat = ContentPlatformPostWithSnapshots & {
+  format: string | null;
+};
+
+function bucketByDayOfWeek(posts: ContentPlatformPostWithFormat[]): DayOfWeekPoint[] {
   const buckets = new Map<number, { totalViews: number; count: number }>();
-  for (const r of rows) {
-    if (!r.publish_date) continue;
-    const day = new Date(r.publish_date).getDay();
+  posts.forEach((p) => {
+    const day = new Date(p.published_at).getDay();
+    const views = currentStatsOf(p).views;
     const b = buckets.get(day) ?? { totalViews: 0, count: 0 };
-    b.totalViews += r.views ?? 0;
+    b.totalViews += views;
     b.count += 1;
     buckets.set(day, b);
-  }
+  });
   return DAY_NAMES.map((name, i) => {
     const b = buckets.get(i);
     return { day: name, "Avg Views": b && b.count > 0 ? Math.round(b.totalViews / b.count) : 0 };
   });
+}
+
+export function computeContentPostedTime(posts: ContentPlatformPostWithFormat[]): {
+  longForm: DayOfWeekPoint[];
+  shortForm: DayOfWeekPoint[];
+} {
+  return {
+    longForm: bucketByDayOfWeek(posts.filter((p) => p.format === "Long Video")),
+    shortForm: bucketByDayOfWeek(posts.filter((p) => p.format === "Short")),
+  };
 }

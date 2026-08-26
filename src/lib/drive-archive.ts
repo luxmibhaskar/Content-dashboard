@@ -10,6 +10,7 @@ import {
 import type { Brand } from "@/lib/brand";
 import type {
   ContentCalendarDetail,
+  ContentPlatformPost,
   ResearchSnapshot,
   JourneyEntry,
   ContentArchiveCompanion,
@@ -100,6 +101,7 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     { data: refVideos },
     { data: researchCopyVersions },
     { data: scriptsVersions },
+    { data: platformPostRows },
   ] = await Promise.all([
     supabase
       .from("title_variants")
@@ -119,6 +121,17 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     supabase.from("reference_videos").select("id, content_id, hook_note, rehook_note, cta_note").eq("brand", brand),
     supabase.from("research_copy_versions").select("content_id, source, is_live, data").eq("brand", brand),
     supabase.from("scripts_versions").select("content_id, source, is_live, data").eq("brand", brand),
+    // docs/platform-performance-tracking.md Migration section: fetched
+    // once for the whole brand, not per item, same "one extra query, not
+    // N" reasoning as every other table grouped by content_id here.
+    // Markdown's own Performance section reads this instead of
+    // row.views/likes/comments/shares/saves now.
+    supabase
+      .from("content_platform_posts")
+      .select(
+        "id, content_id, platform, published_at, retention_drop_note, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+      )
+      .eq("brand", brand),
   ]);
 
   function groupByContent<T extends { content_id: string }>(rows: T[] | null): Map<string, T[]> {
@@ -144,17 +157,21 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
   const scriptsByContent = groupByContent(
     scriptsVersions as (ContentArchiveCompanion["scripts_versions"][number] & { content_id: string })[],
   );
+  const platformPostsByContent = groupByContent(
+    (platformPostRows ?? []) as (ContentPlatformPost & { content_id: string })[],
+  );
 
   for (const row of contentRows) {
     const itemResearchCopy = researchCopyByContent.get(row.id) ?? [];
     const itemScripts = scriptsByContent.get(row.id) ?? [];
+    const itemPlatformPosts = platformPostsByContent.get(row.id) ?? [];
 
     const filename = filenames.get(row.id)!;
     const { webViewLink } = await upsertMarkdownFile(
       drive,
       contentFolderId,
       filename,
-      buildContentCalendarMarkdown(row, itemResearchCopy, itemScripts),
+      buildContentCalendarMarkdown(row, itemResearchCopy, itemScripts, itemPlatformPosts),
     );
     contentLinks.set(row.id, webViewLink);
 

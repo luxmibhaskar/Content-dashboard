@@ -7,6 +7,7 @@ import { getLatestPlatformSnapshots } from "@/app/actions/platforms";
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
 import { localDateKey } from "@/lib/date";
 import { resolveGoalCurrentValues } from "@/lib/goals";
+import { totalAcrossPosts, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
 import type { Goal } from "@/lib/types";
 
 export default async function AppLayout({
@@ -52,14 +53,22 @@ export default async function AppLayout({
       .eq("brand", brand)
       .not("platform_name", "is", null)
       .order("created_at", { ascending: false }),
-    supabase.from("content_calendar").select("views").eq("brand", brand),
+    // docs/platform-performance-tracking.md Migration section: the
+    // "Views" pseudo-goal's total used to sum content_calendar.views
+    // directly; that column's data source moved here.
+    supabase
+      .from("content_platform_posts")
+      .select(
+        "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+      )
+      .eq("brand", brand),
   ]);
 
   const streaks: StreakRow[] = streakRows ?? [];
   const walkStreak = computeStreak(streaks, "walked");
   const postStreak = computeStreak(streaks, "posted");
   const todayRow = streaks.find((r) => r.streak_date === todayDateKey());
-  const totalViews = (viewRows ?? []).reduce((sum, r) => sum + (r.views ?? 0), 0);
+  const totalViews = totalAcrossPosts((viewRows ?? []) as ContentPlatformPostWithSnapshots[]).views;
   const goals = resolveGoalCurrentValues((goalRows ?? []) as Goal[], totalViews, latestSnapshots);
 
   return (

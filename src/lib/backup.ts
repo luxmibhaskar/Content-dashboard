@@ -4,6 +4,7 @@ import { syncDriveArchive, type DriveLinks } from "@/lib/drive-archive";
 import { archiveIdleContent } from "@/lib/archive-lifecycle";
 import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
 import { resolveGoalCurrentValues } from "@/lib/goals";
+import { totalAcrossPosts, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
 import type { ResearchCopyResult, ScriptsResult, Goal } from "@/lib/types";
 
 type Row = (string | number | boolean | null)[];
@@ -511,14 +512,22 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
       .select("platform, follower_count, snapshot_date")
       .eq("brand", brand)
       .order("snapshot_date", { ascending: false }),
-    supabase.from("content_calendar").select("views").eq("brand", brand),
+    // docs/platform-performance-tracking.md Migration section: same
+    // totalViews source swap as src/app/(app)/layout.tsx, the live
+    // "Views" pseudo-goal this backed-up number has to match.
+    supabase
+      .from("content_platform_posts")
+      .select(
+        "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+      )
+      .eq("brand", brand),
   ]);
 
   const latestSnapshotsByPlatform: Record<string, number> = {};
   for (const r of snapshotRows ?? []) {
     if (!(r.platform in latestSnapshotsByPlatform)) latestSnapshotsByPlatform[r.platform] = r.follower_count;
   }
-  const totalViews = (viewRows ?? []).reduce((sum, r) => sum + (r.views ?? 0), 0);
+  const totalViews = totalAcrossPosts((viewRows ?? []) as ContentPlatformPostWithSnapshots[]).views;
 
   // resolveGoalCurrentValues only ever runs, live, on platform_name-not-
   // null rows (src/app/(app)/layout.tsx filters to those before calling

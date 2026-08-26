@@ -9,17 +9,14 @@ import { CollapsibleSection } from "@/components/collapsible-section";
 import { PerformanceOverTimeChart } from "@/components/charts/performance-over-time-chart";
 import { todayDateKey } from "@/lib/streaks";
 import { logPlatformStatsSnapshot } from "@/app/(app)/calendar/[id]/platform-stats-actions";
-import type { ContentPlatformPost, ContentPlatformStatsSnapshot } from "@/lib/types";
+import { engagementOfSnapshot } from "@/lib/platform-analytics";
+import type { ContentPlatformPost } from "@/lib/types";
 import type { OverTimePoint } from "@/lib/analytics";
-
-function engagementOf(s: ContentPlatformStatsSnapshot): number {
-  return (s.likes ?? 0) + (s.comments ?? 0) + (s.saves ?? 0) + (s.shares ?? 0) + (s.reposts ?? 0);
-}
 
 function toOverTimePoints(post: ContentPlatformPost): OverTimePoint[] {
   return [...post.content_platform_stats_snapshots]
     .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
-    .map((s) => ({ date: s.snapshot_date, Views: s.views ?? 0, Engagement: engagementOf(s) }));
+    .map((s) => ({ date: s.snapshot_date, Views: s.views ?? 0, Engagement: engagementOfSnapshot(s) }));
 }
 
 // docs/platform-performance-tracking.md Section 4: per-item Analytics,

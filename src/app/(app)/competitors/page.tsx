@@ -11,16 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { SubTopicMultiSelect } from "@/components/sub-topic-multiselect";
 import { GlowCard } from "@/components/glow-card";
 import { PLATFORMS } from "@/lib/types";
+import { aggregateByContentId, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
 import { createCompetitor } from "./actions";
 
 type BenchmarkTopic = {
+  id: string;
   pillar: string | null;
   sub_topic: string | null;
-  views: number | null;
-  likes: number | null;
-  comments: number | null;
-  shares: number | null;
-  saves: number | null;
 } | null;
 
 export default async function CompetitorsPage({
@@ -35,7 +32,7 @@ export default async function CompetitorsPage({
 
   const supabase = await createClient();
 
-  const [{ data: competitors }, { data: benchmarks }, structure] = await Promise.all([
+  const [{ data: competitors }, { data: benchmarks }, structure, { data: platformPostRows }] = await Promise.all([
     supabase
       .from("competitors")
       .select("id, name, platform, profile_url, notes, active, sub_topics")
@@ -43,10 +40,21 @@ export default async function CompetitorsPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("competitor_benchmarks")
-      .select("competitor_id, content_calendar:content_id(pillar, sub_topic, views, likes, comments, shares, saves)")
+      .select("competitor_id, content_calendar:content_id(id, pillar, sub_topic)")
       .eq("brand", brand),
     getMergedPillarStructure(brand),
+    // docs/platform-performance-tracking.md Migration section: Avg Views
+    // used to read content_calendar.views directly off the same embed
+    // above; that column's gone from this query now, views comes from
+    // here instead, matched back to each benchmark's topic by content id.
+    supabase
+      .from("content_platform_posts")
+      .select(
+        "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+      )
+      .eq("brand", brand),
   ]);
+  const viewsByContentId = aggregateByContentId((platformPostRows ?? []) as ContentPlatformPostWithSnapshots[]);
 
   // Filters the actual list below by each competitor's own tagged
   // sub-topics (set on Add Competitor / edit), not by which content
@@ -82,9 +90,10 @@ export default async function CompetitorsPage({
     if (!b.competitor_id) continue;
     benchmarkCounts.set(b.competitor_id, (benchmarkCounts.get(b.competitor_id) ?? 0) + 1);
     const topic = (Array.isArray(b.content_calendar) ? b.content_calendar[0] : b.content_calendar) as BenchmarkTopic;
-    if (topic?.views !== null && topic?.views !== undefined) {
+    const topicStats = topic ? viewsByContentId.get(topic.id) : undefined;
+    if (topicStats) {
       const entry = viewTotals.get(b.competitor_id) ?? { sum: 0, count: 0 };
-      entry.sum += topic.views;
+      entry.sum += topicStats.views;
       entry.count += 1;
       viewTotals.set(b.competitor_id, entry);
     }

@@ -1,5 +1,6 @@
 import type {
   ContentCalendarDetail,
+  ContentPlatformPost,
   ResearchSnapshot,
   JourneyEntry,
   ResearchCopyResult,
@@ -25,6 +26,36 @@ function list(label: string, values: string[] | null | undefined): string | null
 
 function sourceLabel(source: VersionSource, isLive: boolean): string {
   return `${source === "manual" ? "Manual" : "AI"}${isLive ? " (Active)" : ""}`;
+}
+
+// docs/platform-performance-tracking.md Migration section: one block per
+// platform this item was actually posted to, each showing its latest
+// check-in (same "most recent logged count wins" rule as
+// src/lib/platform-analytics.ts), replacing the old flat Views/Likes/
+// Comments/Shares/Saves fields this section used to read straight off
+// content_calendar. conversions stays a flat field, the new tables have
+// no equivalent for it.
+function buildPerformanceSection(posts: ContentPlatformPost[], conversions: number | null): string {
+  const platformBlocks = posts.map((p) => {
+    const latest = [...p.content_platform_stats_snapshots].sort((a, b) =>
+      b.snapshot_date.localeCompare(a.snapshot_date),
+    )[0];
+    const lines = [
+      field("Posted", new Date(p.published_at).toLocaleString()),
+      field("Latest check-in", latest?.snapshot_date),
+      field("Views", latest?.views),
+      field("Likes", latest?.likes),
+      field("Comments", latest?.comments),
+      field("Saves", latest?.saves),
+      field("Shares", latest?.shares),
+      field("Reposts", latest?.reposts),
+    ].filter((l): l is string => Boolean(l));
+    return [`### ${p.platform}`, ...lines].join("\n");
+  });
+
+  const body = [...platformBlocks, field("Conversions", conversions)].filter((s): s is string => Boolean(s));
+  if (body.length === 0) return "";
+  return `## Performance\n\n${body.join("\n\n")}\n`;
 }
 
 // docs/topic-page-redesign.md Section 2, Tab 1: the real replacement for
@@ -133,10 +164,16 @@ function buildScriptsSection(versions: { source: VersionSource; is_live: boolean
 // Section 2 removed those from the UI entirely; this file just hadn't
 // caught up), those tables are where the topic page's real Research &
 // Copy and Scripts tab content actually lives now.
+// docs/platform-performance-tracking.md Migration section: platformPosts
+// replaces row.views/likes/comments/shares/saves in the Performance
+// section below - conversions is the one field that stays reading off
+// row directly, the new tables have no equivalent for it (see
+// src/lib/platform-analytics.ts's own comment on why).
 export function buildContentCalendarMarkdown(
   row: ContentCalendarDetail,
   researchCopyVersions: { source: VersionSource; is_live: boolean; data: ResearchCopyResult }[],
   scriptsVersions: { source: VersionSource; is_live: boolean; data: ScriptsResult }[],
+  platformPosts: ContentPlatformPost[],
 ): string {
   const title = row.final_title || row.raw_idea_title || "Untitled";
   const parts: string[] = [`# ${title}`];
@@ -209,16 +246,7 @@ export function buildContentCalendarMarkdown(
     ]),
   );
 
-  parts.push(
-    section("Performance", [
-      field("Views", row.views),
-      field("Likes", row.likes),
-      field("Comments", row.comments),
-      field("Shares", row.shares),
-      field("Saves", row.saves),
-      field("Conversions", row.conversions),
-    ]),
-  );
+  parts.push(buildPerformanceSection(platformPosts, row.conversions));
 
   return parts
     .filter((p) => p.trim().length > 0)

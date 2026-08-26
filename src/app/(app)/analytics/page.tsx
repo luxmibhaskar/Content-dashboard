@@ -22,10 +22,12 @@ import {
   computeRetentionDropPatterns,
   computeIdeaSourcePerformance,
   computeRepurposingPerformance,
-  computeBestTimeToPost,
+  computeContentPostedTime,
   type ContentMetricsRow,
   type ExtendedMetricsRow,
+  type ContentPlatformPostWithFormat,
 } from "@/lib/analytics";
+import { aggregateByContentId, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
 import { computeStreak, computeStreakHeatmap, type StreakRow } from "@/lib/streaks";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
@@ -37,7 +39,7 @@ import { NamedMetricBarChart } from "@/components/charts/named-metric-bar-chart"
 import { OutputVolumeChart } from "@/components/charts/output-volume-chart";
 import { ReachFunnelChart } from "@/components/charts/reach-funnel-chart";
 import { TopPerformingList } from "@/components/charts/top-performing-list";
-import { BestTimeToPostChart } from "@/components/charts/best-time-to-post-chart";
+import { ContentPostedTimeChart } from "@/components/charts/content-posted-time-chart";
 import { StreakHeatmap } from "@/components/charts/streak-heatmap";
 import { cn } from "@/lib/utils";
 
@@ -59,7 +61,7 @@ export default async function AnalyticsPage({
   let contentQuery = supabase
     .from("content_calendar")
     .select(
-      "id, final_title, pillar, sub_topic, format, publish_date, production_status, idea_source, derived_from_content_id, retention_drop_timestamp, retention_drop_note, views, likes, comments, shares, saves, conversions",
+      "id, final_title, pillar, sub_topic, format, publish_date, production_status, idea_source, derived_from_content_id, retention_drop_timestamp, retention_drop_note, conversions",
     )
     .eq("brand", brand)
     .eq("is_archived", false);
@@ -71,18 +73,52 @@ export default async function AnalyticsPage({
   const streakSince = new Date();
   streakSince.setDate(streakSince.getDate() - 16 * 7);
 
-  const [{ data: contentRows }, { data: streakRows }, { data: liveTitleRows }] = await Promise.all([
-    contentQuery,
-    supabase
-      .from("daily_streaks")
-      .select("streak_date, walked, posted")
-      .eq("brand", brand)
-      .gte("streak_date", localDateKey(streakSince)),
-    supabase.from("title_variants").select("content_id, source").eq("brand", brand).eq("is_live", true),
-  ]);
+  const [{ data: contentRows }, { data: streakRows }, { data: liveTitleRows }, { data: platformPostRows }] =
+    await Promise.all([
+      contentQuery,
+      supabase
+        .from("daily_streaks")
+        .select("streak_date, walked, posted")
+        .eq("brand", brand)
+        .gte("streak_date", localDateKey(streakSince)),
+      supabase.from("title_variants").select("content_id, source").eq("brand", brand).eq("is_live", true),
+      // docs/platform-performance-tracking.md Migration section: the
+      // views/engagement source for every KPI and graph below, replacing
+      // content_calendar.views/likes/comments/shares/saves. Fetched
+      // brand-wide, not date-filtered here - an item's total is its
+      // platform-posts' current stats regardless of when each post
+      // happened, only which content items are in scope (contentQuery's
+      // own publish_date filter) narrows the range. Content Posted Time
+      // filters this same list by published_at itself, separately, below.
+      supabase
+        .from("content_platform_posts")
+        .select(
+          "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts), content_calendar:content_id(format)",
+        )
+        .eq("brand", brand),
+    ]);
 
-  const rows = (contentRows ?? []) as ContentMetricsRow[];
-  const extendedRows = (contentRows ?? []) as ExtendedMetricsRow[];
+  type PlatformPostRow = ContentPlatformPostWithSnapshots & {
+    content_calendar: { format: string | null } | { format: string | null }[] | null;
+  };
+  const platformPosts = (platformPostRows ?? []) as PlatformPostRow[];
+  const statsByContentId = aggregateByContentId(platformPosts);
+
+  const rows: ContentMetricsRow[] = (contentRows ?? []).map((r) => {
+    const stats = statsByContentId.get(r.id) ?? { views: 0, engagement: 0 };
+    return {
+      pillar: r.pillar,
+      publish_date: r.publish_date,
+      production_status: r.production_status,
+      viewsAgg: stats.views,
+      engagementAgg: stats.engagement,
+      conversions: r.conversions,
+    };
+  });
+  const extendedRows: ExtendedMetricsRow[] = (contentRows ?? []).map((r) => {
+    const stats = statsByContentId.get(r.id) ?? { views: 0, engagement: 0 };
+    return { ...r, viewsAgg: stats.views, engagementAgg: stats.engagement };
+  });
   const kpis = computeKpis(rows);
   const overTime = computePerformanceOverTime(rows);
   const byPillar = computePerformanceByPillar(rows);
@@ -102,7 +138,23 @@ export default async function AnalyticsPage({
   const retentionDrops = computeRetentionDropPatterns(extendedRows);
   const ideaSourcePerformance = computeIdeaSourcePerformance(extendedRows);
   const repurposing = computeRepurposingPerformance(extendedRows);
-  const bestTimeToPost = computeBestTimeToPost(extendedRows);
+
+  // Section 8: Content Posted Time is the one graph here scoped by each
+  // platform-post's own published_at rather than by which content items
+  // are in range, so it gets its own date filter on the same brand-wide
+  // platformPosts list instead of reusing statsByContentId's item scope.
+  const postsInRange =
+    from && to
+      ? platformPosts.filter((p) => {
+          const day = p.published_at.slice(0, 10);
+          return day >= from && day <= to;
+        })
+      : platformPosts;
+  const postsWithFormat: ContentPlatformPostWithFormat[] = postsInRange.map((p) => ({
+    ...p,
+    format: Array.isArray(p.content_calendar) ? (p.content_calendar[0]?.format ?? null) : (p.content_calendar?.format ?? null),
+  }));
+  const contentPostedTime = computeContentPostedTime(postsWithFormat);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
@@ -176,8 +228,9 @@ export default async function AnalyticsPage({
       </section>
 
       <p className="mt-8 text-xs text-muted-foreground">
-        Hook Type Performance isn&apos;t built yet, it depends on Phase 2&apos;s Title/Hook/Thumbnail
-        variants (the hook actually used has to come from a live variant, not a separate field).
+        Hook Type Performance isn&apos;t built yet. Real hook-used data exists now
+        (hook_variants.is_live, set by each Packaging hook&apos;s &quot;Use&quot; action), this
+        graph itself just hasn&apos;t been built on top of it.
       </p>
 
       {/* Section 6.4: worth having once there's enough volume, not the
@@ -288,10 +341,26 @@ export default async function AnalyticsPage({
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-muted-foreground">Best Time to Post</h3>
-            <GlowCard neutral className="mt-2 p-4">
-              <BestTimeToPostChart data={bestTimeToPost} />
-            </GlowCard>
+            <h3 className="text-sm font-medium text-muted-foreground">Content Posted Time</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Real posting time per platform (content_platform_posts.published_at), not
+              publish_date&apos;s old approximation. Long Form and Short Form shown separately, different
+              posting rhythms.
+            </p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Long Form</p>
+                <GlowCard neutral className="mt-1 p-4">
+                  <ContentPostedTimeChart data={contentPostedTime.longForm} />
+                </GlowCard>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Short Form</p>
+                <GlowCard neutral className="mt-1 p-4">
+                  <ContentPostedTimeChart data={contentPostedTime.shortForm} />
+                </GlowCard>
+              </div>
+            </div>
           </section>
         </CollapsibleSection>
       </div>
