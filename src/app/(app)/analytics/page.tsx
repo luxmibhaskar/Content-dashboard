@@ -23,6 +23,8 @@ import {
   computeIdeaSourcePerformance,
   computeRepurposingPerformance,
   computeContentPostedTime,
+  computePlatformComparison,
+  computeFormatComparison,
   type ContentMetricsRow,
   type ExtendedMetricsRow,
   type ContentPlatformPostWithFormat,
@@ -204,6 +206,17 @@ export default async function AnalyticsPage({
   const hookTypePerformance = computeHookTypePerformance(extendedRows, hookTypeByContentId);
   const ideaSourcePerformance = computeIdeaSourcePerformance(extendedRows);
   const repurposing = computeRepurposingPerformance(extendedRows);
+
+  // Analytics audit (2026-08-27) Phase 5: scoped to the same in-range
+  // content items as every other rows/extendedRows-based chart on this
+  // page (Performance by Pillar, Top Sub-topics, etc.), unlike Content
+  // Posted Time and Retention Drop Trends, which deliberately look at
+  // full platform-post history regardless of the range filter.
+  const inRangeContentIds = new Set(extendedRows.map((r) => r.id));
+  const platformComparison = computePlatformComparison(
+    platformPosts.filter((p) => inRangeContentIds.has(p.content_id)),
+  );
+  const formatComparison = computeFormatComparison(extendedRows);
 
   // Section 8: Content Posted Time is the one graph here scoped by each
   // platform-post's own published_at rather than by which content items
@@ -456,6 +469,31 @@ export default async function AnalyticsPage({
                   ))}
                 </ul>
               )}
+            </GlowCard>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Per-Platform Comparison</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Total views/engagement grouped by platform, across every platform-post from an
+              in-range item. An item posted to several platforms contributes to each one here.
+            </p>
+            <GlowCard neutral className="mt-2 p-4">
+              <NamedMetricBarChart
+                data={platformComparison}
+                emptyLabel="No platform-post has tracked views in this range yet."
+              />
+            </GlowCard>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-medium text-muted-foreground">Short vs Long Format Comparison</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Average, not total, views/engagement per format - a sum would just reward whichever
+              format has more volume, this answers which one performs better per piece.
+            </p>
+            <GlowCard neutral className="mt-2 p-4">
+              <NamedMetricBarChart data={formatComparison} emptyLabel="No Short or Long Form item in this range yet." />
             </GlowCard>
           </section>
 

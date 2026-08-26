@@ -379,3 +379,45 @@ export function computeContentPostedTime(posts: ContentPlatformPostWithFormat[])
     shortForm: bucketByDayOfWeek(posts.filter((p) => p.format === "Short")),
   };
 }
+
+// 11. Analytics audit (2026-08-27) Phase 5, recommendation 1: Per-
+// Platform Comparison - total views/engagement grouped by platform.
+// Genuinely missing before this: every other breakdown on this page
+// groups by pillar, sub-topic, idea source, or hook type, never by
+// platform itself, despite that being the entire point of this whole
+// migration. Grouped at the platform-post level, not per content item
+// like groupPerformance's other callers - a single item can span
+// several platforms, so "which platform is worth my time" is inherently
+// a per-post question, same reasoning as Content Posted Time.
+export function computePlatformComparison(posts: ContentPlatformPostWithSnapshots[]): NamedMetric[] {
+  const map = new Map<string, NamedMetric>();
+  for (const post of posts) {
+    const stats = currentStatsOf(post);
+    if (stats.views === null) continue;
+    const entry = map.get(post.platform) ?? { name: post.platform, Views: 0, Engagement: 0, count: 0 };
+    entry.Views += stats.views;
+    entry.Engagement += stats.engagement ?? 0;
+    entry.count += 1;
+    map.set(post.platform, entry);
+  }
+  return [...map.values()];
+}
+
+// 12. Analytics audit (2026-08-27) Phase 5, recommendation 2: Short vs
+// Long Format comparison - AVERAGE (not total) views/engagement per
+// format, deliberately unlike every other groupPerformance-based chart
+// on this page. A sum would just reward whichever format has more
+// volume; the actual question here is which format performs better per
+// piece, the same reasoning the audit report gave for recommending this
+// view in the first place.
+const FORMAT_LABELS: Record<string, string> = { Short: "Short", "Long Video": "Long" };
+
+export function computeFormatComparison(rows: ExtendedMetricsRow[]): NamedMetric[] {
+  const totals = groupPerformance(rows, (r) => (r.format && r.format in FORMAT_LABELS ? r.format : null));
+  return totals.map((t) => ({
+    name: FORMAT_LABELS[t.name] ?? t.name,
+    Views: t.count > 0 ? Math.round(t.Views / t.count) : 0,
+    Engagement: t.count > 0 ? Math.round(t.Engagement / t.count) : 0,
+    count: t.count,
+  }));
+}
