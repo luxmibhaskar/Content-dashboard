@@ -12,12 +12,18 @@ import { currentStatsOf } from "@/lib/platform-analytics";
 // engagement signal, doesn't obviously belong in a per-platform time-
 // series model the same way views/likes/comments/saves/shares do), left
 // for Phase G to resolve properly rather than as a side effect here.
+//
+// Analytics audit (2026-08-27) Phase 1: viewsAgg/engagementAgg are
+// nullable now, null meaning "none of this item's platform-posts have
+// ever been checked in" (src/lib/platform-analytics.ts), distinct from
+// a real, tracked 0. Every function below treats null as "excluded",
+// not "zero", the same distinction conversions already modeled.
 export type ContentMetricsRow = {
   pillar: string | null;
   publish_date: string | null;
   production_status: string | null;
-  viewsAgg: number;
-  engagementAgg: number;
+  viewsAgg: number | null;
+  engagementAgg: number | null;
   conversions: number | null;
 };
 
@@ -29,11 +35,15 @@ export type AnalyticsKpis = {
   totalConversions: number;
   avgConversionRate: number | null;
   hasConversions: boolean;
+  hasPlatformData: boolean;
 };
 
-// Section 6.2. Conversions hide gracefully when nothing in range tracks
-// them; views/engagement always show since a genuinely fresh channel with
-// zero views is a normal state, not an "untracked" one.
+// Section 6.2. Conversions and views/engagement both hide gracefully
+// when nothing in range tracks them (hasConversions / hasPlatformData) -
+// a genuinely fresh channel with zero views would report a real 0 here,
+// not null, so this isn't "no data ever" being mistaken for "0 views",
+// it's specifically "no check-in has been logged for anything in range
+// yet".
 export function computeKpis(rows: ContentMetricsRow[]): AnalyticsKpis {
   const totalPublished = rows.filter((r) => r.production_status === "Published / Scheduled").length;
 
@@ -41,17 +51,21 @@ export function computeKpis(rows: ContentMetricsRow[]): AnalyticsKpis {
   let totalEngagement = 0;
   let totalConversions = 0;
   let hasConversions = false;
+  let hasPlatformData = false;
 
   for (const r of rows) {
-    totalViews += r.viewsAgg;
-    totalEngagement += r.engagementAgg;
+    if (r.viewsAgg !== null) {
+      totalViews += r.viewsAgg;
+      totalEngagement += r.engagementAgg ?? 0;
+      hasPlatformData = true;
+    }
     if (r.conversions !== null) {
       hasConversions = true;
       totalConversions += r.conversions;
     }
   }
 
-  const avgEngagementRate = totalViews > 0 ? (totalEngagement / totalViews) * 100 : null;
+  const avgEngagementRate = hasPlatformData && totalViews > 0 ? (totalEngagement / totalViews) * 100 : null;
   const avgConversionRate = hasConversions && totalViews > 0 ? (totalConversions / totalViews) * 100 : null;
 
   return {
@@ -62,6 +76,7 @@ export function computeKpis(rows: ContentMetricsRow[]): AnalyticsKpis {
     totalConversions,
     avgConversionRate,
     hasConversions,
+    hasPlatformData,
   };
 }
 
@@ -74,8 +89,11 @@ export function computePerformanceOverTime(rows: ContentMetricsRow[]): OverTimeP
     if (!r.publish_date) continue;
     const day = r.publish_date.slice(0, 10);
     const entry = byDate.get(day) ?? { date: day, Views: 0, Engagement: 0 };
-    entry.Views += r.viewsAgg;
-    entry.Engagement += r.engagementAgg;
+    // An untracked row contributes nothing known, same as contributing a
+    // real 0 to a sum - unlike an average, summing doesn't distort the
+    // total either way, so no null-tracking needed here.
+    entry.Views += r.viewsAgg ?? 0;
+    entry.Engagement += r.engagementAgg ?? 0;
     byDate.set(day, entry);
   }
 
@@ -90,8 +108,8 @@ export function computePerformanceByPillar(rows: ContentMetricsRow[]): PillarPoi
   for (const r of rows) {
     const pillar = r.pillar || "Unassigned";
     const entry = byPillar.get(pillar) ?? { pillar, Views: 0, Engagement: 0 };
-    entry.Views += r.viewsAgg;
-    entry.Engagement += r.engagementAgg;
+    entry.Views += r.viewsAgg ?? 0;
+    entry.Engagement += r.engagementAgg ?? 0;
     byPillar.set(pillar, entry);
   }
 
@@ -145,8 +163,8 @@ function groupPerformance(
     const key = keyFn(r);
     if (!key) continue;
     const entry = map.get(key) ?? { name: key, Views: 0, Engagement: 0, count: 0 };
-    entry.Views += r.viewsAgg;
-    entry.Engagement += r.engagementAgg;
+    entry.Views += r.viewsAgg ?? 0;
+    entry.Engagement += r.engagementAgg ?? 0;
     entry.count += 1;
     map.set(key, entry);
   }
@@ -202,15 +220,15 @@ export function computeFunnel(kpis: AnalyticsKpis): { name: string; value: numbe
 export type TopContentItem = { id: string; final_title: string; views: number; engagement: number };
 
 export function computeTopPerformingContent(rows: ExtendedMetricsRow[], limit = 10): TopContentItem[] {
-  return [...rows]
-    .filter((r) => r.viewsAgg > 0)
+  return rows
+    .filter((r): r is ExtendedMetricsRow & { viewsAgg: number } => r.viewsAgg !== null && r.viewsAgg > 0)
     .sort((a, b) => b.viewsAgg - a.viewsAgg)
     .slice(0, limit)
     .map((r) => ({
       id: r.id,
       final_title: r.final_title || "Untitled",
       views: r.viewsAgg,
-      engagement: r.engagementAgg,
+      engagement: r.engagementAgg ?? 0,
     }));
 }
 
@@ -254,10 +272,19 @@ export function computeIdeaSourcePerformance(rows: ExtendedMetricsRow[]): NamedM
 // but should now show real performance comparison using the new per-
 // platform data" - same shape as before, viewsAgg is the only thing
 // that changed under it.
+//
+// Analytics audit (2026-08-27) Phase 1: views (the original's own count)
+// stays nullable and is left untracked rather than shown as 0 -
+// specific-item display of "0 views" reads as "checked in, genuinely
+// zero", the exact misleading case this whole phase exists to fix.
+// derivativeViews is a sum across possibly several derivatives, treating
+// any not-yet-checked-in derivative as contributing nothing known (same
+// sum-invariant reasoning as computePerformanceByPillar), not worth its
+// own null state.
 export type RepurposingRow = {
   id: string;
   final_title: string;
-  views: number;
+  views: number | null;
   derivativeCount: number;
   derivativeViews: number;
   isUntappedLongForm: boolean;
@@ -281,11 +308,11 @@ export function computeRepurposingPerformance(rows: ExtendedMetricsRow[]): Repur
         final_title: r.final_title || "Untitled",
         views: r.viewsAgg,
         derivativeCount: derivatives.length,
-        derivativeViews: derivatives.reduce((sum, d) => sum + d.viewsAgg, 0),
+        derivativeViews: derivatives.reduce((sum, d) => sum + (d.viewsAgg ?? 0), 0),
         isUntappedLongForm: derivatives.length === 0 && r.format === "Long Video",
       };
     })
-    .sort((a, b) => b.views - a.views);
+    .sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
 }
 
 // 10. docs/platform-performance-tracking.md Section 8: "Best Time to
@@ -309,8 +336,14 @@ export type ContentPlatformPostWithFormat = ContentPlatformPostWithSnapshots & {
 function bucketByDayOfWeek(posts: ContentPlatformPostWithFormat[]): DayOfWeekPoint[] {
   const buckets = new Map<number, { totalViews: number; count: number }>();
   posts.forEach((p) => {
-    const day = new Date(p.published_at).getDay();
     const views = currentStatsOf(p).views;
+    // Analytics audit (2026-08-27) Phase 1: a post with no check-in
+    // logged yet used to count as 0 views in this average, dragging a
+    // day's real numbers down toward zero the more un-checked-in volume
+    // it had. Excluded from both sum and count now, same fix as
+    // Competitors' Avg Views (competitors/page.tsx).
+    if (views === null) return;
+    const day = new Date(p.published_at).getDay();
     const b = buckets.get(day) ?? { totalViews: 0, count: 0 };
     b.totalViews += views;
     b.count += 1;

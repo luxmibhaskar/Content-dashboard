@@ -68,7 +68,11 @@ export default async function AppLayout({
   const walkStreak = computeStreak(streaks, "walked");
   const postStreak = computeStreak(streaks, "posted");
   const todayRow = streaks.find((r) => r.streak_date === todayDateKey());
-  const totalViews = totalAcrossPosts((viewRows ?? []) as ContentPlatformPostWithSnapshots[]).views;
+  // .views is null when nothing's been checked in anywhere yet
+  // (src/lib/platform-analytics.ts); a goal's current_value has no
+  // "hide gracefully" state the way an Analytics KPI card does, 0
+  // progress is the correct default here, not a special case.
+  const totalViews = totalAcrossPosts((viewRows ?? []) as ContentPlatformPostWithSnapshots[]).views ?? 0;
   const goals = resolveGoalCurrentValues((goalRows ?? []) as Goal[], totalViews, latestSnapshots);
 
   return (

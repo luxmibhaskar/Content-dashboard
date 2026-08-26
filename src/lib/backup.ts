@@ -527,7 +527,10 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
   for (const r of snapshotRows ?? []) {
     if (!(r.platform in latestSnapshotsByPlatform)) latestSnapshotsByPlatform[r.platform] = r.follower_count;
   }
-  const totalViews = totalAcrossPosts((viewRows ?? []) as ContentPlatformPostWithSnapshots[]).views;
+  // null means nothing's been checked in anywhere yet
+  // (src/lib/platform-analytics.ts); same "0 progress, not a special
+  // case" reasoning as src/app/(app)/layout.tsx's identical totalViews.
+  const totalViews = totalAcrossPosts((viewRows ?? []) as ContentPlatformPostWithSnapshots[]).views ?? 0;
 
   // resolveGoalCurrentValues only ever runs, live, on platform_name-not-
   // null rows (src/app/(app)/layout.tsx filters to those before calling

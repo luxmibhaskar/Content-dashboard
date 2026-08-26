@@ -90,8 +90,13 @@ export default async function CompetitorsPage({
     if (!b.competitor_id) continue;
     benchmarkCounts.set(b.competitor_id, (benchmarkCounts.get(b.competitor_id) ?? 0) + 1);
     const topic = (Array.isArray(b.content_calendar) ? b.content_calendar[0] : b.content_calendar) as BenchmarkTopic;
+    // Analytics audit (2026-08-27) Phase 1: topicStats.views is null when
+    // that topic hasn't been checked in yet (src/lib/platform-analytics.ts),
+    // excluded from both sum and count here rather than treated as a
+    // real 0, the same "don't let an untracked item drag the average
+    // down" fix applied to Content Posted Time.
     const topicStats = topic ? viewsByContentId.get(topic.id) : undefined;
-    if (topicStats) {
+    if (topicStats && topicStats.views !== null) {
       const entry = viewTotals.get(b.competitor_id) ?? { sum: 0, count: 0 };
       entry.sum += topicStats.views;
       entry.count += 1;

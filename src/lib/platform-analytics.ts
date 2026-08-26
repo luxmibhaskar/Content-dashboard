@@ -40,27 +40,45 @@ function latestSnapshot(snapshots: PlatformStatsSnapshot[]): PlatformStatsSnapsh
   return [...snapshots].sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))[0];
 }
 
-export type PostCurrentStats = { views: number; engagement: number };
+// Analytics audit (2026-08-27), Phase 1: null and 0 used to mean the
+// same thing here - a post with no check-in logged yet and a post
+// genuinely checked in at zero views both collapsed to {views: 0}, so
+// every KPI/chart downstream showed a misleading zero instead of hiding
+// gracefully, exactly the anti-pattern this app's own "leave blank if
+// not tracked" convention (conversions, the old flat columns) warns
+// against. null now means "no snapshot logged yet", a real number
+// (including a real 0) means "checked in, this is the count".
+export type PostCurrentStats = { views: number | null; engagement: number | null };
 
 export function currentStatsOf(post: ContentPlatformPostWithSnapshots): PostCurrentStats {
   const latest = latestSnapshot(post.content_platform_stats_snapshots);
-  if (!latest) return { views: 0, engagement: 0 };
+  if (!latest) return { views: null, engagement: null };
   return { views: latest.views ?? 0, engagement: engagementOfSnapshot(latest) };
 }
 
 // One content item can have several platform-posts (one per platform it
 // went out on); this sums each one's current stats into that item's
-// total, keyed by content_id.
+// total, keyed by content_id. An untracked post (no check-in yet)
+// contributes nothing to the sum rather than 0, but doesn't erase a
+// sibling post's real data either - only if NONE of an item's posts
+// have ever been checked in does the item's own total come back null.
 export function aggregateByContentId(
   posts: ContentPlatformPostWithSnapshots[],
 ): Map<string, PostCurrentStats> {
-  const map = new Map<string, PostCurrentStats>();
+  const totals = new Map<string, { views: number; engagement: number; hasData: boolean }>();
   for (const post of posts) {
     const current = currentStatsOf(post);
-    const entry = map.get(post.content_id) ?? { views: 0, engagement: 0 };
-    entry.views += current.views;
-    entry.engagement += current.engagement;
-    map.set(post.content_id, entry);
+    const entry = totals.get(post.content_id) ?? { views: 0, engagement: 0, hasData: false };
+    if (current.views !== null) {
+      entry.views += current.views;
+      entry.engagement += current.engagement ?? 0;
+      entry.hasData = true;
+    }
+    totals.set(post.content_id, entry);
+  }
+  const map = new Map<string, PostCurrentStats>();
+  for (const [contentId, entry] of totals) {
+    map.set(contentId, entry.hasData ? { views: entry.views, engagement: entry.engagement } : { views: null, engagement: null });
   }
   return map;
 }
@@ -68,14 +86,21 @@ export function aggregateByContentId(
 // Grand total across every platform-post passed in, no per-item
 // grouping - the Streak & Goals "Views" pseudo-goal and its Sheets
 // backup mirror (src/app/(app)/layout.tsx, src/lib/backup.ts) both want
-// one brand-wide number, not a per-item breakdown.
+// one brand-wide number, not a per-item breakdown. Same null-means-
+// nothing-tracked-yet rule as aggregateByContentId; those two call
+// sites coalesce it to 0 themselves since a goal progress bar has no
+// "hide gracefully" state the way an Analytics KPI card does.
 export function totalAcrossPosts(posts: ContentPlatformPostWithSnapshots[]): PostCurrentStats {
   let views = 0;
   let engagement = 0;
+  let hasData = false;
   for (const post of posts) {
     const current = currentStatsOf(post);
-    views += current.views;
-    engagement += current.engagement;
+    if (current.views !== null) {
+      views += current.views;
+      engagement += current.engagement ?? 0;
+      hasData = true;
+    }
   }
-  return { views, engagement };
+  return hasData ? { views, engagement } : { views: null, engagement: null };
 }

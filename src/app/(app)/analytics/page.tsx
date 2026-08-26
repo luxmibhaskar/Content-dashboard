@@ -104,8 +104,13 @@ export default async function AnalyticsPage({
   const platformPosts = (platformPostRows ?? []) as PlatformPostRow[];
   const statsByContentId = aggregateByContentId(platformPosts);
 
+  // Analytics audit (2026-08-27) Phase 1: an item absent from
+  // statsByContentId has zero platform-posts at all, same "nothing
+  // tracked yet" state as one whose posts exist but have no check-ins -
+  // both correctly default to null here now, not 0.
+  const NO_STATS = { views: null, engagement: null };
   const rows: ContentMetricsRow[] = (contentRows ?? []).map((r) => {
-    const stats = statsByContentId.get(r.id) ?? { views: 0, engagement: 0 };
+    const stats = statsByContentId.get(r.id) ?? NO_STATS;
     return {
       pillar: r.pillar,
       publish_date: r.publish_date,
@@ -116,7 +121,7 @@ export default async function AnalyticsPage({
     };
   });
   const extendedRows: ExtendedMetricsRow[] = (contentRows ?? []).map((r) => {
-    const stats = statsByContentId.get(r.id) ?? { views: 0, engagement: 0 };
+    const stats = statsByContentId.get(r.id) ?? NO_STATS;
     return { ...r, viewsAgg: stats.views, engagementAgg: stats.engagement };
   });
   const kpis = computeKpis(rows);
@@ -179,8 +184,16 @@ export default async function AnalyticsPage({
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiCard label="Total Published" value={kpis.totalPublished.toLocaleString()} />
-        <KpiCard label="Total Views" value={kpis.totalViews.toLocaleString()} />
-        <KpiCard label="Total Engagement" value={kpis.totalEngagement.toLocaleString()} />
+        {/* Analytics audit (2026-08-27) Phase 1: hides the same way the
+            Conversions KPIs already do below when nothing in range has
+            ever been checked in - a real, tracked 0 still shows as 0,
+            this only hides the "no data exists yet" case. */}
+        {kpis.hasPlatformData && (
+          <>
+            <KpiCard label="Total Views" value={kpis.totalViews.toLocaleString()} />
+            <KpiCard label="Total Engagement" value={kpis.totalEngagement.toLocaleString()} />
+          </>
+        )}
         <KpiCard
           label="Avg Engagement Rate"
           value={kpis.avgEngagementRate !== null ? `${kpis.avgEngagementRate.toFixed(1)}%` : "-"}
@@ -327,7 +340,8 @@ export default async function AnalyticsPage({
                       </Link>
                       <span className="text-muted-foreground">
                         {" "}
-                        - {r.views.toLocaleString()} views &middot; {r.derivativeCount} derivative
+                        - {r.views !== null ? `${r.views.toLocaleString()} views` : "not tracked yet"} &middot;{" "}
+                        {r.derivativeCount} derivative
                         {r.derivativeCount === 1 ? "" : "s"} ({r.derivativeViews.toLocaleString()} views)
                       </span>
                       {r.isUntappedLongForm && (
