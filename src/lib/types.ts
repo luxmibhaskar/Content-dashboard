@@ -589,6 +589,30 @@ export type Goal = {
   icon_url: string | null;
 };
 
+// docs/platform-performance-tracking.md Section 2:
+// supabase/migrations/0018_content_platform_posts.sql. One row per
+// platform a content item was actually posted to; snapshots is the
+// embedded content_platform_stats_snapshots child collection (Supabase
+// FK embed, same pattern competitors/page.tsx already uses in reverse),
+// one row per check-in, repeatable over time.
+export type ContentPlatformStatsSnapshot = {
+  snapshot_date: string;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  saves: number | null;
+  shares: number | null;
+  reposts: number | null;
+};
+
+export type ContentPlatformPost = {
+  id: string;
+  platform: string;
+  published_at: string;
+  retention_drop_note: string | null;
+  content_platform_stats_snapshots: ContentPlatformStatsSnapshot[];
+};
+
 // Section 13: Quick Capture
 export const QUICK_CAPTURE_CONTENT_TYPES = ["Competitor", "Inspiration", "Trend", "Other"] as const;
 export const QUICK_CAPTURE_STATUSES = ["Inbox", "Reviewed", "Migrated"] as const;

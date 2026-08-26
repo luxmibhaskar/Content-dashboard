@@ -9,12 +9,14 @@ import { CopyButton } from "@/components/copy-button";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { FormatPlatformFields } from "@/components/format-platform-fields";
+import { PlatformAnalyticsSection } from "@/components/platform-analytics-section";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
 import {
   PRODUCTION_STATUSES,
   VIABILITY_STATUSES,
   type ContentCalendarDetail,
+  type ContentPlatformPost,
   type ManualWorkflowPhaseRow,
   type ReferenceVideo,
   type ResearchCopyVersion,
@@ -93,6 +95,7 @@ export default async function TopicPage({
     { data: manualWorkflowPhases },
     structure,
     { data: goalRows },
+    { data: platformPosts },
   ] = await Promise.all([
     item.derived_from_content_id
       ? supabase
@@ -140,6 +143,19 @@ export default async function TopicPage({
       .select("platform_name")
       .eq("brand", item.brand)
       .not("platform_name", "is", null),
+    // docs/platform-performance-tracking.md Section 4: the per-item
+    // Analytics section's data, one row per platform this item was
+    // posted to, each with its own embedded snapshot history (Supabase
+    // FK embed, content_platform_stats_snapshots.content_platform_post_id
+    // -> content_platform_posts.id, same reverse-embed shape as
+    // competitors/page.tsx's content_calendar:content_id(...) join).
+    supabase
+      .from("content_platform_posts")
+      .select(
+        "id, platform, published_at, retention_drop_note, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+      )
+      .eq("content_id", id)
+      .order("published_at", { ascending: true }),
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id, item.brand);
@@ -324,6 +340,22 @@ export default async function TopicPage({
           <Button type="submit">Save</Button>
         </div>
       </form>
+
+      {/* docs/platform-performance-tracking.md Sections 4-5: directly
+          below Production Status (the Save/ProductionStatusTracker row
+          just above), same as Long Form and Short Form alike, own
+          collapsible container. Outside the main form, same reasoning as
+          TopicPageTabs below: each platform's "Log a check-in" is its
+          own tiny form. */}
+      <div className="mt-5">
+        <PlatformAnalyticsSection
+          contentId={item.id}
+          brand={item.brand}
+          format={item.format ?? ""}
+          platforms={(platformPosts ?? []) as ContentPlatformPost[]}
+          sourceItem={sourceItem}
+        />
+      </div>
 
       {/* docs/topic-page-redesign.md Section 2: outside the main form on
           purpose, same reasoning as before, Tab 1's Use This/Run/Save
