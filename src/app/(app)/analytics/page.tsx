@@ -90,18 +90,30 @@ export default async function AnalyticsPage({
       // happened, only which content items are in scope (contentQuery's
       // own publish_date filter) narrows the range. Content Posted Time
       // filters this same list by published_at itself, separately, below.
+      //
+      // Analytics audit (2026-08-27) Phase 2: content_calendar!inner +
+      // is_archived filtered here directly now. Every other section on
+      // this page is already archived-safe indirectly (contentRows'
+      // own is_archived filter means archived items never appear in the
+      // lookups built from it), but Content Posted Time reads this raw
+      // list straight through by published_at, with no such indirection
+      // - archiving a content item doesn't touch its content_platform_posts
+      // rows (archive-lifecycle.ts), so without this join an archived
+      // item's posts kept counting toward day-of-week averages while
+      // being correctly invisible everywhere else on the page.
       supabase
         .from("content_platform_posts")
         .select(
-          "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts), content_calendar:content_id(format)",
+          "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts), content_calendar!inner(format, is_archived)",
         )
-        .eq("brand", brand),
+        .eq("brand", brand)
+        .eq("content_calendar.is_archived", false),
     ]);
 
   type PlatformPostRow = ContentPlatformPostWithSnapshots & {
     content_calendar: { format: string | null } | { format: string | null }[] | null;
   };
-  const platformPosts = (platformPostRows ?? []) as PlatformPostRow[];
+  const platformPosts = (platformPostRows ?? []) as unknown as PlatformPostRow[];
   const statsByContentId = aggregateByContentId(platformPosts);
 
   // Analytics audit (2026-08-27) Phase 1: an item absent from
