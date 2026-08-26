@@ -19,7 +19,7 @@ import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 // the new topic page. TopicPageTabs already defaults every topic page
 // to the AI area regardless of how the item was created, so this needs
 // no entry param to land there, it's already where things land.
-export async function createBlankContentItem() {
+export async function createBlankContentItem(format?: "Short" | "Long Video") {
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
@@ -31,6 +31,12 @@ export async function createBlankContentItem() {
       brand,
       final_title: "Untitled",
       raw_idea_title: "Untitled",
+      // docs/platform-performance-tracking.md Section 1: seeded from
+      // whichever side of the Long Form / Short Form toggle "+ New" was
+      // clicked from, so the new item shows up in that same filtered
+      // view immediately rather than landing in neither until Format is
+      // set by hand on its topic page.
+      ...(format ? { format } : {}),
     })
     .select("id")
     .single();

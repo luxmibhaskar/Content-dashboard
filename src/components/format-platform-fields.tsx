@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
@@ -31,11 +32,13 @@ const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
 export function FormatPlatformFields({
   initialFormat,
   initialPlatforms,
+  initialDescription,
   publishDateValue,
   knownPlatforms,
 }: {
   initialFormat: string;
   initialPlatforms: string[];
+  initialDescription: string;
   publishDateValue: string;
   knownPlatforms: string[];
 }) {
@@ -93,6 +96,24 @@ export function FormatPlatformFields({
           <Input id="publish_date" name="publish_date" type="datetime-local" defaultValue={publishDateValue} />
         </div>
       </div>
+
+      {/* docs/platform-performance-tracking.md Section 3: Short Form's
+          title container gets a short description field Long Form's
+          never had, first real UI final_description gets (previously
+          select-only, read out into the Drive Markdown archive but
+          nothing ever wrote it). Short-only on purpose, matching the
+          doc's own scoping, not a general-purpose field. */}
+      {format === "Short" && (
+        <div className="space-y-1.5">
+          <Label htmlFor="final_description">Short description</Label>
+          <Textarea
+            id="final_description"
+            name="final_description"
+            defaultValue={initialDescription}
+            placeholder="A brief description for this Short"
+          />
+        </div>
+      )}
 
       {(format === "Short" || format === "Long Video") && (
         <div className="space-y-1.5">

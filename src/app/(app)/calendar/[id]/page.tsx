@@ -142,7 +142,7 @@ export default async function TopicPage({
       .not("platform_name", "is", null),
   ]);
 
-  const boundUpdate = updateContentItem.bind(null, item.id);
+  const boundUpdate = updateContentItem.bind(null, item.id, item.brand);
   const publishDateValue = item.publish_date
     ? new Date(item.publish_date).toISOString().slice(0, 16)
     : "";
@@ -251,6 +251,7 @@ export default async function TopicPage({
         <FormatPlatformFields
           initialFormat={item.format ?? ""}
           initialPlatforms={item.platform ?? []}
+          initialDescription={item.final_description ?? ""}
           publishDateValue={publishDateValue}
           knownPlatforms={knownPlatforms}
         />

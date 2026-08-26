@@ -8,23 +8,6 @@ function str(formData: FormData, key: string) {
   return String(formData.get(key) ?? "") || null;
 }
 
-function lines(formData: FormData, key: string): string[] {
-  return String(formData.get(key) ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-function json(formData: FormData, key: string, fallback: unknown) {
-  const raw = String(formData.get(key) ?? "");
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
-
 function num(formData: FormData, key: string): number | null {
   const raw = String(formData.get(key) ?? "");
   if (!raw) return null;
@@ -36,11 +19,35 @@ function getAll(formData: FormData, key: string): string[] {
   return formData.getAll(key).map(String);
 }
 
-export async function updateContentItem(id: string, formData: FormData) {
+export async function updateContentItem(id: string, brand: string, formData: FormData) {
   const supabase = await createClient();
 
   const publishDateRaw = String(formData.get("publish_date") ?? "");
+  const platforms = getAll(formData, "platform");
 
+  // Audit finding, fixed here (found while wiring Phase C of
+  // docs/platform-performance-tracking.md, not otherwise related to it):
+  // this update used to unconditionally write raw_idea_title,
+  // raw_keywords_topics, brief_intent, content_angle_hook_direction,
+  // reference_inspiration, target_stage_viewer_journey,
+  // my_angle_unique_pov, proof_credibility, tone_style, idea_source,
+  // source_detail, viewer_problem, promise_outcome, final_title_hook,
+  // viewer_keywords_search_phrases, viewer_description,
+  // primary_emotion_pain_point, objections_doubts, desired_action_cta,
+  // completeness_checklist, format_recommendation, main_pointers,
+  // energy_tag, full_script, voice_memo_transcript, and
+  // platform_publishing on every Save, none of which this form has had
+  // an input for since the topic page's three-tab rebuild
+  // (docs/topic-page-redesign.md Section 2) and, for brief_intent/
+  // raw_keywords_topics specifically, since those moved to their own
+  // updateResearchInput action (research-copy-actions.ts). formData.get
+  // on an absent field returns null, so every one of those columns was
+  // silently getting nulled on every unrelated Save, confirmed live
+  // against real data (a content item with a genuinely populated
+  // main_pointers array, still intact only because it happened not to
+  // have been saved since). Same fix already applied once before for a
+  // different field group (Section 9 of that doc): stop passing keys
+  // this form has no input for, don't pass them as null.
   const { error } = await supabase
     .from("content_calendar")
     .update({
@@ -54,45 +61,17 @@ export async function updateContentItem(id: string, formData: FormData) {
       pillar: str(formData, "pillar"),
       sub_topic: str(formData, "sub_topic"),
       format: str(formData, "format"),
-      // Only present in formData while Format is Short
-      // (format-platform-fields.tsx), otherwise correctly clears to [],
-      // this field's only meaning is short-form distribution.
-      platform: getAll(formData, "platform"),
+      // Only present in formData while Format is Short or Long Video
+      // (format-platform-fields.tsx), otherwise correctly clears to [].
+      platform: platforms,
       publish_date: publishDateRaw ? new Date(publishDateRaw).toISOString() : null,
 
-      // 10.1.1 Creator Input
-      raw_idea_title: str(formData, "raw_idea_title"),
-      raw_keywords_topics: str(formData, "raw_keywords_topics"),
-      brief_intent: str(formData, "brief_intent"),
-      content_angle_hook_direction: str(formData, "content_angle_hook_direction"),
-      reference_inspiration: str(formData, "reference_inspiration"),
-      target_stage_viewer_journey: str(formData, "target_stage_viewer_journey"),
-      my_angle_unique_pov: str(formData, "my_angle_unique_pov"),
-      proof_credibility: str(formData, "proof_credibility"),
-      tone_style: str(formData, "tone_style"),
-      idea_source: str(formData, "idea_source"),
-      source_detail: str(formData, "source_detail"),
-
-      // 10.1.2 Viewer POV
-      viewer_problem: str(formData, "viewer_problem"),
-      promise_outcome: str(formData, "promise_outcome"),
-      final_title_hook: str(formData, "final_title_hook"),
-      viewer_keywords_search_phrases: str(formData, "viewer_keywords_search_phrases"),
-      viewer_description: str(formData, "viewer_description"),
-      primary_emotion_pain_point: str(formData, "primary_emotion_pain_point"),
-      objections_doubts: lines(formData, "objections_doubts"),
-      desired_action_cta: str(formData, "desired_action_cta"),
-      completeness_checklist: json(formData, "completeness_checklist", []),
-      format_recommendation: str(formData, "format_recommendation"),
-
-      // 10.1.5 Recording Section
-      main_pointers: json(formData, "main_pointers", []),
-      energy_tag: str(formData, "energy_tag"),
-      full_script: str(formData, "full_script"),
-      voice_memo_transcript: str(formData, "voice_memo_transcript"),
-
-      // 10.1.4 Publishing Ready
-      platform_publishing: json(formData, "platform_publishing", {}),
+      // docs/platform-performance-tracking.md Section 3: Short Form
+      // title container's short description. Only present in formData
+      // while Format is Short, otherwise correctly clears to null, same
+      // "field's only meaning is short-form" reasoning as platform used
+      // to have before platform itself grew to cover Long Form too.
+      final_description: str(formData, "final_description"),
 
       // Performance metrics (Section 6.2 KPIs). Left blank = untracked
       // (null), not 0, so Analytics can tell the two apart. Relocated
@@ -110,6 +89,24 @@ export async function updateContentItem(id: string, formData: FormData) {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  // docs/platform-performance-tracking.md Section 3: each platform
+  // actually posted to gets its own content_platform_posts row. Upsert
+  // with ignoreDuplicates so an already-tracked platform's published_at
+  // (set once, when it was first added) and retention_drop_note are
+  // never touched by a later, unrelated Save; removing a platform from
+  // the picker deliberately does not delete its row here either, once
+  // posted it stays a real historical record even if the multiselect
+  // toggle is later turned back off.
+  if (platforms.length > 0) {
+    const { error: postsError } = await supabase.from("content_platform_posts").upsert(
+      platforms.map((platform) => ({ content_id: id, brand, platform })),
+      { onConflict: "content_id,platform", ignoreDuplicates: true },
+    );
+    if (postsError) {
+      throw new Error(postsError.message);
+    }
   }
 
   revalidatePath("/calendar");
