@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/top-bar";
+import { UnsavedChangesProvider } from "@/lib/unsaved-changes-context";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { getLatestPlatformSnapshots } from "@/app/actions/platforms";
 import { computeStreak, todayDateKey, type StreakRow } from "@/lib/streaks";
@@ -76,16 +77,18 @@ export default async function AppLayout({
   const goals = resolveGoalCurrentValues((goalRows ?? []) as Goal[], totalViews, latestSnapshots);
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <TopBar
-        brand={brand}
-        walkStreak={walkStreak}
-        postStreak={postStreak}
-        todayWalked={todayRow?.walked ?? false}
-        todayPosted={todayRow?.posted ?? false}
-        goals={goals}
-      />
-      <main className="flex-1">{children}</main>
-    </div>
+    <UnsavedChangesProvider>
+      <div className="flex min-h-svh flex-col">
+        <TopBar
+          brand={brand}
+          walkStreak={walkStreak}
+          postStreak={postStreak}
+          todayWalked={todayRow?.walked ?? false}
+          todayPosted={todayRow?.posted ?? false}
+          goals={goals}
+        />
+        <main className="flex-1">{children}</main>
+      </div>
+    </UnsavedChangesProvider>
   );
 }

@@ -10,6 +10,7 @@ import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { FormatPlatformFields, type LongFormTopicOption } from "@/components/format-platform-fields";
 import { PlatformAnalyticsSection } from "@/components/platform-analytics-section";
+import { DirtyFormTracker } from "@/components/dirty-form-tracker";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
 import {
@@ -221,7 +222,7 @@ export default async function TopicPage({
         </p>
       )}
 
-      <form action={boundUpdate} className="mt-4 space-y-5">
+      <DirtyFormTracker key={item.id} action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="final_title">Title</Label>
@@ -349,7 +350,7 @@ export default async function TopicPage({
           <ProductionStatusTracker status={item.production_status} />
           <Button type="submit">Save</Button>
         </div>
-      </form>
+      </DirtyFormTracker>
 
       {/* docs/platform-performance-tracking.md Sections 4-5: directly
           below Production Status (the Save/ProductionStatusTracker row
