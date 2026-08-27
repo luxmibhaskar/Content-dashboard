@@ -14,7 +14,7 @@ export function BrandSwitcher({ brand }: { brand: Brand }) {
 
   function handleSwitch(next: Brand) {
     if (next === brand || isPending) return;
-    // beforeunload doesn't fire for this router.refresh() client-side
+    // beforeunload doesn't fire for this router.push() client-side
     // transition (no document unload), so it can't protect an unsaved
     // topic-page form here - this confirm is the second, App Router-aware
     // mechanism the beforeunload listener in DirtyFormTracker can't reach.
@@ -24,6 +24,15 @@ export function BrandSwitcher({ brand }: { brand: Brand }) {
     setDirty(false);
     startTransition(async () => {
       await setBrand(next);
+      // Topic page restructuring (2026-08-27): switching brands now
+      // always lands on that brand's own Dashboard rather than
+      // refreshing whatever page you're currently on, which could be
+      // showing the other brand's data (or a route, like a topic page,
+      // that doesn't exist for the new brand at all). push() alone
+      // wouldn't reliably pick up the new brand cookie when already on
+      // Dashboard (same href, nothing forces Next to re-render Server
+      // Components), so refresh() follows it unconditionally.
+      router.push("/");
       router.refresh();
     });
   }
