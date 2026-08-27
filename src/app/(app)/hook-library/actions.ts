@@ -88,6 +88,29 @@ export async function importHookLibrary(
   return { error: null, imported: valid.length, skipped };
 }
 
+// "Write a hook" (2026-08-27): a single manual entry alongside the file
+// import above, same table, no file involved. Kept separate from
+// updateHookLibraryEntry (which only ever changes an existing row's
+// content, never its type) since this one both creates the row and sets
+// its type from the form.
+export async function writeHookLibraryEntry(formData: FormData) {
+  const type = String(formData.get("type") ?? "").trim().toLowerCase();
+  const content = String(formData.get("content") ?? "").trim();
+  if (!isHookLibraryType(type) || !content) return;
+
+  const cookieStore = await cookies();
+  const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
+  const brand: Brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("hook_library_entries").insert({ brand, type, content });
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/hook-library");
+}
+
 export async function updateHookLibraryEntry(id: string, formData: FormData) {
   const content = String(formData.get("content") ?? "").trim();
   if (!content) return;

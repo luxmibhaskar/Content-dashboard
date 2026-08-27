@@ -5,6 +5,7 @@ import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { HookLibraryEntryCard } from "@/components/hook-library-entry";
 import { HookLibraryImport } from "@/components/hook-library-import";
+import { HookLibraryWriteForm } from "@/components/hook-library-write-form";
 import { HookLibraryExport } from "@/components/hook-library-export";
 import { HOOK_LIBRARY_TYPES, type HookLibraryEntry, type HookLibraryType } from "@/lib/types";
 
@@ -181,9 +182,9 @@ export default async function HookLibraryPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           A swipe file of hook examples by delivery mode, what&apos;s shown or said in the
           first few seconds, separate from the framing patterns below. Pick a type, then
-          import a CSV or JSON file, every entry in it is added as that one type (no AI
-          involved), or edit an entry directly. Export works the same way, one type at a time,
-          or all three at once.
+          either write one hook directly or import a CSV or JSON file, every entry in it is
+          added as that one type (no AI involved), or edit an entry directly. Export works
+          the same way, one type at a time, or all three at once.
         </p>
 
         {/* Independently collapsible (CollapsibleSection, same component
@@ -216,7 +217,10 @@ export default async function HookLibraryPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <HookLibraryImport />
+          <div className="flex flex-wrap items-center gap-3">
+            <HookLibraryWriteForm />
+            <HookLibraryImport />
+          </div>
           <HookLibraryExport />
         </div>
       </div>
