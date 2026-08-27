@@ -32,6 +32,7 @@ import {
 import { aggregateByContentId } from "@/lib/platform-analytics";
 import { computeRetentionDropTrends, formatSecondsAsTimestamp, type RetentionDropPost } from "@/lib/retention-drop";
 import { computeStreak, computeStreakHeatmap, WALK_STREAK_LABEL, type StreakRow } from "@/lib/streaks";
+import { isViewsGoal } from "@/lib/goals";
 import type { HookLibraryType } from "@/lib/types";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
@@ -47,18 +48,53 @@ import { ContentPostedTimeChart } from "@/components/charts/content-posted-time-
 import { StreakHeatmap } from "@/components/charts/streak-heatmap";
 import { cn } from "@/lib/utils";
 
+// Analytics filters (2026-08-27): Format and Platform, alongside the
+// existing date range. Both narrow every content/platform-post-derived
+// section on this page (KPIs, all the charts below) the same way range
+// already does, at the query level rather than per-chart, so nothing
+// downstream needs its own awareness of the filter. Deliberately don't
+// touch daily_streaks (Current Streak KPI, Streak History): that's a
+// personal daily-habit tracker unrelated to content format or platform,
+// filtering it here would just make it silently show a subset with no
+// visible reason why.
+type ContentFormatFilter = "Short" | "Long Video";
+const FORMAT_FILTERS: { value: ContentFormatFilter; label: string }[] = [
+  { value: "Short", label: "Short" },
+  { value: "Long Video", label: "Long" },
+];
+function isContentFormatFilter(value: string | undefined): value is ContentFormatFilter {
+  return value === "Short" || value === "Long Video";
+}
+
 export default async function AnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; format?: string; platform?: string }>;
 }) {
   const params = await searchParams;
   const range: AnalyticsRange = isAnalyticsRange(params.range) ? params.range : "30d";
   const { from, to } = computeAnalyticsRange(range);
+  const formatFilter = isContentFormatFilter(params.format) ? params.format : null;
+  const platformFilter = params.platform?.trim() || null;
 
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
+
+  // buildHref preserves whichever of range/format/platform aren't the one
+  // being changed by a given pill, so the three filters combine instead
+  // of each link resetting the other two.
+  function buildHref(next: { range?: string; format?: string | null; platform?: string | null }) {
+    const search = new URLSearchParams();
+    const nextRange = next.range ?? range;
+    if (nextRange !== "30d") search.set("range", nextRange);
+    const nextFormat = next.format === undefined ? formatFilter : next.format;
+    if (nextFormat) search.set("format", nextFormat);
+    const nextPlatform = next.platform === undefined ? platformFilter : next.platform;
+    if (nextPlatform) search.set("platform", nextPlatform);
+    const qs = search.toString();
+    return qs ? `/analytics?${qs}` : "/analytics";
+  }
 
   const supabase = await createClient();
 
@@ -73,6 +109,26 @@ export default async function AnalyticsPage({
   if (from && to) {
     contentQuery = contentQuery.gte("publish_date", from).lte("publish_date", `${to}T23:59:59`);
   }
+  if (formatFilter) {
+    contentQuery = contentQuery.eq("format", formatFilter);
+  }
+  if (platformFilter) {
+    contentQuery = contentQuery.contains("platform", [platformFilter]);
+  }
+
+  let platformPostsQuery = supabase
+    .from("content_platform_posts")
+    .select(
+      "content_id, platform, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts, retention_drop_timestamp, retention_drop_note), content_calendar!inner(format, is_archived, final_title)",
+    )
+    .eq("brand", brand)
+    .eq("content_calendar.is_archived", false);
+  if (formatFilter) {
+    platformPostsQuery = platformPostsQuery.eq("content_calendar.format", formatFilter);
+  }
+  if (platformFilter) {
+    platformPostsQuery = platformPostsQuery.eq("platform", platformFilter);
+  }
 
   const streakSince = new Date();
   streakSince.setDate(streakSince.getDate() - 16 * 7);
@@ -83,6 +139,7 @@ export default async function AnalyticsPage({
     { data: liveTitleRows },
     { data: liveHookRows },
     { data: platformPostRows },
+    { data: goalRows },
   ] = await Promise.all([
       contentQuery,
       supabase
@@ -126,13 +183,15 @@ export default async function AnalyticsPage({
       // requiring it (harmless until now, nothing here read .platform),
       // needed now to label Retention Drop Trends by platform;
       // final_title needed to link each trend row back to its item.
+      platformPostsQuery,
+      // Analytics filters (2026-08-27): the Platform filter pill row's
+      // option list, same source of truth as Content Calendar's and Idea
+      // Panel's own platform pickers, no separate hardcoded list.
       supabase
-        .from("content_platform_posts")
-        .select(
-          "content_id, platform, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts, retention_drop_timestamp, retention_drop_note), content_calendar!inner(format, is_archived, final_title)",
-        )
+        .from("goals")
+        .select("platform_name")
         .eq("brand", brand)
-        .eq("content_calendar.is_archived", false),
+        .not("platform_name", "is", null),
     ]);
 
   // Described locally rather than extending ContentPlatformPostWithSnapshots
@@ -163,6 +222,14 @@ export default async function AnalyticsPage({
   };
   const platformPosts = (platformPostRows ?? []) as unknown as PlatformPostRow[];
   const statsByContentId = aggregateByContentId(platformPosts);
+
+  const knownPlatforms = [
+    ...new Set(
+      (goalRows ?? [])
+        .map((g) => g.platform_name)
+        .filter((p): p is string => !!p && !isViewsGoal(p)),
+    ),
+  ];
 
   // Analytics audit (2026-08-27) Phase 1: an item absent from
   // statsByContentId has zero platform-posts at all, same "nothing
@@ -258,7 +325,7 @@ export default async function AnalyticsPage({
         {ANALYTICS_RANGES.map((r) => (
           <Link
             key={r.value}
-            href={`/analytics?range=${r.value}`}
+            href={buildHref({ range: r.value })}
             className={cn(
               "rounded-md px-2.5 py-1 text-sm",
               range === r.value
@@ -270,6 +337,65 @@ export default async function AnalyticsPage({
           </Link>
         ))}
       </div>
+
+      {/* Analytics filters (2026-08-27): Format and Platform, same pill-
+          link pattern as the date range above (server-rendered, no client
+          JS needed), each combining with the other two via buildHref
+          rather than resetting them. Doesn't touch Current Streak/Streak
+          History below, deliberately - see buildHref's own comment. */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <Link
+          href={buildHref({ format: null })}
+          className={cn(
+            "rounded-md px-2.5 py-1 text-sm",
+            !formatFilter ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+          )}
+        >
+          All formats
+        </Link>
+        {FORMAT_FILTERS.map((f) => (
+          <Link
+            key={f.value}
+            href={buildHref({ format: f.value })}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-sm",
+              formatFilter === f.value
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
+
+      {knownPlatforms.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Link
+            href={buildHref({ platform: null })}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-sm",
+              !platformFilter ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+            )}
+          >
+            All platforms
+          </Link>
+          {knownPlatforms.map((p) => (
+            <Link
+              key={p}
+              href={buildHref({ platform: p })}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-sm",
+                platformFilter === p
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {p}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiCard label="Total Published" value={kpis.totalPublished.toLocaleString()} />
