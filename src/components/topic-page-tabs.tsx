@@ -77,6 +77,7 @@ export function TopicPageTabs({
         <div className="mt-4">
           <AiWorkflowPanel
             contentId={contentId}
+            brand={brand}
             briefIntent={briefIntent}
             keywords={keywords}
             researchCopyVersions={researchCopyVersions}

@@ -4,6 +4,7 @@ import type {
   ResearchSnapshot,
   JourneyEntry,
   ResearchCopyResult,
+  ScriptHooks,
   ScriptsResult,
   VersionSource,
 } from "@/lib/types";
@@ -122,9 +123,19 @@ function buildScriptsBlock(v: { source: VersionSource; is_live: boolean; data: S
   const d = v.data;
   const lines: string[] = [`### ${sourceLabel(v.source, v.is_live)}`, ""];
 
-  if (d.hooks?.length > 0) {
+  // Hook categorization (2026-08-27): real rows saved before this still
+  // have the old flat string[] on disk, nothing rewrites historical
+  // data, so this stays shape-aware rather than assuming ScriptHooks.
+  const hooks = d.hooks as ScriptHooks | string[] | undefined;
+  if (Array.isArray(hooks) && hooks.length > 0) {
     lines.push("**Hooks:**");
-    d.hooks.forEach((h, i) => lines.push(`${i + 1}. ${h}`));
+    hooks.forEach((h, i) => lines.push(`${i + 1}. ${h}`));
+    lines.push("");
+  } else if (hooks && !Array.isArray(hooks) && (hooks.visual || hooks.textual || hooks.verbal)) {
+    lines.push("**Hooks:**");
+    if (hooks.visual) lines.push(`- Visual: ${hooks.visual}`);
+    if (hooks.textual) lines.push(`- Textual: ${hooks.textual}`);
+    if (hooks.verbal) lines.push(`- Verbal: ${hooks.verbal}`);
     lines.push("");
   }
 

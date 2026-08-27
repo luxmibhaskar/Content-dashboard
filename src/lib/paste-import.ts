@@ -3,6 +3,7 @@ import type {
   ResearchCopyContainer,
   ResearchCopyResult,
   ResearchSource,
+  ScriptHooks,
   ScriptPointer,
   ScriptsResult,
 } from "@/lib/types";
@@ -30,7 +31,7 @@ its own content and an optional "Links:" sub-list underneath (not "Sources:", th
 top-level SOURCES header). See docs/topic-page-redesign.md Section 7.`;
 
 const HEADER_RE =
-  /^#{0,3}\s*(SUMMARY|SOURCES|TITLES|DESCRIPTION|KEYWORD TAGS|QUESTION TAGS|SOURCE FINDINGS|HOOKS|PAIN-POINT ANSWER|LONG-FORM SCRIPT|CTA OPTIONS|SHORT-FORM POINTERS|ATOMIZED SHORTS)\s*:?\s*$/i;
+  /^#{0,3}\s*(SUMMARY|SOURCES|TITLES|DESCRIPTION|KEYWORD TAGS|QUESTION TAGS|SOURCE FINDINGS|VISUAL HOOK|TEXTUAL HOOK|VERBAL HOOK|PAIN-POINT ANSWER|LONG-FORM SCRIPT|CTA OPTIONS|SHORT-FORM POINTERS|ATOMIZED SHORTS)\s*:?\s*$/i;
 
 function splitSections(text: string): Map<string, string[]> {
   const sections = new Map<string, string[]>();
@@ -207,8 +208,14 @@ function parseAtomizedShorts(lines: string[] | undefined): AtomizedShort[] {
   return shorts;
 }
 
+// Hook categorization (2026-08-27): three separate headers, one hook
+// each, replacing the old flat "HOOKS" list - matches ScriptHooks
+// (src/lib/types.ts) and synthesizeScripts' own new output shape, so a
+// paste and a real Run produce the identical structure.
 const SCRIPTS_CORE_HEADERS = [
-  "HOOKS",
+  "VISUAL HOOK",
+  "TEXTUAL HOOK",
+  "VERBAL HOOK",
   "PAIN-POINT ANSWER",
   "LONG-FORM SCRIPT",
   "CTA OPTIONS",
@@ -219,12 +226,24 @@ export function parseScriptsPaste(text: string): Omit<ScriptsResult, "generatedA
   const sections = splitSections(text);
   if (!SCRIPTS_CORE_HEADERS.every((h) => sections.has(h))) return null;
 
-  const hooks = listLines(sections.get("HOOKS"));
+  const hooks: ScriptHooks = {
+    visual: joinBlock(sections.get("VISUAL HOOK")),
+    textual: joinBlock(sections.get("TEXTUAL HOOK")),
+    verbal: joinBlock(sections.get("VERBAL HOOK")),
+  };
   const painPointAnswer = joinBlock(sections.get("PAIN-POINT ANSWER"));
   const longFormScript = joinBlock(sections.get("LONG-FORM SCRIPT"));
   const ctaOptions = listLines(sections.get("CTA OPTIONS"));
   const shortFormPointers = parsePointerList(sections.get("SHORT-FORM POINTERS") ?? []);
-  if (hooks.length === 0 || !painPointAnswer || !longFormScript || ctaOptions.length === 0 || shortFormPointers.length === 0) {
+  if (
+    !hooks.visual ||
+    !hooks.textual ||
+    !hooks.verbal ||
+    !painPointAnswer ||
+    !longFormScript ||
+    ctaOptions.length === 0 ||
+    shortFormPointers.length === 0
+  ) {
     return null;
   }
 

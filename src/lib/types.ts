@@ -226,8 +226,28 @@ export type AtomizedShort = {
   pointerScript: ScriptPointer[];
 };
 
+// Scripting hook categorization (2026-08-27): one hook per delivery
+// mode, matching Manual Packaging's own visual/textual/verbal
+// categories (HOOK_LIBRARY_TYPES below), not 3 interchangeable opening
+// lines. "textual" here on purpose, not "text": HookLibraryType's own
+// value is "text" (hook_variants.hook_type's check constraint), keep
+// them visually distinct so a callsite mapping ScriptHooks -> a
+// HookLibraryType is never a silent no-op string match.
+export type ScriptHooks = { visual: string; textual: string; verbal: string };
+
+// Archive/backup exports (backup.ts, markdown-archive.ts) are the only
+// two places that need to read either shape: real scripts_versions rows
+// saved before this categorization (2026-08-27) still have the old flat
+// string[] on disk, nothing rewrites historical data. Every other
+// consumer in the app only ever reads freshly-generated data, already
+// in the ScriptHooks shape.
+export function formatScriptHooks(hooks: ScriptHooks | string[]): string {
+  if (Array.isArray(hooks)) return hooks.join("; ");
+  return `Visual: ${hooks.visual}; Textual: ${hooks.textual}; Verbal: ${hooks.verbal}`;
+}
+
 export type ScriptsResult = {
-  hooks: string[];
+  hooks: ScriptHooks;
   painPointAnswer: string;
   longFormScript: string;
   ctaOptions: string[];

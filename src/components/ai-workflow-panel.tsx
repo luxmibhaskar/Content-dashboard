@@ -46,12 +46,14 @@ const LOCK_MESSAGE: Record<AiWorkflowPhase, string> = {
 // level lock for visual parity with Manual.
 export function AiWorkflowPanel({
   contentId,
+  brand,
   briefIntent,
   keywords,
   researchCopyVersions,
   scriptsVersions,
 }: {
   contentId: string;
+  brand: string;
   briefIntent: string | null;
   keywords: string | null;
   researchCopyVersions: ResearchCopyVersion[];
@@ -94,7 +96,12 @@ export function AiWorkflowPanel({
         ) : activePhase === "packaging" ? (
           <AiPackagingPhaseContent contentId={contentId} versions={researchCopyVersions} />
         ) : (
-          <ScriptsTab contentId={contentId} activeResearchCopy={activeResearchCopy} versions={scriptsVersions} />
+          <ScriptsTab
+            contentId={contentId}
+            brand={brand}
+            activeResearchCopy={activeResearchCopy}
+            versions={scriptsVersions}
+          />
         )}
       </div>
     </div>

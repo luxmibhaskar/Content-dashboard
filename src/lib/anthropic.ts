@@ -444,8 +444,18 @@ const AtomizedShortSchema = z.object({
 // Same reasoning again for the top-level arrays: no .max() on
 // atomizedShorts, shortFormPointers, or ctaOptions, trimmed after
 // parsing.
+// Hook categorization (2026-08-27): one hook per delivery mode, not 3
+// interchangeable opening lines (see ScriptHooks, src/lib/types.ts).
+// Mirrors Manual Packaging's own visual/textual/verbal categories, the
+// same three Hook Library delivery modes.
+const ScriptHooksSchema = z.object({
+  visual: z.string(),
+  textual: z.string(),
+  verbal: z.string(),
+});
+
 const ScriptsSchema = z.object({
-  hooks: z.array(z.string()).length(3),
+  hooks: ScriptHooksSchema,
   painPointAnswer: z.string(),
   longFormScript: z.string(),
   ctaOptions: z.array(z.string()).min(2),
@@ -497,7 +507,7 @@ export async function synthesizeScripts(params: {
     max_tokens: 16000,
     output_config: { effort: "medium", format: scriptsFormat },
     system:
-      "You write video scripts and script outlines for a solo creator's channel, grounded strictly in already-completed research provided to you, you do not invent facts, statistics, or claims not present in that research. Write natural, spoken, direct-address language a person would actually say on camera in longFormScript, painPointAnswer, and ctaOptions specifically, never AI-formatted lists or stiff phrasing there. Pointer-style sections (shortFormPointers, and each atomized short's pointerScript) are outlines to glance at while recording, not scripts to read verbatim, short phrases plus a brief explanation each, not full sentences of spoken dialogue, no CTA needed in those, that's just one more point to ad-lib when you get there. Never use em dashes anywhere.",
+      "You write video scripts and script outlines for a solo creator's channel, grounded strictly in already-completed research provided to you, you do not invent facts, statistics, or claims not present in that research. Write natural, spoken, direct-address language a person would actually say on camera in longFormScript, painPointAnswer, hooks.verbal, and ctaOptions specifically, never AI-formatted lists or stiff phrasing there. hooks.visual and hooks.textual are not spoken lines: visual describes what's shown on screen (an action, framing, cut, or expression), textual is the exact on-screen text overlay, keep the three hooks genuinely distinct in kind, not the same line adapted to three formats. Pointer-style sections (shortFormPointers, and each atomized short's pointerScript) are outlines to glance at while recording, not scripts to read verbatim, short phrases plus a brief explanation each, not full sentences of spoken dialogue, no CTA needed in those, that's just one more point to ad-lib when you get there. Never use em dashes anywhere.",
     messages: [
       {
         role: "user",
@@ -513,7 +523,11 @@ ${painPointsAndQuestions || "(none surfaced, work from the research summary abov
 
 Produce all of the following:
 
-1. hooks: exactly 3 distinct opening hook line options, the first line or two that would stop someone scrolling, specific to this topic's actual content, not generic teasers.
+1. hooks: three genuinely distinct hook types for the opening of this video, not three interchangeable phrasings of the same line, each specific to this topic's actual content, not generic teasers.
+   - visual: what's shown on screen in the first few seconds, an action, framing, cut, or expression that would stop someone scrolling on its own, described concretely enough to actually shoot, not just a mood or vibe.
+   - textual: the on-screen text overlay for the opening, the exact words that would appear as text on screen, distinct from what's said out loud.
+   - verbal: the actual spoken opening line, what you'd say out loud on camera.
+   These three should work as genuinely different hook mechanisms for the same video, someone could use just one of them alone and it would still work as a complete hook, not three restatements of one idea.
 
 2. painPointAnswer: one direct line delivering the core answer or relief the viewer came for, meant to land immediately after whichever hook gets used. Placed early on purpose, don't bury it after buildup, the viewer should get the actual payoff before anything else, not just a promise of one.
 

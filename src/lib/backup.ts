@@ -6,7 +6,7 @@ import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
 import { resolveGoalCurrentValues } from "@/lib/goals";
 import { totalAcrossPosts, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
 import { WALK_STREAK_LABEL } from "@/lib/streaks";
-import type { ResearchCopyResult, ScriptsResult, Goal } from "@/lib/types";
+import { formatScriptHooks, type ResearchCopyResult, type ScriptHooks, type ScriptsResult, type Goal } from "@/lib/types";
 
 type Row = (string | number | boolean | null)[];
 type Tab = { title: string; headers: string[]; rows: Row[] };
@@ -220,7 +220,7 @@ async function buildScriptsVersionsTab(supabase: SupabaseClient, brand: Brand): 
       contentTitles.get(v.content_id) ?? v.content_id,
       v.source,
       v.is_live ? "Yes" : "No",
-      (d.hooks ?? []).join("; "),
+      formatScriptHooks(d.hooks as ScriptHooks | string[]),
       d.painPointAnswer,
       d.longFormScript,
       (d.ctaOptions ?? []).join("; "),

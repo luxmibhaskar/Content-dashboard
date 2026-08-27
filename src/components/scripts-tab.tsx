@@ -4,7 +4,16 @@ import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
-import type { AtomizedShort, ResearchCopyResult, ScriptPointer, ScriptsVersion, VersionSource } from "@/lib/types";
+import { useHook } from "@/app/(app)/calendar/[id]/hook-actions";
+import type {
+  AtomizedShort,
+  HookLibraryType,
+  ResearchCopyResult,
+  ScriptHooks,
+  ScriptPointer,
+  ScriptsVersion,
+  VersionSource,
+} from "@/lib/types";
 import {
   runScripts,
   importScriptsPaste,
@@ -13,10 +22,23 @@ import {
 } from "@/app/(app)/calendar/[id]/scripts-actions";
 
 const SCRIPTS_PASTE_TEMPLATE_HINT = `Expects these headers, each on its own line, in this order:
-HOOKS / PAIN-POINT ANSWER / LONG-FORM SCRIPT / CTA OPTIONS / SHORT-FORM POINTERS / ATOMIZED SHORTS (optional).
-Hooks and CTA options as numbered or bulleted lists. Short-form pointers as "Point: ... | Explanation: ..." lines.
-Atomized shorts as "### Short 1: <title>" blocks, each followed by its own Point/Explanation lines.
-See docs/topic-page-redesign.md Section 7.`;
+VISUAL HOOK / TEXTUAL HOOK / VERBAL HOOK / PAIN-POINT ANSWER / LONG-FORM SCRIPT / CTA OPTIONS / SHORT-FORM POINTERS / ATOMIZED SHORTS (optional).
+Each hook header is followed by exactly one hook (not a list), a genuinely distinct hook type, not three
+phrasings of the same line: Visual = what's shown on screen, Textual = the on-screen text overlay, Verbal =
+what's said out loud. CTA options as a numbered or bulleted list. Short-form pointers as
+"Point: ... | Explanation: ..." lines. Atomized shorts as "### Short 1: <title>" blocks, each followed by its
+own Point/Explanation lines. See docs/topic-page-redesign.md Section 7.`;
+
+const HOOK_TYPE_BY_FIELD: Record<keyof ScriptHooks, HookLibraryType> = {
+  visual: "visual",
+  textual: "text",
+  verbal: "verbal",
+};
+const HOOK_FIELD_LABELS: Record<keyof ScriptHooks, string> = {
+  visual: "Visual",
+  textual: "Textual",
+  verbal: "Verbal",
+};
 
 const VERSION_LABELS: Record<VersionSource, string> = {
   manual: "Manual",
@@ -32,6 +54,36 @@ function PointerList({ points }: { points: ScriptPointer[] }) {
           <p className="mt-0.5 text-sm text-muted-foreground">{p.explanation}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Hook categorization (2026-08-27): one hook per delivery mode, each
+// with its own "Use" action, same pattern Manual Packaging's hooks
+// already use (packaging-phase-content.tsx's HookListField) - a tiny
+// per-item form, not a bulk action, so using one hook doesn't require
+// touching the others.
+function HookCard({
+  label,
+  text,
+  boundUse,
+}: {
+  label: string;
+  text: string;
+  boundUse: (formData: FormData) => Promise<void>;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2 rounded-md border border-border p-2.5">
+      <div>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="mt-0.5 text-sm">{text}</p>
+      </div>
+      <form action={boundUse}>
+        <input type="hidden" name="value" value={text} />
+        <Button type="submit" size="xs" variant="outline" className="shrink-0">
+          Use
+        </Button>
+      </form>
     </div>
   );
 }
@@ -59,15 +111,23 @@ function AtomizedShortCard({ short, index }: { short: AtomizedShort; index: numb
 // for UI clarity and symmetry with Research & Copy.
 function VersionPanel({
   contentId,
+  brand,
   source,
   version,
 }: {
   contentId: string;
+  brand: string;
   source: VersionSource;
   version: ScriptsVersion | undefined;
 }) {
   const boundSetActive = setActiveScriptsVersion.bind(null, contentId, source);
   const scripts = version?.data;
+  const boundUseHook = (type: HookLibraryType) => useHook.bind(null, contentId, brand, type);
+  // Real scripts_versions rows saved before hook categorization
+  // (2026-08-27) still have the old flat string[] on disk, nothing
+  // rewrites historical data - stay shape-aware here rather than
+  // assuming every row already matches ScriptHooks.
+  const hooks = scripts?.hooks as ScriptHooks | string[] | undefined;
 
   return (
     <div className="space-y-3">
@@ -97,11 +157,23 @@ function VersionPanel({
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">Opening hooks</p>
               <div className="space-y-2">
-                {scripts.hooks.map((h, i) => (
-                  <p key={i} className="rounded-md border border-border p-2 text-sm">
-                    {h}
-                  </p>
-                ))}
+                {Array.isArray(hooks) ? (
+                  hooks.map((h, i) => (
+                    <p key={i} className="rounded-md border border-border p-2 text-sm">
+                      {h}
+                    </p>
+                  ))
+                ) : (
+                  hooks &&
+                  (Object.keys(HOOK_FIELD_LABELS) as (keyof ScriptHooks)[]).map((field) => (
+                    <HookCard
+                      key={field}
+                      label={HOOK_FIELD_LABELS[field]}
+                      text={hooks[field]}
+                      boundUse={boundUseHook(HOOK_TYPE_BY_FIELD[field])}
+                    />
+                  ))
+                )}
               </div>
             </div>
 
@@ -165,10 +237,12 @@ function VersionPanel({
 // actually supports.
 export function ScriptsTab({
   contentId,
+  brand,
   activeResearchCopy,
   versions,
 }: {
   contentId: string;
+  brand: string;
   activeResearchCopy: ResearchCopyResult | null;
   versions: ScriptsVersion[];
 }) {
@@ -229,8 +303,8 @@ export function ScriptsTab({
         <p className="text-sm text-muted-foreground">No scripts yet. Run above to generate them, or paste one in.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <VersionPanel contentId={contentId} source="manual" version={manual} />
-          <VersionPanel contentId={contentId} source="ai" version={ai} />
+          <VersionPanel contentId={contentId} brand={brand} source="manual" version={manual} />
+          <VersionPanel contentId={contentId} brand={brand} source="ai" version={ai} />
         </div>
       )}
     </div>
