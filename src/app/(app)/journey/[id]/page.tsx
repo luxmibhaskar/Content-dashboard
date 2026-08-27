@@ -114,7 +114,7 @@ export default async function JourneyEntryPage({
             defaultChecked={entry.angle_worthy}
             className="size-3.5"
           />
-          Angle-worthy (feeds the Personal Angle Bank, Phase 3)
+          Angle-worthy (shows with the &quot;Angle-worthy only&quot; filter on My Journey Log)
         </label>
 
         <div className="flex items-center justify-between pt-2">
