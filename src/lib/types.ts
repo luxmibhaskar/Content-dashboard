@@ -41,16 +41,6 @@ export type ContentCalendarItem = {
   is_archived: boolean;
 };
 
-export const FORMATS = [
-  "Reel",
-  "Short",
-  "Long Video",
-  "Post",
-  "Thread",
-  "Story",
-  "Other",
-] as const;
-
 export const TARGET_STAGES = ["Awareness", "Consideration", "Decision"] as const;
 
 export const TONE_STYLES = [
@@ -74,6 +64,8 @@ export type Idea = {
   pillar: string | null;
   sub_topic: string | null;
   format: string | null;
+  // Idea Panel format field (2026-08-27): supabase/migrations/0022_ideas_platform.sql.
+  platform: string[];
   brief_description: string | null;
   reference_url: string | null;
   idea_source: string | null;

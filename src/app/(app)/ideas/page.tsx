@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FORMATS, IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
+import { IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
+import { CONTENT_FORMAT_OPTIONS } from "@/components/format-platform-fields";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { createIdea } from "./actions";
 
@@ -68,9 +69,9 @@ export default async function IdeasPage() {
               className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
             >
               <option value="">-</option>
-              {FORMATS.map((f) => (
-                <option key={f} value={f}>
-                  {f}
+              {CONTENT_FORMAT_OPTIONS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
                 </option>
               ))}
             </select>

@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FORMATS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
+import { IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
+import { IdeaFormatPlatformFields } from "@/components/idea-format-platform-fields";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
+import { isViewsGoal } from "@/lib/goals";
 import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
 
 export default async function IdeaPage({
@@ -22,7 +24,7 @@ export default async function IdeaPage({
   const { data: idea } = await supabase
     .from("ideas")
     .select(
-      "id, brand, idea_title, pillar, sub_topic, format, brief_description, reference_url, idea_source, source_detail, status, migrated_to_content_id",
+      "id, brand, idea_title, pillar, sub_topic, format, platform, brief_description, reference_url, idea_source, source_detail, status, migrated_to_content_id",
     )
     .eq("id", id)
     .single<Idea>();
@@ -31,7 +33,24 @@ export default async function IdeaPage({
     notFound();
   }
 
-  const structure = await getMergedPillarStructure(idea.brand);
+  const [structure, { data: goalRows }] = await Promise.all([
+    getMergedPillarStructure(idea.brand),
+    // Same source of truth as Content Calendar's own picker
+    // (calendar/[id]/page.tsx): goals.platform_name for this brand, no
+    // static fallback list.
+    supabase
+      .from("goals")
+      .select("platform_name")
+      .eq("brand", idea.brand)
+      .not("platform_name", "is", null),
+  ]);
+  const knownPlatforms = [
+    ...new Set(
+      (goalRows ?? [])
+        .map((g) => g.platform_name)
+        .filter((p): p is string => !!p && !isViewsGoal(p)),
+    ),
+  ];
 
   const boundUpdate = updateIdea.bind(null, idea.id);
   const boundDelete = deleteIdea.bind(null, idea.id);
@@ -112,39 +131,33 @@ export default async function IdeaPage({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2.5">
-            <Label htmlFor="format">Format</Label>
-            <select
-              id="format"
-              name="format"
-              defaultValue={idea.format ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-            >
-              <option value="">-</option>
-              {FORMATS.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2.5">
-            <Label htmlFor="idea_source">Idea source</Label>
-            <select
-              id="idea_source"
-              name="idea_source"
-              defaultValue={idea.idea_source ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-            >
-              <option value="">-</option>
-              {IDEA_SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Full width, not paired in a grid: unlike Content Calendar's
+            Format (naturally paired with Publish date), nothing here
+            pairs with it, and the platform picker below it needs the
+            full row anyway. */}
+        <div className="space-y-4">
+          <IdeaFormatPlatformFields
+            initialFormat={idea.format ?? ""}
+            initialPlatforms={idea.platform ?? []}
+            knownPlatforms={knownPlatforms}
+          />
+        </div>
+
+        <div className="space-y-2.5">
+          <Label htmlFor="idea_source">Idea source</Label>
+          <select
+            id="idea_source"
+            name="idea_source"
+            defaultValue={idea.idea_source ?? ""}
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+          >
+            <option value="">-</option>
+            {IDEA_SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2.5">

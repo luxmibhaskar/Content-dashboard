@@ -14,6 +14,9 @@ type IdeaFields = {
   pillar: string | null;
   sub_topic: string | null;
   format: string | null;
+  // Idea Panel format field (2026-08-27): supabase/migrations/0022_ideas_platform.sql,
+  // same pattern as content_calendar.platform.
+  platform: string[];
   brief_description: string | null;
   reference_url: string | null;
   idea_source: string | null;
@@ -42,6 +45,7 @@ async function ensureMigrated(
       pillar: fields.pillar,
       sub_topic: fields.sub_topic,
       format: fields.format,
+      platform: fields.platform,
       // final_title starts as the idea's title too, not blank, an empty
       // "Untitled" header on a row that's already real underneath reads
       // as broken, not as "not polished yet." Free to edit from here.
@@ -81,6 +85,9 @@ export async function updateIdea(id: string, formData: FormData) {
     pillar: str(formData, "pillar"),
     sub_topic: str(formData, "sub_topic"),
     format: str(formData, "format"),
+    // Only present in formData while Format is Short or Long Video
+    // (idea-format-platform-fields.tsx), otherwise correctly clears to [].
+    platform: formData.getAll("platform").map(String),
     brief_description: str(formData, "brief_description"),
     reference_url: str(formData, "reference_url"),
     idea_source: str(formData, "idea_source"),
@@ -119,7 +126,7 @@ export async function transferToCalendar(ideaId: string) {
   const { data: idea, error: fetchError } = await supabase
     .from("ideas")
     .select(
-      "brand, idea_title, pillar, sub_topic, format, brief_description, reference_url, idea_source, source_detail, migrated_to_content_id",
+      "brand, idea_title, pillar, sub_topic, format, platform, brief_description, reference_url, idea_source, source_detail, migrated_to_content_id",
     )
     .eq("id", ideaId)
     .single();
@@ -134,6 +141,7 @@ export async function transferToCalendar(ideaId: string) {
     pillar: idea.pillar,
     sub_topic: idea.sub_topic,
     format: idea.format,
+    platform: idea.platform ?? [],
     brief_description: idea.brief_description,
     reference_url: idea.reference_url,
     idea_source: idea.idea_source,

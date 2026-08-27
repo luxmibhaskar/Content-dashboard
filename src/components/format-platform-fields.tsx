@@ -19,7 +19,10 @@ export type LongFormTopicOption = {
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
 
-const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
+// Shared with idea-format-platform-fields.tsx (Idea Panel's own Format
+// field, narrowed to match this exact pair, 2026-08-27) so the two never
+// drift into two separately-hardcoded option lists.
+export const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
   { value: "Short", label: "Short" },
   { value: "Long Video", label: "Long" },
 ];
