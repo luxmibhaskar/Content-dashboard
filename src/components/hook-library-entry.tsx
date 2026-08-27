@@ -39,7 +39,10 @@ export function HookLibraryEntryCard({ entry }: { entry: HookLibraryEntry }) {
 
   return (
     <div className="group relative rounded-lg border border-border p-3">
-      <p className="pr-12 text-sm leading-relaxed whitespace-pre-wrap">{entry.content}</p>
+      {/* break-words so a long hook with no spaces (or a pasted URL) wraps
+          instead of overflowing the card and being clipped at its edge,
+          whitespace-pre-wrap alone only breaks at existing spaces/newlines. */}
+      <p className="pr-12 text-sm leading-relaxed whitespace-pre-wrap break-words">{entry.content}</p>
       <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <button
           type="button"
