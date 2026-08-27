@@ -165,18 +165,25 @@ export default async function ReviewPage({
         <div className="mt-10 border-t border-border pt-6">
           <h2 className="text-sm font-medium text-muted-foreground">Past Reviews</h2>
           <ul className="mt-2 space-y-1.5">
-            {pastReviews!
-              .filter((r) => r.week_start_date !== weekStart)
-              .map((r) => (
-                <li key={r.id} className="text-sm">
-                  <Link href={`/review?week=${r.week_start_date}`} className="hover:underline">
-                    {r.week_start_date} to {r.week_end_date}
-                  </Link>
-                  {r.next_week_adjustment && (
-                    <span className="text-muted-foreground"> - {r.next_week_adjustment}</span>
-                  )}
-                </li>
-              ))}
+            {/* The week currently in the form above is kept in this list
+                once it's saved (previously filtered out, so a just-saved
+                review appeared nowhere), tagged "This week" to set it
+                apart from genuinely past weeks. */}
+            {pastReviews!.map((r) => (
+              <li key={r.id} className="text-sm">
+                <Link href={`/review?week=${r.week_start_date}`} className="hover:underline">
+                  {r.week_start_date} to {r.week_end_date}
+                </Link>
+                {r.week_start_date === weekStart && (
+                  <span className="ml-2 rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    This week
+                  </span>
+                )}
+                {r.next_week_adjustment && (
+                  <span className="text-muted-foreground"> - {r.next_week_adjustment}</span>
+                )}
+              </li>
+            ))}
           </ul>
         </div>
       )}

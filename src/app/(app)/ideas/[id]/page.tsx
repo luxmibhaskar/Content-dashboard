@@ -9,16 +9,20 @@ import { IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { IdeaFormatPlatformFields } from "@/components/idea-format-platform-fields";
+import { SaveToast } from "@/components/save-toast";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
 import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
 
 export default async function IdeaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
   const { id } = await params;
+  const { saved } = await searchParams;
   const supabase = await createClient();
 
   const { data: idea } = await supabase
@@ -58,6 +62,7 @@ export default async function IdeaPage({
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
+      <SaveToast token={saved ?? null} />
       <Link href="/ideas" className="text-sm text-muted-foreground hover:underline">
         &larr; Idea Panel
       </Link>

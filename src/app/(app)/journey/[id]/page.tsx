@@ -6,16 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PillarSubtopicPicker } from "@/components/pillar-subtopic-picker";
+import { GlowCard } from "@/components/glow-card";
+import { SaveToast } from "@/components/save-toast";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { MOOD_ENERGY_OPTIONS, type JourneyEntry } from "@/lib/types";
 import { updateJourneyEntry, deleteJourneyEntry } from "./actions";
 
 export default async function JourneyEntryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
   const { id } = await params;
+  const { saved } = await searchParams;
   const supabase = await createClient();
 
   const { data: entry } = await supabase
@@ -30,13 +35,29 @@ export default async function JourneyEntryPage({
     notFound();
   }
 
-  const structure = await getMergedPillarStructure(entry.brand);
+  const [structure, { data: pastEntriesData }] = await Promise.all([
+    getMergedPillarStructure(entry.brand),
+    // Same list /journey shows, scoped to this brand and minus the entry
+    // open in the form above. No date/pillar/keyword filters here, this
+    // is a quick "what else have I logged" reference, not the full
+    // searchable index that page already is.
+    supabase
+      .from("journey_log")
+      .select(
+        "id, entry_date, pillar_focus, sub_topic, what_i_did_experienced, key_lesson_insight, angle_worthy",
+      )
+      .eq("brand", entry.brand)
+      .neq("id", entry.id)
+      .order("entry_date", { ascending: false }),
+  ]);
+  const pastEntries = (pastEntriesData ?? []) as JourneyEntry[];
 
   const boundUpdate = updateJourneyEntry.bind(null, entry.id);
   const boundDelete = deleteJourneyEntry.bind(null, entry.id);
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
+      <SaveToast token={saved ?? null} />
       <Link href="/journey" className="text-sm text-muted-foreground hover:underline">
         &larr; My Journey Log
       </Link>
@@ -127,6 +148,36 @@ export default async function JourneyEntryPage({
           Delete entry
         </Button>
       </form>
+
+      {pastEntries.length > 0 && (
+        <div className="mt-10 border-t border-border pt-6">
+          <h2 className="text-sm font-medium text-muted-foreground">Past Journey Log</h2>
+          <GlowCard glow={1} className="mt-2 divide-y divide-border">
+            {pastEntries.map((e) => (
+              <Link
+                key={e.id}
+                href={`/journey/${e.id}`}
+                className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{e.entry_date}</span>
+                    {e.angle_worthy && <span title="Angle-worthy">&#9733;</span>}
+                    {[...e.pillar_focus, ...e.sub_topic].length > 0 && (
+                      <span className="truncate">
+                        {[...e.pillar_focus, ...e.sub_topic].join(" / ")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-sm">
+                    {e.key_lesson_insight || e.what_i_did_experienced || "No lesson recorded yet"}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </GlowCard>
+        </div>
+      )}
     </div>
   );
 }

@@ -31,7 +31,10 @@ export async function updateJourneyEntry(id: string, formData: FormData) {
   }
 
   revalidatePath("/journey");
-  redirect(`/journey/${id}`);
+  // ?saved=<ts> drives <SaveToast> on the detail page, this redirect
+  // lands back on the same URL and otherwise gives no visible signal the
+  // save worked. Fresh timestamp each save so repeats re-trigger it.
+  redirect(`/journey/${id}?saved=${Date.now()}`);
 }
 
 export async function deleteJourneyEntry(id: string) {

@@ -109,7 +109,10 @@ export async function updateIdea(id: string, formData: FormData) {
   }
 
   revalidatePath("/ideas");
-  redirect(`/ideas/${id}`);
+  // ?saved=<ts> is read by <SaveToast> on the detail page for a visible
+  // "Saved" confirmation, this action otherwise redirects back to the
+  // same URL with nothing changing on screen. Fresh timestamp each save.
+  redirect(`/ideas/${id}?saved=${Date.now()}`);
 }
 
 // Section 19: "Transfer to Calendar" from the Idea Panel/Scout flow.
