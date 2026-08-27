@@ -62,6 +62,34 @@ export async function findOrCreateFolder(
   return created.id;
 }
 
+// Section 17.4 hygiene: the archive only ever upserts, so a content
+// item deleted from Supabase, or a research topic that was renamed or
+// had all its snapshots removed, leaves its Drive files/folders behind
+// forever. After a folder's current contents have been written, this
+// trashes (reversible, not a hard delete) anything directly inside it
+// whose name isn't in `expectedNames`. Callers pass the full set of
+// names they just wrote to that folder.
+export async function trashOrphans(
+  drive: drive_v3.Drive,
+  parentId: string,
+  expectedNames: Set<string>,
+): Promise<string[]> {
+  const { data } = await drive.files.list({
+    q: `'${parentId}' in parents and trashed = false`,
+    fields: "files(id, name)",
+    spaces: "drive",
+    pageSize: 1000,
+  });
+
+  const trashed: string[] = [];
+  for (const f of data.files ?? []) {
+    if (!f.id || !f.name || expectedNames.has(f.name)) continue;
+    await drive.files.update({ fileId: f.id, requestBody: { trashed: true } });
+    trashed.push(f.name);
+  }
+  return trashed;
+}
+
 // Overwrites in place if a file with this name already exists in the
 // folder (nightly sync should always reflect current state, not pile up
 // duplicates), otherwise creates it. Returns the file's id and a link a

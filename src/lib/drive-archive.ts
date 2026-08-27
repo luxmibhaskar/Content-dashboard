@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getDriveClient, findOrCreateFolder, upsertMarkdownFile, upsertJsonFile } from "@/lib/google-drive";
+import {
+  getDriveClient,
+  findOrCreateFolder,
+  upsertMarkdownFile,
+  upsertJsonFile,
+  trashOrphans,
+} from "@/lib/google-drive";
 import {
   buildContentCalendarMarkdown,
   buildResearchSnapshotMarkdown,
@@ -222,6 +228,20 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     await upsertJsonFile(drive, contentFolderId, `${row.id}.json`, companion);
   }
 
+  // Sweep files for content items no longer in Supabase (never hard
+  // delete: trashed files are recoverable for 30 days). Hygiene only,
+  // guarded so a sweep hiccup can't fail the archive write that already
+  // succeeded above.
+  try {
+    const expectedContentFiles = new Set<string>([
+      ...filenames.values(),
+      ...contentRows.map((r) => `${r.id}.json`),
+    ]);
+    await trashOrphans(drive, contentFolderId, expectedContentFiles);
+  } catch (err) {
+    console.warn("[drive-archive] content-calendar orphan sweep failed:", err);
+  }
+
   const { data: snapshots } = await supabase
     .from("research_snapshots")
     .select("id, content_id, snapshot_date, youtube_data, google_data, reddit_data, quora_data, summary")
@@ -229,6 +249,10 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
   const snapshotRows = (snapshots ?? []) as ResearchSnapshot[];
 
   const topicFolderCache = new Map<string, string>();
+  // Per-topic-folder set of the filenames written this run, for the
+  // orphan sweep below (a topic renamed or with snapshots since deleted
+  // otherwise strands its old folder / files).
+  const expectedByTopic = new Map<string, Set<string>>();
   for (const snap of snapshotRows) {
     const title = titleById.get(snap.content_id) ?? "Untitled";
     const topicFolderName = sanitizeName(title);
@@ -253,6 +277,22 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
       quora_data: snap.quora_data,
     };
     await upsertJsonFile(drive, topicFolderId, `${snap.id}.json`, researchCompanion);
+
+    const names = expectedByTopic.get(topicFolderName) ?? new Set<string>();
+    names.add(`${dateLabel}.md`);
+    names.add(`${snap.id}.json`);
+    expectedByTopic.set(topicFolderName, names);
+  }
+
+  try {
+    // Trash whole topic folders no longer backed by any snapshot, then
+    // stale files inside the folders that remain.
+    await trashOrphans(drive, researchFolderId, new Set(expectedByTopic.keys()));
+    for (const [topicFolderName, folderId] of topicFolderCache) {
+      await trashOrphans(drive, folderId, expectedByTopic.get(topicFolderName) ?? new Set());
+    }
+  } catch (err) {
+    console.warn("[drive-archive] research-snapshots orphan sweep failed:", err);
   }
 
   const { data: journeyEntries } = await supabase
@@ -277,6 +317,16 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
       `${month}.md`,
       buildJourneyMonthMarkdown(month, entries),
     );
+  }
+
+  try {
+    await trashOrphans(
+      drive,
+      journeyFolderId,
+      new Set([...byMonth.keys()].map((month) => `${month}.md`)),
+    );
+  } catch (err) {
+    console.warn("[drive-archive] journey-log orphan sweep failed:", err);
   }
 
   return { contentLinks, snapshotLinks };
