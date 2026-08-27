@@ -152,7 +152,7 @@ export default async function JourneyEntryPage({
       {pastEntries.length > 0 && (
         <div className="mt-10 border-t border-border pt-6">
           <h2 className="text-sm font-medium text-muted-foreground">Past Journey Log</h2>
-          <GlowCard glow={1} className="mt-2 divide-y divide-border">
+          <GlowCard neutral className="mt-2 divide-y divide-border">
             {pastEntries.map((e) => (
               <Link
                 key={e.id}

@@ -60,7 +60,7 @@ export default async function TopicMapPage() {
           (Idea Panel, Production Status, Competitors, Journey Log filters,
           see src/lib/custom-sub-topics.ts). */}
       <form action={addCustomSubTopic} className="mt-6">
-        <GlowCard glow={1} className="space-y-5 p-6">
+        <GlowCard neutral className="space-y-5 p-6">
           {/* Explicit 50/50 split: Sub-topic on the left, Pillar on the
               right, each exactly half the row. The Add button sits on
               its own row below rather than squeezed in as a 3rd column,

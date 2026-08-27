@@ -159,7 +159,7 @@ export default async function JourneyLogPage({
         )}
       </form>
 
-      <GlowCard glow={1} className="mt-6 divide-y divide-border">
+      <GlowCard neutral className="mt-6 divide-y divide-border">
         {(entries as JourneyEntry[] | null)?.map((entry) => (
           <div key={entry.id}>
             <Link

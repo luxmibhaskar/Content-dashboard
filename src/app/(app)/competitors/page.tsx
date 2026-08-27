@@ -113,7 +113,7 @@ export default async function CompetitorsPage({
       </p>
 
       <form action={createCompetitor} className="mt-6">
-        <GlowCard glow={1} className="space-y-3 p-4">
+        <GlowCard neutral className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
@@ -214,7 +214,7 @@ export default async function CompetitorsPage({
         )}
       </form>
 
-      <GlowCard glow={2} className="mt-3 divide-y divide-border">
+      <GlowCard neutral className="mt-3 divide-y divide-border">
         {visibleCompetitors.map((c) => (
           <div key={c.id}>
             <Link

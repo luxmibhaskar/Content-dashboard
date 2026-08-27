@@ -47,7 +47,7 @@ export default async function CollaboratorsPage() {
       </p>
 
       <form action={createCollaborator} className="mt-6">
-        <GlowCard glow={1} className="space-y-5 p-6">
+        <GlowCard neutral className="space-y-5 p-6">
         <div className="grid grid-cols-2 gap-5">
           <div className="space-y-2.5">
             <Label htmlFor="name">Name</Label>
@@ -95,7 +95,7 @@ export default async function CollaboratorsPage() {
           {grouped[status].length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Nothing here yet.</p>
           ) : (
-            <GlowCard glow={2} className="mt-2 divide-y divide-border">
+            <GlowCard neutral className="mt-2 divide-y divide-border">
               {grouped[status].map((c) => (
                 <div key={c.id}>
                   <Link

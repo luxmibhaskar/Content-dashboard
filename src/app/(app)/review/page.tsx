@@ -77,7 +77,7 @@ export default async function ReviewPage({
       <form key={weekStart} action={saveWeeklyReview} className="mt-6">
         <input type="hidden" name="week_start_date" value={weekStart} />
         <input type="hidden" name="week_end_date" value={weekEnd} />
-        <GlowCard glow={1} className="space-y-6 p-5">
+        <GlowCard neutral className="space-y-6 p-5">
 
         <div className="space-y-1.5">
           <Label htmlFor="posted_as_planned">

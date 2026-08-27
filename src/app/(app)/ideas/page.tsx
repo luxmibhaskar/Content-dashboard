@@ -52,7 +52,7 @@ export default async function IdeasPage() {
       </p>
 
       <form action={createIdea} className="mt-6">
-        <GlowCard glow={1} className="space-y-3 p-4">
+        <GlowCard neutral className="space-y-3 p-4">
         <div className="space-y-2.5">
           <Label htmlFor="idea_title">Idea title</Label>
           <Input id="idea_title" name="idea_title" required placeholder="What's the idea?" />
@@ -120,7 +120,7 @@ export default async function IdeasPage() {
           {grouped[status].length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Nothing here yet.</p>
           ) : (
-            <GlowCard glow={2} className="mt-2 divide-y divide-border">
+            <GlowCard neutral className="mt-2 divide-y divide-border">
               {grouped[status].map((idea) => (
                 <div key={idea.id}>
                   <Link
