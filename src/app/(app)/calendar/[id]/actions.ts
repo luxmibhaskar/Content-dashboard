@@ -54,8 +54,6 @@ export async function updateContentItem(id: string, brand: string, formData: For
       // Header
       final_title: str(formData, "final_title"),
       production_status: str(formData, "production_status"),
-      viability_status: String(formData.get("viability_status")),
-      viability_reason_note: str(formData, "viability_reason_note"),
 
       // 10.1.6 System & Production (core fields only, this chunk)
       pillar: str(formData, "pillar"),

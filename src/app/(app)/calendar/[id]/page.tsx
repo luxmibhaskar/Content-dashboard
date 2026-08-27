@@ -15,7 +15,6 @@ import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
 import {
   PRODUCTION_STATUSES,
-  VIABILITY_STATUSES,
   type ContentCalendarDetail,
   type ContentPlatformPost,
   type ManualWorkflowPhaseRow,
@@ -41,7 +40,7 @@ export const maxDuration = 300;
 // System & Production and Performance are unaffected, still collapsible
 // sections further down.
 const SELECT_COLUMNS = `
-  id, brand, final_title, production_status, viability_status, viability_reason_note,
+  id, brand, final_title, production_status,
   pillar, sub_topic, format, platform, publish_date, is_archived,
   raw_idea_title, raw_keywords_topics, brief_intent,
   sequence_step, sequence_order_custom, evidence_condition, script_outline_link,
@@ -236,48 +235,21 @@ export default async function TopicPage({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="production_status">Production status</Label>
-            <select
-              id="production_status"
-              name="production_status"
-              defaultValue={item.production_status ?? ""}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-            >
-              <option value="">No status yet</option>
-              {PRODUCTION_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="viability_status">Viability status</Label>
-            <select
-              id="viability_status"
-              name="viability_status"
-              defaultValue={item.viability_status}
-              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-            >
-              {VIABILITY_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
         <div className="space-y-1.5">
-          <Label htmlFor="viability_reason_note">Viability reason (optional)</Label>
-          <Input
-            id="viability_reason_note"
-            name="viability_reason_note"
-            defaultValue={item.viability_reason_note ?? ""}
-          />
+          <Label htmlFor="production_status">Production status</Label>
+          <select
+            id="production_status"
+            name="production_status"
+            defaultValue={item.production_status ?? ""}
+            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+          >
+            <option value="">No status yet</option>
+            {PRODUCTION_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

@@ -22,18 +22,16 @@ export const PRODUCTION_STATUSES: ProductionStatus[] = [
   "Published / Scheduled",
 ];
 
-export const VIABILITY_STATUSES: ViabilityStatus[] = [
-  "Ready",
-  "Waiting for Evidence",
-  "Needs More Time",
-  "On Hold",
-];
-
 export type ContentCalendarItem = {
   id: string;
   brand: Brand;
   final_title: string | null;
   production_status: ProductionStatus | null;
+  // Viability Status/Reason retired from the UI (2026-08-27): Production
+  // Status already conveys workability, this was redundant. Column and
+  // type stay for the archive/backup exports (markdown-archive.ts,
+  // backup.ts) that still read a content item's last-known value; nothing
+  // edits it anymore, so it's frozen at whatever each item already had.
   viability_status: ViabilityStatus;
   viability_reason_note: string | null;
   pillar: string | null;

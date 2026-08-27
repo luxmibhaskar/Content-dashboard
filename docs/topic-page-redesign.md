@@ -26,11 +26,9 @@ this (Section 19 of `builder-brief.md` is the Build Phases list) — this
 section is that spec's real home now. Refines `builder-brief.md`
 Section 10.0's four-things list with the actual spatial layout:
 
-- **Top-left**: Title (one line, truncated).
-- **Top-right**: the Viability Status dot (green/amber/grey), not the
-  pillar tag. This is the deliberate choice: whether an item is
-  workable right now is the thing worth a glance-able top corner, ahead
-  of which pillar it belongs to.
+- **Top-left**: Title (one line, truncated). (Viability Status dot
+  retired 2026-08-27, Production Status already conveys workability;
+  see Section 9's 2026-08-27 update below.)
 - **Second row**: the pillar-colored tag (`src/components/pillar-tag.tsx`,
   `docs/brand-tokens.md`'s Tag styling), plus the sub-topic as plain
   text next to it, plus an "Archived" badge when applicable.
@@ -446,7 +444,10 @@ starved of new data) caught and avoided before anything shipped.
 always-visible Production Status block above it, which stays exactly as
 it was: production status, viability status, viability reason, pillar,
 sub-topic, format, publish date, confirmed unaffected before touching
-anything). Performance metrics (Views/Likes/Comments/Shares/Saves/
+anything). **Update, 2026-08-27: viability status and viability reason
+were later retired from this block too** (Production Status already
+conveys workability, the pair was judged redundant), see the note below
+this section for the follow-up. Performance metrics (Views/Likes/Comments/Shares/Saves/
 Conversions) was the one field group in that section verified to feed
 something outside itself, `src/lib/analytics.ts` reads those exact
 columns for Analytics Overview's KPIs and charts, so it moved into the
@@ -469,6 +470,18 @@ its only UI setter is gone, so a new repurposed-from relationship can no
 longer be set from the topic page. The read-only "Repurposed from: X" /
 "Derivatives (N)" display near the top of the page is unaffected and
 still reads whatever was set before.
+
+**⚠ Update, 2026-08-27: Viability Status and Viability Reason retired.**
+Removed from the always-visible Production Status block entirely (topic
+page form, `src/app/(app)/calendar/[id]/actions.ts`'s write, and the
+Calendar List's top-right dot, `ViabilityDot`/`viability-dot.tsx`,
+deleted). Judged redundant with Production Status, which already
+conveys whether an item is workable right now. The columns
+(`viability_status`, `viability_reason_note`) stay in the schema,
+frozen at whatever each item last had, unused by any UI now, same
+"superseded field stays schema-only" convention as the rest of this
+section; the Drive Markdown archive and CSV backup exports still read
+them as a historical snapshot.
 
 **⚠ Format/Platform updated since, see `format-platform-fields.tsx`.**
 Format's own dropdown narrowed to Short/Long only, no legacy fallback

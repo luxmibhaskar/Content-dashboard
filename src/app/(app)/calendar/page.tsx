@@ -10,7 +10,7 @@ import { createBlankContentItem } from "./actions";
 import type { ContentCalendarItem } from "@/lib/types";
 
 const SELECT_COLUMNS =
-  "id, brand, final_title, production_status, viability_status, viability_reason_note, pillar, sub_topic, format, publish_date, is_archived";
+  "id, brand, final_title, production_status, pillar, sub_topic, format, publish_date, is_archived";
 
 // docs/platform-performance-tracking.md Section 1: "one table, filtered
 // view", not a separate Short Form table. Long Form is the default,

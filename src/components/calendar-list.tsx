@@ -1,19 +1,17 @@
 import Link from "next/link";
 import { ProductionStatusBar } from "@/components/production-status-bar";
-import { ViabilityDot } from "@/components/viability-dot";
 import { PillarTag } from "@/components/pillar-tag";
 import { GlowCard } from "@/components/glow-card";
 import { pillarGlowIndex } from "@/lib/pillars";
 import type { ContentCalendarItem } from "@/lib/types";
 
 // Card layout confirmed and documented in
-// docs/topic-page-redesign.md Section 0.5: title top-left, Viability
-// dot top-right (deliberately, not the pillar tag: workable-right-now
-// is the glance-able signal), pillar tag in its own row below,
-// production status as a centered bar in the lower-middle (replacing
-// the old status dots). Items with no production_status yet are
-// filtered out before reaching this list (see calendar/page.tsx), so
-// status is always non-null here.
+// docs/topic-page-redesign.md Section 0.5: title top-left (Viability
+// dot retired 2026-08-27, Production Status already conveys
+// workability), pillar tag in its own row below, production status as
+// a centered bar in the lower-middle (replacing the old status dots).
+// Items with no production_status yet are filtered out before reaching
+// this list (see calendar/page.tsx), so status is always non-null here.
 export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
   return (
     <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -32,12 +30,9 @@ export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
               neutral={glowIndex === null}
               className="flex min-h-[132px] flex-col gap-2 p-3.5 transition hover:bg-muted/30"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="truncate text-sm font-medium">
-                  {item.final_title || "Untitled"}
-                </span>
-                <ViabilityDot status={item.viability_status} />
-              </div>
+              <span className="truncate text-sm font-medium">
+                {item.final_title || "Untitled"}
+              </span>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 {item.pillar && <PillarTag pillar={item.pillar} />}
