@@ -25,24 +25,36 @@ export type GlowIndex = 1 | 2 | 3;
 // above it, the recurring gap reported on Topic Map/Collaborators/
 // Weekly Review/Idea Panel forms, and the same class of bug also
 // affecting `divide-y` list separators and `flex ...gap-*` row layouts
-// elsewhere. Margin utilities (mt-, mx-, etc.) are the one exception:
-// they position the card itself against whatever precedes it on the
-// page, and only work from the outer box, since .glow-card's own border
-// (globals.css) blocks margin-collapsing, an inner margin would show up
-// as unwanted space inside the card instead of before it. So the
-// incoming className is split: margin tokens stay on the outer box,
-// everything else moves to the wrapper div that's the real content's
-// direct parent, one fix here rather than 30+ call sites each patched
-// by hand (and silently un-fixed the next time a page copies this
-// pattern).
-const MARGIN_TOKEN = /^(?:[\w-]+:)*-?m[trblxyse]?-/;
+// elsewhere.
+//
+// So the incoming className is split between the outer .glow-card box
+// and the inner content wrapper. Two kinds of utility belong on the
+// OUTER box:
+//   1. Margins (mt-, mx-, etc.) - they position the card against
+//      whatever precedes it; .glow-card's own border blocks
+//      margin-collapsing, so an inner margin shows up as space *inside*
+//      the card instead of before it.
+//   2. How the card sits in its parent layout as a flex/grid item, and
+//      its outer box height: h-*, min-h-*, max-h-*, flex-1/auto/none,
+//      grow, shrink, basis-*, self-*, order-*, col-/row-span. A caller
+//      passing `h-full` or `flex-1` wants the *card* to fill/flex; if
+//      that lands on the inner wrapper instead, the outer box stays
+//      auto-height and `fill`'s inner `h-full` collapses against it
+//      (the clipped Content Output donut, the zero-height dashboard
+//      graph panel).
+// Everything else - padding, gap, space-y, divide, flex direction,
+// items/justify, text - lays out the card's own children and stays
+// inner. Bare `flex`/`grid` are content layout, so they stay inner too;
+// only the flex-*item* forms (flex-1, flex-[..]) move out.
+const OUTER_TOKEN =
+  /^(?:[\w-]+:)*-?(?:m[trblxyse]?-|h-|min-h-|max-h-|flex-(?:1|auto|none|initial|\[)|grow(?:-|$)|shrink(?:-|$)|basis-|self-|justify-self-|place-self-|order-|col-(?:span|start|end)-|row-(?:span|start|end)-)/;
 
 function splitOuterAndInnerClasses(className?: string) {
   if (!className) return { outer: undefined, inner: undefined };
   const outer: string[] = [];
   const inner: string[] = [];
   for (const token of className.split(/\s+/).filter(Boolean)) {
-    (MARGIN_TOKEN.test(token) ? outer : inner).push(token);
+    (OUTER_TOKEN.test(token) ? outer : inner).push(token);
   }
   return { outer: outer.join(" "), inner: inner.join(" ") };
 }
