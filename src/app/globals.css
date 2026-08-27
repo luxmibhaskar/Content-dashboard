@@ -73,7 +73,13 @@
      (shared-neutrals note), so this is a single shared value, not a
      brand-scoped override like --primary/--ring. */
   --foreground: #1f2937;
-  --card: oklch(1 0 0);
+  /* Light-mode tonal separation pass: --card was oklch(1 0 0), identical
+     to --background, so cards had zero tonal lift off the page and read
+     only via border + shadow (dark mode has a genuine ~6% lightness gap
+     between the two). A touch cooler and darker than Mist (#F1F5F9) so
+     every card, neutral or pillar-colored, actually sits above the page.
+     .dark is untouched. */
+  --card: #e8edf3;
   --card-foreground: #1f2937;
   --popover: oklch(1 0 0);
   --popover-foreground: #1f2937;
@@ -281,6 +287,22 @@ body {
   background-attachment: fixed;
 }
 
+/* Light-mode tonal separation pass: the wash above only varied the page
+   near the very top. This taller ellipse carries the Mist tone (a shade
+   deeper, matched to the new --card) most of the way down the page with
+   a soft mid-stop, so the page reads as a lit surface rather than a flat
+   sheet and cards low on the page still have something to lift off of.
+   Scoped to :not(.dark) so dark mode keeps the original tight top wash
+   from the rule above, untouched. */
+:root:not(.dark) body {
+  background-image: radial-gradient(
+    ellipse 110% 95% at 50% -20%,
+    color-mix(in oklch, #e8edf3 80%, transparent),
+    color-mix(in oklch, #f1f5f9 34%, transparent) 55%,
+    transparent 92%
+  );
+}
+
 /* Redesign Phase 4 (docs/dashboard-redesign.md): every card/container
    app-wide routes through GlowCard (src/components/glow-card.tsx),
    which applies this class. Frosted glass + a brand-colored glowing
@@ -311,8 +333,12 @@ body {
      placeholder, mixing 0% of a color is fully transparent, so this one
      variable is what turns the halo off there entirely, dark mode's
      "alive" cue is the rim light sweep on ::before instead, a halo would
-     just be redundant glow on top of an already-glowing edge. */
-  --halo-strength: 35%;
+     just be redundant glow on top of an already-glowing edge.
+     Light-mode tonal separation pass: nudged up from 35% now that the
+     card no longer sits white-on-white against the page, so the halo has
+     a tone to bloom against instead of being lost. .dark .glow-card
+     still forces this to 0%, dark is untouched. */
+  --halo-strength: 48%;
   /* Later ask, "a real outer glow, distinct from the rim light and halo,
      which sit at or just past the edge": those two hug the border, this
      is a wider, unoffset drop-shadow that bleeds well outside the card so
@@ -321,8 +347,11 @@ body {
      outward bleed is the one edge cue that reads MORE naturally against a
      dark backdrop, so dark mode pushes it stronger instead of dropping it
      (.dark .glow-card below); this lighter default value is light mode's
-     own, more restrained so it doesn't read as a rendering artifact. */
-  --outer-glow-strength: 20%;
+     own, more restrained so it doesn't read as a rendering artifact.
+     Light-mode tonal separation pass: nudged up from 20% for the same
+     reason as --halo-strength above (a real surface behind the card to
+     glow against now). .dark .glow-card still forces its own 42%. */
+  --outer-glow-strength: 28%;
   /* Later ask again: this wide bleed is a "background wash sitting
      behind the container", distinct from the border/edge-ring layers
      right above (which stay on --glow-color, that edge IS meant to be
@@ -353,7 +382,20 @@ body {
   --border-strength: 70%;
   position: relative;
   overflow: hidden;
-  background: color-mix(in oklch, var(--card) 55%, transparent);
+  /* Light-mode tonal separation pass: was color-mix(var(--card) 55%,
+     transparent) - a translucent near-white fill that was effectively
+     invisible on a white page. Now (a) leans on the new tonal --card
+     (see :root) and a slightly firmer 58% for real lift, and (b) blends
+     ~9% of this card's own --glow-color into the fill so a Body / Build
+     / etc. card reads as gently pillar-tinted glass, not plain white.
+     The [data-neutral] rule below overrides this with an untinted mix,
+     and .dark .glow-card restores the exact original formula, so dark
+     mode and neutral cards are unchanged. */
+  background: color-mix(
+    in oklch,
+    var(--glow-color) 9%,
+    color-mix(in oklch, var(--card) 58%, transparent)
+  );
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   /* Refinement 7: light mode's own "this card is lit" cue. A bright rim
@@ -383,6 +425,10 @@ body {
   --halo-strength: 0%;
   --outer-glow-strength: 42%;
   border-color: color-mix(in oklch, var(--glow-color) 40%, var(--border));
+  /* Restores the pre-tonal-separation-pass fill: dark mode already has a
+     real ~6% gap between --card and --background, so it keeps the plain
+     translucent card fill and gets no pillar tint. */
+  background: color-mix(in oklch, var(--card) 55%, transparent);
 }
 
 /* Generic app-chrome variant (glow-card.tsx's neutral prop): --glow-color
@@ -425,6 +471,19 @@ body {
 html[data-brand="lbsworks"] .glow-card[data-neutral="true"] {
   --outer-glow-color: #f1f5f9;
   --outer-glow-strength: 10%;
+  /* Light-mode tonal separation pass: the base --halo-strength went 35%
+     to 48% globally, which reads fine on one card but compounds into a
+     lavender cast across the Dashboard's many neutral cards on this
+     brand specifically (Build Indigo is bright/saturated; Iron Charcoal
+     on LBsTransformation blends in for free at the full strength, so
+     that brand is left untouched). Scoped back down here, same reasoning
+     and same selector as the --outer-glow reduction above. The fill tint
+     needs no entry: the neutral background rule above replaces the fill
+     wholesale with a Mist mix that never reads --glow-color, so neutral
+     cards get no pillar tint on either brand regardless. Pillar-colored
+     (non-neutral) LBsWorks cards keep the full 48% halo and 9% fill
+     tint. */
+  --halo-strength: 22%;
 }
 
 html[data-brand="lbsworks"].dark .glow-card[data-neutral="true"] {
