@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CONTENT_FORMAT_OPTIONS } from "@/components/format-platform-fields";
+import { CONTENT_FORMAT_OPTIONS } from "@/lib/types";
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
 

@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
+import { CONTENT_FORMAT_OPTIONS, IDEA_SOURCES, IDEA_STATUSES } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
-import { CONTENT_FORMAT_OPTIONS } from "@/components/format-platform-fields";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { createIdea } from "./actions";
 

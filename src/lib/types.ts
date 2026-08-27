@@ -54,6 +54,19 @@ export const TONE_STYLES = [
 
 export const IDEA_SOURCES = ["Comment", "DM", "Mind", "Competitor", "Internet"] as const;
 
+// The Format picker's option pair, narrowed to Short / Long (the label
+// for "Long Video" is just "Long"). Lives here, not in
+// format-platform-fields.tsx, because that's a "use client" module and a
+// Server Component (ideas/page.tsx) needs this constant too: importing a
+// plain value from a client module into an RSC gets the client-reference
+// stub, not the array. Shared by format-platform-fields.tsx and
+// idea-format-platform-fields.tsx so the two never drift into separately
+// hardcoded lists.
+export const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
+  { value: "Short", label: "Short" },
+  { value: "Long Video", label: "Long" },
+];
+
 // Section 8: Idea Panel
 export const IDEA_STATUSES = ["Idea", "Research", "Ready to work"] as const;
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ReferenceVideosSection } from "@/components/reference-videos-section";
 import { ProductionStatusTracker } from "@/components/production-status-tracker";
 import type { PillarStructure } from "@/lib/pillars";
-import type { ProductionStatus, ReferenceVideo } from "@/lib/types";
+import { CONTENT_FORMAT_OPTIONS, type ProductionStatus, type ReferenceVideo } from "@/lib/types";
 
 export type LongFormTopicOption = {
   id: string;
@@ -19,13 +19,9 @@ export type LongFormTopicOption = {
 
 const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm";
 
-// Shared with idea-format-platform-fields.tsx (Idea Panel's own Format
-// field, narrowed to match this exact pair, 2026-08-27) so the two never
-// drift into two separately-hardcoded option lists.
-export const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
-  { value: "Short", label: "Short" },
-  { value: "Long Video", label: "Long" },
-];
+// CONTENT_FORMAT_OPTIONS now lives in @/lib/types (a non-client module)
+// so the Server Component at ideas/page.tsx can import the real array
+// instead of a client-reference stub, see the note there.
 
 // Format + Publish date + (Short and Long) the "posted on" platform
 // multiselect, one client component since the multiselect's visibility
