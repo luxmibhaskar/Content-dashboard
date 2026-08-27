@@ -150,7 +150,12 @@ export function PhaseNav<P extends string>({
   onSelect: (phase: P) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+    // Made more prominent (topic page restructuring, 2026-08-27): a
+    // background tint and shadow so this reads as a real sub-navigation,
+    // not a subtle 1px pill. One notch lighter than the Manual/AI
+    // toggle above it (topic-page-tabs.tsx) on purpose, to preserve the
+    // hierarchy: that picks the side, this picks the phase within it.
+    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5 shadow-sm">
       {phases.map((phase) => (
         <Button
           key={phase}

@@ -47,7 +47,14 @@ export function TopicPageTabs({
 
   return (
     <div>
-      <div className="inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+      {/* Made more prominent (topic page restructuring, 2026-08-27):
+          heavier border, a background tint, and a shadow so this reads
+          as a real top-level switch rather than a subtle 1px pill,
+          matching the visual weight of a page-level control. Kept one
+          notch heavier than PhaseNav's own bump below it
+          (manual-workflow-ui.tsx) to preserve the hierarchy: this picks
+          the side, PhaseNav picks the phase within it. */}
+      <div className="inline-flex items-center gap-1 rounded-xl border-2 border-border bg-muted/50 p-1 shadow-sm">
         <Button
           type="button"
           size="sm"
