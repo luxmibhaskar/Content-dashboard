@@ -167,11 +167,14 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     const itemPlatformPosts = platformPostsByContent.get(row.id) ?? [];
 
     const filename = filenames.get(row.id)!;
+    const derivedFromTitle = row.derived_from_content_id
+      ? (titleById.get(row.derived_from_content_id) ?? null)
+      : null;
     const { webViewLink } = await upsertMarkdownFile(
       drive,
       contentFolderId,
       filename,
-      buildContentCalendarMarkdown(row, itemResearchCopy, itemScripts, itemPlatformPosts),
+      buildContentCalendarMarkdown(row, itemResearchCopy, itemScripts, itemPlatformPosts, derivedFromTitle),
     );
     contentLinks.set(row.id, webViewLink);
 

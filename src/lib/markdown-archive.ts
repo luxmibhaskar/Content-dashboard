@@ -190,6 +190,12 @@ export function buildContentCalendarMarkdown(
   researchCopyVersions: { source: VersionSource; is_live: boolean; data: ResearchCopyResult }[],
   scriptsVersions: { source: VersionSource; is_live: boolean; data: ScriptsResult }[],
   platformPosts: ContentPlatformPost[],
+  // Backup coverage audit (2026-08-27) Phase 2: the source item's own
+  // title, resolved by the caller (drive-archive.ts already builds a
+  // titleById map for the whole brand), same "readable, not a raw uuid"
+  // treatment every other content_id reference gets. null when this item
+  // isn't derived from anything.
+  derivedFromTitle: string | null,
 ): string {
   const title = row.final_title || row.raw_idea_title || "Untitled";
   const parts: string[] = [`# ${title}`];
@@ -202,8 +208,16 @@ export function buildContentCalendarMarkdown(
       field("Pillar", row.pillar),
       field("Sub-topic", row.sub_topic),
       field("Format", row.format),
-      list("Platform", row.platform_publishing ? Object.keys(row.platform_publishing) : null),
+      // Backup coverage audit (2026-08-27) Phase 2: real bug fixed here.
+      // This used to read row.platform_publishing, a dead column from
+      // the pre-redesign "Publishing Ready" section that nothing writes
+      // to anymore - it showed blank for every item posted since,
+      // even though the real data (row.platform, the "Posted on"
+      // picker's own column, format-platform-fields.tsx) existed all
+      // along and was already correct in the Sheets export.
+      list("Platform", row.platform),
       field("Publish date", row.publish_date),
+      field("Idea derived from", derivedFromTitle),
     ]),
   );
 
