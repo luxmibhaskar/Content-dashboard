@@ -23,6 +23,16 @@ import type {
 type Row = (string | number | boolean | null)[];
 type Tab = { title: string; headers: string[]; rows: Row[] };
 
+// Backup coverage audit (2026-08-27): every tab ends with a "Created At"
+// / "Updated At" pair, read straight from the source row's own
+// created_at / updated_at columns (every table has both, each with the
+// shared set_updated_at() trigger). Raw ISO strings, same passthrough
+// treatment every other timestamp in this file gets (snapshot_date,
+// generatedAt, etc.), written RAW so Sheets stores them verbatim. This
+// is a one-way, read-only backup signal ("when was this row last
+// touched"), not an import key, no restore logic reads it back.
+const TIMESTAMP_HEADERS = ["Created At", "Updated At"];
+
 function supabaseAdmin(): SupabaseClient {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,7 +72,7 @@ async function buildJourneyLogTab(supabase: SupabaseClient, brand: Brand): Promi
   const { data } = await supabase
     .from("journey_log")
     .select(
-      "entry_date, pillar_focus, sub_topic, what_i_did_experienced, key_lesson_insight, proof_results, mood_energy, tags_keywords, angle_worthy",
+      "entry_date, pillar_focus, sub_topic, what_i_did_experienced, key_lesson_insight, proof_results, mood_energy, tags_keywords, angle_worthy, created_at, updated_at",
     )
     .eq("brand", brand)
     .order("entry_date", { ascending: false });
@@ -77,6 +87,8 @@ async function buildJourneyLogTab(supabase: SupabaseClient, brand: Brand): Promi
     r.mood_energy,
     r.tags_keywords,
     r.angle_worthy ? "Yes" : "No",
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
@@ -91,6 +103,7 @@ async function buildJourneyLogTab(supabase: SupabaseClient, brand: Brand): Promi
       "Mood",
       "Tags",
       "Angle-Worthy",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -100,7 +113,7 @@ async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
   const { data } = await supabase
     .from("ideas")
     .select(
-      "idea_title, pillar, sub_topic, format, platform, brief_description, reference_url, idea_source, source_detail, status",
+      "idea_title, pillar, sub_topic, format, platform, brief_description, reference_url, idea_source, source_detail, status, created_at, updated_at",
     )
     .eq("brand", brand)
     .order("created_at", { ascending: false });
@@ -123,6 +136,8 @@ async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
     r.idea_source,
     r.source_detail,
     r.status,
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
@@ -138,6 +153,7 @@ async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
       "Idea Source",
       "Source Detail",
       "Status",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -159,7 +175,7 @@ async function buildContentCalendarTab(
     supabase
       .from("content_calendar")
       .select(
-        "id, final_title, viewer_problem, promise_outcome, pillar, sub_topic, format, platform, publish_date, production_status, viability_status, final_description, conversions, derived_from_content_id, retention_drop_note, earned_the_click",
+        "id, final_title, viewer_problem, promise_outcome, pillar, sub_topic, format, platform, publish_date, production_status, viability_status, final_description, conversions, derived_from_content_id, retention_drop_note, earned_the_click, created_at, updated_at",
       )
       .eq("brand", brand)
       .order("publish_date", { ascending: false }),
@@ -183,6 +199,8 @@ async function buildContentCalendarTab(
     r.retention_drop_note,
     r.earned_the_click,
     contentLinks.get(r.id) ?? "",
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
@@ -204,6 +222,7 @@ async function buildContentCalendarTab(
       "Retention Drop",
       "Earned The Click",
       "Full Detail Link",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -221,7 +240,7 @@ async function buildResearchCopyVersionsTab(supabase: SupabaseClient, brand: Bra
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("research_copy_versions")
-    .select("content_id, source, is_live, data")
+    .select("content_id, source, is_live, data, created_at, updated_at")
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((v) => {
@@ -237,6 +256,8 @@ async function buildResearchCopyVersionsTab(supabase: SupabaseClient, brand: Bra
       (d.questionTags ?? []).join(", "),
       (d.containers ?? []).map((c) => `${c.sourceName} (${c.type})`).join(", "),
       d.generatedAt,
+      v.created_at,
+      v.updated_at,
     ];
   });
 
@@ -253,6 +274,7 @@ async function buildResearchCopyVersionsTab(supabase: SupabaseClient, brand: Bra
       "Question Tags",
       "Source Containers",
       "Generated At",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -400,7 +422,7 @@ async function buildManualWorkflowPhasesTab(supabase: SupabaseClient, brand: Bra
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("manual_workflow_phases")
-    .select("content_id, phase, raw_pasted_text, parsed_data, status")
+    .select("content_id, phase, raw_pasted_text, parsed_data, status, created_at, updated_at")
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((row) => {
@@ -410,6 +432,8 @@ async function buildManualWorkflowPhasesTab(supabase: SupabaseClient, brand: Bra
       raw_pasted_text: string | null;
       parsed_data: unknown;
       status: string | null;
+      created_at: string;
+      updated_at: string;
     };
     const common: Row = [
       contentTitles.get(r.content_id) ?? r.content_id,
@@ -424,7 +448,7 @@ async function buildManualWorkflowPhasesTab(supabase: SupabaseClient, brand: Bra
     const scripting =
       r.phase === "scripting" ? scriptingPhaseColumns(r.parsed_data) : blankColumns(MANUAL_WORKFLOW_SCRIPTING_COLUMN_COUNT);
 
-    return [...common, ...research, ...packaging, ...scripting];
+    return [...common, ...research, ...packaging, ...scripting, r.created_at, r.updated_at];
   });
 
   return {
@@ -487,6 +511,7 @@ async function buildManualWorkflowPhasesTab(supabase: SupabaseClient, brand: Bra
       "Personal Information Needed",
       "Recommended Production Step",
       "Script Status",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -496,7 +521,7 @@ async function buildScriptsVersionsTab(supabase: SupabaseClient, brand: Brand): 
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("scripts_versions")
-    .select("content_id, source, is_live, data")
+    .select("content_id, source, is_live, data, created_at, updated_at")
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((v) => {
@@ -512,6 +537,8 @@ async function buildScriptsVersionsTab(supabase: SupabaseClient, brand: Brand): 
       (d.shortFormPointers ?? []).map((p) => `${p.point}: ${p.explanation}`).join("; "),
       (d.atomizedShorts ?? []).map((s) => s.title).join(", "),
       d.generatedAt,
+      v.created_at,
+      v.updated_at,
     ];
   });
 
@@ -528,6 +555,7 @@ async function buildScriptsVersionsTab(supabase: SupabaseClient, brand: Brand): 
       "Short-Form Pointers",
       "Atomized Shorts",
       "Generated At",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -539,15 +567,17 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
   const [{ data: titles }, { data: hooks }, { data: thumbs }] = await Promise.all([
     supabase
       .from("title_variants")
-      .select("content_id, variant_text, rank, source, performance_rating, is_live")
+      .select("content_id, variant_text, rank, source, performance_rating, is_live, created_at, updated_at")
       .eq("brand", brand),
     supabase
       .from("hook_variants")
-      .select("content_id, variant_text, rank, source, performance_rating, is_live, hook_type")
+      .select(
+        "content_id, variant_text, rank, source, performance_rating, is_live, hook_type, created_at, updated_at",
+      )
       .eq("brand", brand),
     supabase
       .from("thumbnail_variants")
-      .select("content_id, concept, rank, source, performance_rating, is_live")
+      .select("content_id, concept, rank, source, performance_rating, is_live, created_at, updated_at")
       .eq("brand", brand),
   ]);
 
@@ -562,6 +592,8 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       v.is_live ? "Yes" : "No",
       // No hook_type equivalent on title_variants.
       null,
+      v.created_at,
+      v.updated_at,
     ]),
     ...(hooks ?? []).map((v) => [
       "Hook",
@@ -575,6 +607,8 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       // Only hooks marked live since that fix carry a value, earlier rows
       // are null.
       v.hook_type,
+      v.created_at,
+      v.updated_at,
     ]),
     ...(thumbs ?? []).map((v) => [
       "Thumbnail",
@@ -586,6 +620,8 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       v.is_live ? "Yes" : "No",
       // No hook_type equivalent on thumbnail_variants.
       null,
+      v.created_at,
+      v.updated_at,
     ]),
   ];
 
@@ -600,6 +636,7 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       "Performance Rating",
       "Is Live",
       "Hook Type",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -616,16 +653,16 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
 async function buildHookLibraryTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("hook_library_entries")
-    .select("type, content, created_at")
+    .select("type, content, created_at, updated_at")
     .eq("brand", brand)
     .order("type", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const rows: Row[] = (data ?? []).map((r) => [r.type, r.content, r.created_at]);
+  const rows: Row[] = (data ?? []).map((r) => [r.type, r.content, r.created_at, r.updated_at]);
 
   return {
     title: "Hook Library",
-    headers: ["Type", "Content", "Created At"],
+    headers: ["Type", "Content", ...TIMESTAMP_HEADERS],
     rows,
   };
 }
@@ -634,7 +671,7 @@ async function buildReferenceVideosTab(supabase: SupabaseClient, brand: Brand): 
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("reference_videos")
-    .select("content_id, url, hook_note, rehook_note, cta_note, date_added")
+    .select("content_id, url, hook_note, rehook_note, cta_note, date_added, created_at, updated_at")
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((r) => [
@@ -644,11 +681,21 @@ async function buildReferenceVideosTab(supabase: SupabaseClient, brand: Brand): 
     r.rehook_note,
     r.cta_note,
     r.date_added,
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
     title: "Reference Videos",
-    headers: ["Content Item", "URL", "Hook Note", "Re-hook Note", "CTA Note", "Date Added"],
+    headers: [
+      "Content Item",
+      "URL",
+      "Hook Note",
+      "Re-hook Note",
+      "CTA Note",
+      "Date Added",
+      ...TIMESTAMP_HEADERS,
+    ],
     rows,
   };
 }
@@ -661,7 +708,9 @@ async function buildResearchSnapshotsTab(
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("research_snapshots")
-    .select("id, content_id, snapshot_date, summary, youtube_data, reddit_data, quora_data")
+    .select(
+      "id, content_id, snapshot_date, summary, youtube_data, reddit_data, quora_data, created_at, updated_at",
+    )
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((r) => [
@@ -672,6 +721,8 @@ async function buildResearchSnapshotsTab(
     sourceCount(r.reddit_data),
     sourceCount(r.quora_data),
     snapshotLinks.get(r.id) ?? "",
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
@@ -684,6 +735,7 @@ async function buildResearchSnapshotsTab(
       "Reddit Count",
       "Quora Count",
       "Full Detail Link",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -693,7 +745,7 @@ async function buildWeeklyReviewsTab(supabase: SupabaseClient, brand: Brand): Pr
   const { data } = await supabase
     .from("weekly_reviews")
     .select(
-      "week_start_date, week_end_date, posted_as_planned, pillar_balance_notes, retention_drop_patterns, hook_library_insights, earned_click_updates, next_week_adjustment",
+      "week_start_date, week_end_date, posted_as_planned, pillar_balance_notes, retention_drop_patterns, hook_library_insights, earned_click_updates, next_week_adjustment, created_at, updated_at",
     )
     .eq("brand", brand)
     .order("week_start_date", { ascending: false });
@@ -707,6 +759,8 @@ async function buildWeeklyReviewsTab(supabase: SupabaseClient, brand: Brand): Pr
     r.hook_library_insights,
     r.earned_click_updates,
     r.next_week_adjustment,
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
@@ -720,6 +774,7 @@ async function buildWeeklyReviewsTab(supabase: SupabaseClient, brand: Brand): Pr
       "Hook Library Insights",
       "Earned Click Updates",
       "Next Week Adjustment",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -728,14 +783,21 @@ async function buildWeeklyReviewsTab(supabase: SupabaseClient, brand: Brand): Pr
 async function buildCompetitorsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("competitors")
-    .select("name, platform, profile_url, notes")
+    .select("name, platform, profile_url, notes, created_at, updated_at")
     .eq("brand", brand);
 
-  const rows: Row[] = (data ?? []).map((r) => [r.name, r.platform, r.profile_url, r.notes]);
+  const rows: Row[] = (data ?? []).map((r) => [
+    r.name,
+    r.platform,
+    r.profile_url,
+    r.notes,
+    r.created_at,
+    r.updated_at,
+  ]);
 
   return {
     title: "Competitors",
-    headers: ["Name", "Platform", "Profile URL", "Notes"],
+    headers: ["Name", "Platform", "Profile URL", "Notes", ...TIMESTAMP_HEADERS],
     rows,
   };
 }
@@ -744,7 +806,7 @@ async function buildCompetitorBenchmarksTab(supabase: SupabaseClient, brand: Bra
   const contentTitles = await contentTitleMap(supabase, brand);
   const { data } = await supabase
     .from("competitor_benchmarks")
-    .select("content_id, competitor_name, platform, url, why_benchmark")
+    .select("content_id, competitor_name, platform, url, why_benchmark, created_at, updated_at")
     .eq("brand", brand);
 
   const rows: Row[] = (data ?? []).map((r) => [
@@ -753,11 +815,20 @@ async function buildCompetitorBenchmarksTab(supabase: SupabaseClient, brand: Bra
     r.platform,
     r.url,
     r.why_benchmark,
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
     title: "Competitor Benchmarks",
-    headers: ["Content Item", "Competitor", "Platform", "URL", "Why Benchmark"],
+    headers: [
+      "Content Item",
+      "Competitor",
+      "Platform",
+      "URL",
+      "Why Benchmark",
+      ...TIMESTAMP_HEADERS,
+    ],
     rows,
   };
 }
@@ -765,7 +836,7 @@ async function buildCompetitorBenchmarksTab(supabase: SupabaseClient, brand: Bra
 async function buildDailyStreaksTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("daily_streaks")
-    .select("streak_date, walked, posted")
+    .select("streak_date, walked, posted, created_at, updated_at")
     .eq("brand", brand)
     .order("streak_date", { ascending: false });
 
@@ -773,11 +844,13 @@ async function buildDailyStreaksTab(supabase: SupabaseClient, brand: Brand): Pro
     r.streak_date,
     r.walked ? "Yes" : "No",
     r.posted ? "Yes" : "No",
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
     title: "Daily Streaks",
-    headers: ["Date", WALK_STREAK_LABEL[brand].name, "Posted"],
+    headers: ["Date", WALK_STREAK_LABEL[brand].name, "Posted", ...TIMESTAMP_HEADERS],
     rows,
   };
 }
@@ -792,15 +865,21 @@ async function buildDailyStreaksTab(supabase: SupabaseClient, brand: Brand): Pro
 async function buildPlatformSnapshotsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("platform_snapshots")
-    .select("platform, follower_count, snapshot_date")
+    .select("platform, follower_count, snapshot_date, created_at, updated_at")
     .eq("brand", brand)
     .order("snapshot_date", { ascending: false });
 
-  const rows: Row[] = (data ?? []).map((r) => [r.platform, r.follower_count, r.snapshot_date]);
+  const rows: Row[] = (data ?? []).map((r) => [
+    r.platform,
+    r.follower_count,
+    r.snapshot_date,
+    r.created_at,
+    r.updated_at,
+  ]);
 
   return {
     title: "Platform Snapshots",
-    headers: ["Platform", "Follower Count", "Snapshot Date"],
+    headers: ["Platform", "Follower Count", "Snapshot Date", ...TIMESTAMP_HEADERS],
     rows,
   };
 }
@@ -808,15 +887,21 @@ async function buildPlatformSnapshotsTab(supabase: SupabaseClient, brand: Brand)
 async function buildCustomSubTopicsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("custom_sub_topics")
-    .select("pillar, sub_topic, is_archived")
+    .select("pillar, sub_topic, is_archived, created_at, updated_at")
     .eq("brand", brand)
     .order("pillar", { ascending: true });
 
-  const rows: Row[] = (data ?? []).map((r) => [r.pillar, r.sub_topic, r.is_archived ? "Yes" : "No"]);
+  const rows: Row[] = (data ?? []).map((r) => [
+    r.pillar,
+    r.sub_topic,
+    r.is_archived ? "Yes" : "No",
+    r.created_at,
+    r.updated_at,
+  ]);
 
   return {
     title: "Custom Sub-topics",
-    headers: ["Pillar", "Sub-topic", "Archived"],
+    headers: ["Pillar", "Sub-topic", "Archived", ...TIMESTAMP_HEADERS],
     rows,
   };
 }
@@ -832,7 +917,7 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
     supabase
       .from("goals")
       .select(
-        "goal_text, target_metric, target_value, current_value, target_date, status, platform_name, icon_slug",
+        "goal_text, target_metric, target_value, current_value, target_date, status, platform_name, icon_slug, created_at, updated_at",
       )
       .eq("brand", brand),
     supabase
@@ -868,12 +953,12 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
   // pre-redesign (platform_name null) rows through with their raw
   // stored current_value untouched, same "preserve what a superseded
   // field actually holds" rule this file follows elsewhere.
-  const rawGoals = (goalRows ?? []) as Goal[];
+  const rawGoals = (goalRows ?? []) as unknown as (Goal & { created_at: string; updated_at: string })[];
   const resolved = resolveGoalCurrentValues(rawGoals, totalViews, latestSnapshotsByPlatform).map((g, i) =>
     rawGoals[i].platform_name === null ? rawGoals[i] : g,
   );
 
-  const rows: Row[] = resolved.map((g) => [
+  const rows: Row[] = resolved.map((g, i) => [
     g.platform_name,
     g.icon_slug,
     g.status,
@@ -882,6 +967,8 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
     g.target_date,
     g.target_metric,
     g.goal_text,
+    rawGoals[i].created_at,
+    rawGoals[i].updated_at,
   ]);
 
   return {
@@ -895,6 +982,7 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
       "Target Date",
       "Legacy Target Metric",
       "Legacy Goal Text",
+      ...TIMESTAMP_HEADERS,
     ],
     rows,
   };
@@ -903,7 +991,7 @@ async function buildGoalsTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
 async function buildCollaboratorsTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("collaborators")
-    .select("name, platform, profile_url, status, notes, last_contact_date")
+    .select("name, platform, profile_url, status, notes, last_contact_date, created_at, updated_at")
     .eq("brand", brand)
     .order("name", { ascending: true });
 
@@ -914,11 +1002,21 @@ async function buildCollaboratorsTab(supabase: SupabaseClient, brand: Brand): Pr
     r.status,
     r.notes,
     r.last_contact_date,
+    r.created_at,
+    r.updated_at,
   ]);
 
   return {
     title: "Collaborators",
-    headers: ["Name", "Platform", "Profile URL", "Status", "Notes", "Last Contact Date"],
+    headers: [
+      "Name",
+      "Platform",
+      "Profile URL",
+      "Status",
+      "Notes",
+      "Last Contact Date",
+      ...TIMESTAMP_HEADERS,
+    ],
     rows,
   };
 }
