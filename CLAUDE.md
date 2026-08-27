@@ -53,8 +53,12 @@ When "Phase N" comes up, always confirm which one is meant:
   this note: Phase 1 and Phase 2 are substantially built. Phase 3 is
   partial, Hook Library and Weekly Review are built; the Pillar Tree
   (Section 15.1) was built then removed as part of the dashboard
-  redesign below; the Services panel's live status checks and "Check
-  Alternatives" research (Section 5.3) are not yet built.
+  redesign below; the Services panel's live status checks (Section 5.3)
+  are built and working (real usage numbers pulled on-expand for
+  whichever services expose one). "Check Alternatives" (same section)
+  was also built, then deliberately removed per explicit instruction,
+  not left unbuilt, its schema (`service_alternative_checks`) and code
+  remain unused in case it's wanted back.
 - **Redesign phases** (`docs/dashboard-redesign.md`): all four phases
   are built (Command Center layout, Platforms data model, Command
   Center graphs, full visual treatment).

@@ -87,7 +87,7 @@ async function buildJourneyLogTab(supabase: SupabaseClient, brand: Brand): Promi
 async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Tab> {
   const { data } = await supabase
     .from("ideas")
-    .select("idea_title, pillar, sub_topic, format, brief_description, reference_url, status")
+    .select("idea_title, pillar, sub_topic, format, platform, brief_description, reference_url, status")
     .eq("brand", brand)
     .order("created_at", { ascending: false });
 
@@ -96,6 +96,10 @@ async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
     r.pillar,
     r.sub_topic,
     r.format,
+    // Idea Panel format field (2026-08-27): supabase/migrations/0022_ideas_platform.sql,
+    // same shape as content_calendar.platform, same join-with-comma rendering
+    // as that tab's own Platform column.
+    (r.platform ?? []).join(", "),
     r.brief_description,
     r.reference_url,
     r.status,
@@ -103,7 +107,16 @@ async function buildIdeasTab(supabase: SupabaseClient, brand: Brand): Promise<Ta
 
   return {
     title: "Ideas",
-    headers: ["Idea Title", "Pillar", "Sub-topic", "Format", "Brief Description", "Reference URL", "Status"],
+    headers: [
+      "Idea Title",
+      "Pillar",
+      "Sub-topic",
+      "Format",
+      "Platform",
+      "Brief Description",
+      "Reference URL",
+      "Status",
+    ],
     rows,
   };
 }
@@ -258,7 +271,7 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       .eq("brand", brand),
     supabase
       .from("hook_variants")
-      .select("content_id, variant_text, rank, source, performance_rating, is_live")
+      .select("content_id, variant_text, rank, source, performance_rating, is_live, hook_type")
       .eq("brand", brand),
     supabase
       .from("thumbnail_variants")
@@ -275,6 +288,8 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       v.source,
       v.performance_rating,
       v.is_live ? "Yes" : "No",
+      // No hook_type equivalent on title_variants.
+      null,
     ]),
     ...(hooks ?? []).map((v) => [
       "Hook",
@@ -284,6 +299,10 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       v.source,
       v.performance_rating,
       v.is_live ? "Yes" : "No",
+      // Analytics audit (2026-08-27) Phase 4: 0021_hook_variants_type.sql.
+      // Only hooks marked live since that fix carry a value, earlier rows
+      // are null.
+      v.hook_type,
     ]),
     ...(thumbs ?? []).map((v) => [
       "Thumbnail",
@@ -293,12 +312,23 @@ async function buildVariantsTab(supabase: SupabaseClient, brand: Brand): Promise
       v.source,
       v.performance_rating,
       v.is_live ? "Yes" : "No",
+      // No hook_type equivalent on thumbnail_variants.
+      null,
     ]),
   ];
 
   return {
     title: "Variants",
-    headers: ["Variant Type", "Content Item", "Text", "Rank", "Source", "Performance Rating", "Is Live"],
+    headers: [
+      "Variant Type",
+      "Content Item",
+      "Text",
+      "Rank",
+      "Source",
+      "Performance Rating",
+      "Is Live",
+      "Hook Type",
+    ],
     rows,
   };
 }
