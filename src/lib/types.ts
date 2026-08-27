@@ -134,8 +134,6 @@ export type ContentCalendarDetail = ContentCalendarItem & {
   success_metric_focus: string | null;
   follow_up_content_ideas: string[] | null;
   analytics_review_date: string | null;
-  retention_drop_timestamp: string | null;
-  retention_drop_note: string | null;
   earned_the_click: string | null;
   earned_click_note: string | null;
   derived_from_content_id: string | null;

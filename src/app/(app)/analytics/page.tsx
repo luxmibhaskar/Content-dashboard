@@ -552,6 +552,21 @@ export default async function AnalyticsPage({
                         {" "}
                         &middot; {t.points.length} check-ins
                       </span>
+                      {/* The per-check-in retention notes, previously
+                          captured and backed up but shown nowhere. One
+                          line per check-in that has a note: drop point
+                          (date) - note. */}
+                      {t.points.some((p) => p.note) && (
+                        <ul className="mt-1 ml-3 space-y-0.5 text-xs text-muted-foreground">
+                          {t.points
+                            .filter((p) => p.note)
+                            .map((p, i) => (
+                              <li key={i}>
+                                {p.rawText} ({p.date}): {p.note}
+                              </li>
+                            ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>

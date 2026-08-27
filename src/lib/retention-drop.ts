@@ -25,6 +25,7 @@ export function formatSecondsAsTimestamp(totalSeconds: number): string {
 export type RetentionSnapshotInput = {
   snapshot_date: string;
   retention_drop_timestamp: string | null;
+  retention_drop_note: string | null;
 };
 
 export type RetentionDropPost = {
@@ -34,7 +35,12 @@ export type RetentionDropPost = {
   content_platform_stats_snapshots: RetentionSnapshotInput[];
 };
 
-export type RetentionDropPoint = { date: string; seconds: number; rawText: string };
+export type RetentionDropPoint = {
+  date: string;
+  seconds: number;
+  rawText: string;
+  note: string | null;
+};
 
 export type RetentionDropTrend = {
   contentId: string;
@@ -58,7 +64,12 @@ export function computeRetentionDropTrends(posts: RetentionDropPost[]): Retentio
         const seconds = parseRetentionDropSeconds(s.retention_drop_timestamp);
         return seconds === null
           ? null
-          : { date: s.snapshot_date, seconds, rawText: s.retention_drop_timestamp as string };
+          : {
+              date: s.snapshot_date,
+              seconds,
+              rawText: s.retention_drop_timestamp as string,
+              note: s.retention_drop_note,
+            };
       })
       .filter((p): p is RetentionDropPoint => p !== null)
       .sort((a, b) => a.date.localeCompare(b.date));

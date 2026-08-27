@@ -636,7 +636,7 @@ Fields:
 
 Plus:
 
-- `retention_drop_timestamp` (timestamp + short note on what was happening there).
+- `retention_drop_timestamp` (timestamp + short note on what was happening there). ⚠ Superseded: `content_calendar.retention_drop_timestamp` / `retention_drop_note` were dropped in `0023_drop_content_calendar_retention_drop.sql`. Retention drop is now one reading per platform check-in on `content_platform_stats_snapshots` (`0020_retention_drop_check_ins.sql`), entered in the topic page's "Log a check-in" form and trended in Analytics' Retention Drop Trends.
 - `earned_the_click` (Yes / No / Unsure).
 - `earned_click_note` (optional).
 - `derived_from_content_id` (self‑referencing FK to `content_calendar`, optional) — **set manually, only on the derivative side, never the source side.** When editing a Short (or any repurposed piece), a search‑and‑select field lets you type the source video's title and pick it from matching results, that's the entire interaction. The long‑form source's "Derivatives" list is never edited directly, it's always computed by looking up which items point back to it, updating automatically the moment a Short links to it. Shown visibly in the topic page header both directions (see Header, above), not just stored invisibly. Powers the Repurposing Performance graph (Section 6.4). *(new in v1.3)*
@@ -1063,7 +1063,7 @@ Directly addresses the Supabase storage growth risk (Section 18): published cont
 - `title`, `viewer_problem`, `promise_outcome`, `pillar`, `sub_topic`, `format`, `platform`, `publish_date`
 - production status, viability status
 - performance metrics: views, engagement, conversions — **critical this never archives away**, the Analytics Overview's All‑time filter (Section 6.1) depends on this data staying queryable for every item ever published, not just the last week
-- `retention_drop_timestamp`, `earned_the_click`
+- `earned_the_click` (retention drop moved to `content_platform_stats_snapshots`, see the ⚠ note earlier in this section)
 - a reference to which variant is `is_live` (just the pointer, not the full variant history)
 
 **Archives after 7 days** (cleared from Supabase, already safely duplicated in the Drive archive, nothing is lost, just relocated):

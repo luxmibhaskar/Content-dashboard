@@ -175,7 +175,7 @@ async function buildContentCalendarTab(
     supabase
       .from("content_calendar")
       .select(
-        "id, final_title, viewer_problem, promise_outcome, pillar, sub_topic, format, platform, publish_date, production_status, viability_status, final_description, conversions, derived_from_content_id, retention_drop_note, earned_the_click, created_at, updated_at",
+        "id, final_title, viewer_problem, promise_outcome, pillar, sub_topic, format, platform, publish_date, production_status, viability_status, final_description, conversions, derived_from_content_id, earned_the_click, created_at, updated_at",
       )
       .eq("brand", brand)
       .order("publish_date", { ascending: false }),
@@ -196,7 +196,6 @@ async function buildContentCalendarTab(
     r.final_description,
     r.conversions,
     r.derived_from_content_id ? (contentTitles.get(r.derived_from_content_id) ?? r.derived_from_content_id) : "",
-    r.retention_drop_note,
     r.earned_the_click,
     contentLinks.get(r.id) ?? "",
     r.created_at,
@@ -219,7 +218,6 @@ async function buildContentCalendarTab(
       "Short Description",
       "Conversions",
       "Idea Derived From",
-      "Retention Drop",
       "Earned The Click",
       "Full Detail Link",
       ...TIMESTAMP_HEADERS,

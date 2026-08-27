@@ -268,12 +268,11 @@ export function computeHookTypePerformance(
 
 // 6. Retention Drop Patterns retired here (analytics audit, 2026-08-27,
 // Phase 3): it read content_calendar.retention_drop_note/timestamp,
-// whose only UI setter was removed in topic-page-redesign.md Section 9
-// and never came back, so this list could only ever show whatever
-// grandfathered data existed before that removal, permanently dead for
-// anything published since. Replaced by computeRetentionDropTrends
-// (src/lib/retention-drop.ts), sourced from the new, real, per-check-in
-// field on content_platform_stats_snapshots instead.
+// whose only UI setter was removed in topic-page-redesign.md Section 9.
+// Replaced by computeRetentionDropTrends (src/lib/retention-drop.ts),
+// sourced from the per-check-in fields on
+// content_platform_stats_snapshots. The two content_calendar columns
+// were dropped entirely in 0023_drop_content_calendar_retention_drop.sql.
 
 // 8. Idea Source Performance
 export function computeIdeaSourcePerformance(rows: ExtendedMetricsRow[]): NamedMetric[] {

@@ -161,50 +161,60 @@ function PlatformAnalyticsCard({
         {logOpen && (
           <form
             action={(formData) => startTransition(() => boundLog(formData))}
-            className="mt-2 flex flex-wrap items-end gap-2"
+            className="mt-2 space-y-3"
           >
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground" htmlFor={`snapshot_date-${post.id}`}>
-                Date
-              </label>
-              <input
-                id={`snapshot_date-${post.id}`}
-                type="date"
-                name="snapshot_date"
-                max={todayDateKey()}
-                defaultValue={todayDateKey()}
-                required
-                className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
-              />
+            {/* Retention drop leads the check-in: it's the qualitative
+                "where/why did viewers leave" read, captured before
+                rattling through the metric numbers rather than tacked
+                on last. One reading per check-in
+                (0020_retention_drop_check_ins.sql) so the drop point can
+                be seen moving earlier/later over time
+                (src/lib/retention-drop.ts, Analytics' Retention Drop
+                Trends). Free text, same "timestamp + a short note" shape
+                the old per-item field always used. */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Retention drop</p>
+              <div className="flex flex-wrap items-end gap-2">
+                <Input
+                  name="retention_drop_timestamp"
+                  type="text"
+                  placeholder="Drop point, e.g. 2:15"
+                  className="h-8 w-32 text-sm"
+                />
+                <Input
+                  name="retention_drop_note"
+                  type="text"
+                  placeholder="What was happening there"
+                  className="h-8 w-56 text-sm"
+                />
+              </div>
             </div>
-            <Input name="views" type="number" min={0} placeholder="Views" className="h-8 w-24 text-sm" />
-            <Input name="likes" type="number" min={0} placeholder="Likes" className="h-8 w-24 text-sm" />
-            <Input name="comments" type="number" min={0} placeholder="Comments" className="h-8 w-24 text-sm" />
-            <Input name="saves" type="number" min={0} placeholder="Saves" className="h-8 w-24 text-sm" />
-            <Input name="shares" type="number" min={0} placeholder="Shares" className="h-8 w-24 text-sm" />
-            <Input name="reposts" type="number" min={0} placeholder="Reposts" className="h-8 w-24 text-sm" />
-            {/* Analytics audit (2026-08-27) Phase 3: one retention drop
-                reading per check-in now, not one per item, so it's
-                possible to see whether the drop point is moving later
-                (improving) or earlier (worsening) across check-ins
-                (src/lib/retention-drop.ts, Analytics Overview's
-                Retention Drop Trends). Free text, same "timestamp + a
-                short note" shape the old per-item field always used. */}
-            <Input
-              name="retention_drop_timestamp"
-              type="text"
-              placeholder="Drop point, e.g. 2:15"
-              className="h-8 w-32 text-sm"
-            />
-            <Input
-              name="retention_drop_note"
-              type="text"
-              placeholder="What was happening there"
-              className="h-8 w-40 text-sm"
-            />
-            <Button type="submit" size="xs" variant="outline" loading={isPending}>
-              Save
-            </Button>
+
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground" htmlFor={`snapshot_date-${post.id}`}>
+                  Date
+                </label>
+                <input
+                  id={`snapshot_date-${post.id}`}
+                  type="date"
+                  name="snapshot_date"
+                  max={todayDateKey()}
+                  defaultValue={todayDateKey()}
+                  required
+                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+              <Input name="views" type="number" min={0} placeholder="Views" className="h-8 w-24 text-sm" />
+              <Input name="likes" type="number" min={0} placeholder="Likes" className="h-8 w-24 text-sm" />
+              <Input name="comments" type="number" min={0} placeholder="Comments" className="h-8 w-24 text-sm" />
+              <Input name="saves" type="number" min={0} placeholder="Saves" className="h-8 w-24 text-sm" />
+              <Input name="shares" type="number" min={0} placeholder="Shares" className="h-8 w-24 text-sm" />
+              <Input name="reposts" type="number" min={0} placeholder="Reposts" className="h-8 w-24 text-sm" />
+              <Button type="submit" size="xs" variant="outline" loading={isPending}>
+                Save
+              </Button>
+            </div>
           </form>
         )}
       </div>

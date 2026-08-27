@@ -44,7 +44,7 @@ const SELECT_COLUMNS = `
   sequence_step, sequence_order_custom, evidence_condition, script_outline_link,
   published_url, performance_notes, series_playlist, search_demand_trend_signal,
   success_metric_focus, follow_up_content_ideas, analytics_review_date,
-  retention_drop_timestamp, retention_drop_note, earned_the_click, earned_click_note,
+  earned_the_click, earned_click_note,
   derived_from_content_id,
   conversions,
   final_description, plain_keyword_tags, question_style_tags,

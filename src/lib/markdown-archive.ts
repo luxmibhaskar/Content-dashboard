@@ -269,8 +269,6 @@ export function buildContentCalendarMarkdown(
       field("Success metric focus", row.success_metric_focus),
       list("Follow-up content ideas", row.follow_up_content_ideas),
       field("Analytics review date", row.analytics_review_date),
-      field("Retention drop timestamp", row.retention_drop_timestamp),
-      field("Retention drop note", row.retention_drop_note),
       field("Earned the click", row.earned_the_click),
       field("Earned click note", row.earned_click_note),
     ]),
