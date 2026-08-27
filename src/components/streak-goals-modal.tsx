@@ -8,6 +8,8 @@ import { StreakLogForm } from "@/components/streak-goals/streak-log-form";
 import { PlatformGoalCard } from "@/components/streak-goals/platform-goal-card";
 import { AddPlatformGoalForm } from "@/components/streak-goals/add-platform-goal-form";
 import { postStreakVisibility, shuffleVisibility, walkStreakVisibility } from "@/lib/shuffle-visibility";
+import { WALK_STREAK_LABEL } from "@/lib/streaks";
+import type { Brand } from "@/lib/brand";
 import type { Goal } from "@/lib/types";
 
 type Tab = "streak" | "goals";
@@ -24,6 +26,7 @@ type Tab = "streak" | "goals";
 // backfill) and full goal CRUD are different tasks, not one continuous
 // flow.
 export function StreakGoalsModal({
+  brand,
   open,
   onOpenChange,
   walkStreak,
@@ -32,6 +35,7 @@ export function StreakGoalsModal({
   todayPosted,
   goals,
 }: {
+  brand: Brand;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   walkStreak: number;
@@ -71,7 +75,7 @@ export function StreakGoalsModal({
             </Dialog.Close>
           </div>
           <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-            Walk streak: <span className="font-medium text-foreground">{walkStreak}</span>{" "}
+            {WALK_STREAK_LABEL[brand].short}: <span className="font-medium text-foreground">{walkStreak}</span>{" "}
             &middot; Posting streak: <span className="font-medium text-foreground">{postStreak}</span>
           </Dialog.Description>
 
@@ -87,7 +91,7 @@ export function StreakGoalsModal({
                 onChange={(e) => walkStreakVisibility.set(e.target.checked)}
                 className="size-4 rounded border-input"
               />
-              Show Walk streak in top bar
+              Show {WALK_STREAK_LABEL[brand].short} in top bar
             </label>
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <input
@@ -129,7 +133,7 @@ export function StreakGoalsModal({
           </div>
 
           <div className={tab === "streak" ? "mt-4" : "mt-4 hidden"}>
-            <StreakLogForm todayWalked={todayWalked} todayPosted={todayPosted} />
+            <StreakLogForm brand={brand} todayWalked={todayWalked} todayPosted={todayPosted} />
           </div>
 
           <div className={tab === "goals" ? "mt-4 space-y-3" : "mt-4 hidden"}>

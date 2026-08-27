@@ -166,6 +166,7 @@ export function TopBar({
             responsive mechanism, there's real room at this tier. */}
         <div className="hidden min-w-0 md:flex">
           <StreakGoalsBar
+            brand={brand}
             walkStreak={walkStreak}
             postStreak={postStreak}
             goals={goals}
@@ -237,6 +238,7 @@ export function TopBar({
       {mobileOpen && (
         <div className="flex flex-col gap-4 border-t border-border px-4 py-3 md:hidden">
           <StreakGoalsBar
+            brand={brand}
             walkStreak={walkStreak}
             postStreak={postStreak}
             goals={goals}
@@ -282,6 +284,7 @@ export function TopBar({
       )}
 
       <StreakGoalsModal
+        brand={brand}
         open={goalsModalOpen}
         onOpenChange={setGoalsModalOpen}
         walkStreak={walkStreak}

@@ -1,4 +1,5 @@
-import type { HeatmapCell } from "@/lib/streaks";
+import { WALK_STREAK_LABEL, type HeatmapCell } from "@/lib/streaks";
+import type { Brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 const LEVEL_CLASS: Record<0 | 1 | 2, string> = {
@@ -9,11 +10,12 @@ const LEVEL_CLASS: Record<0 | 1 | 2, string> = {
 
 // Section 6.4: GitHub-style contribution heatmap from daily_streaks.
 // One column per week (Sun-Sat rows), oldest week first.
-export function StreakHeatmap({ cells }: { cells: HeatmapCell[] }) {
+export function StreakHeatmap({ brand, cells }: { brand: Brand; cells: HeatmapCell[] }) {
   if (cells.length === 0) {
     return <p className="text-sm text-muted-foreground">No streak history yet.</p>;
   }
 
+  const streakWord = WALK_STREAK_LABEL[brand].word;
   const weeks: HeatmapCell[][] = [];
   for (let i = 0; i < cells.length; i += 7) {
     weeks.push(cells.slice(i, i + 7));
@@ -27,7 +29,7 @@ export function StreakHeatmap({ cells }: { cells: HeatmapCell[] }) {
             {week.map((cell) => (
               <div
                 key={cell.date}
-                title={`${cell.date}: ${cell.level === 2 ? "walked + posted" : cell.level === 1 ? "walked or posted" : "neither"}`}
+                title={`${cell.date}: ${cell.level === 2 ? `${streakWord} + posted` : cell.level === 1 ? `${streakWord} or posted` : "neither"}`}
                 className={cn("size-3 rounded-sm", LEVEL_CLASS[cell.level])}
               />
             ))}

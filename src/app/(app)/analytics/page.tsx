@@ -31,7 +31,7 @@ import {
 } from "@/lib/analytics";
 import { aggregateByContentId } from "@/lib/platform-analytics";
 import { computeRetentionDropTrends, formatSecondsAsTimestamp, type RetentionDropPost } from "@/lib/retention-drop";
-import { computeStreak, computeStreakHeatmap, type StreakRow } from "@/lib/streaks";
+import { computeStreak, computeStreakHeatmap, WALK_STREAK_LABEL, type StreakRow } from "@/lib/streaks";
 import type { HookLibraryType } from "@/lib/types";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
@@ -296,7 +296,10 @@ export default async function AnalyticsPage({
             />
           </>
         )}
-        <KpiCard label="Current Streak" value={`${walkStreak} walk / ${postStreak} post`} />
+        <KpiCard
+          label="Current Streak"
+          value={`${walkStreak} ${WALK_STREAK_LABEL[brand].word} / ${postStreak} post`}
+        />
       </div>
 
       <section className="mt-8">
@@ -433,7 +436,7 @@ export default async function AnalyticsPage({
           <section>
             <h3 className="text-sm font-medium text-muted-foreground">Streak History</h3>
             <GlowCard neutral className="mt-2 p-4">
-              <StreakHeatmap cells={streakHeatmap} />
+              <StreakHeatmap brand={brand} cells={streakHeatmap} />
             </GlowCard>
           </section>
 

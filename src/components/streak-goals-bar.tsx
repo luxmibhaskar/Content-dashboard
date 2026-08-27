@@ -3,6 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { findPlatformIcon } from "@/lib/platform-icons";
 import { postStreakVisibility, shuffleVisibility, walkStreakVisibility } from "@/lib/shuffle-visibility";
+import { WALK_STREAK_LABEL } from "@/lib/streaks";
+import type { Brand } from "@/lib/brand";
 import type { Goal } from "@/lib/types";
 
 const ROTATE_MS = 4000;
@@ -32,11 +34,13 @@ function progressLabel(goal: Goal) {
 // right. No wrapping border/centering of its own anymore, the parent
 // row's own layout (justify-between) handles that.
 export function StreakGoalsBar({
+  brand,
   walkStreak,
   postStreak,
   goals,
   onOpenGoalsModal,
 }: {
+  brand: Brand;
   walkStreak: number;
   postStreak: number;
   goals: Goal[];
@@ -75,7 +79,7 @@ export function StreakGoalsBar({
     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
       {walkStreakVisible && (
         <span>
-          Walk streak: <span className="font-medium text-foreground">{walkStreak}</span>
+          {WALK_STREAK_LABEL[brand].short}: <span className="font-medium text-foreground">{walkStreak}</span>
         </span>
       )}
       {postStreakVisible && (

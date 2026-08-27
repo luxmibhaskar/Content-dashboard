@@ -1,6 +1,44 @@
 import { localDateKey } from "@/lib/date";
+import type { Brand } from "@/lib/brand";
 
 export type StreakRow = { streak_date: string; walked: boolean; posted: boolean };
+
+// Streak renaming, per brand (2026-08-27): the underlying tracking is
+// identical for both brands - same daily_streaks.walked boolean, same
+// consecutive-day streak logic (computeStreak below) - only what it
+// means, and is called, differs. LBsTransformation keeps its literal
+// walking meaning, just relabeled. LBsWorks repurposes the same column
+// for a different daily check-in entirely (a walking metric never fit
+// that brand's build-in-public identity), so its copy doesn't mention
+// walking at all. Never surface the column name "walked" itself in UI
+// copy, always go through this map.
+export const WALK_STREAK_LABEL: Record<
+  Brand,
+  {
+    name: string;
+    short: string;
+    // One word, for compact spots (Analytics Overview's "N walk / M post"
+    // KPI value) where the full "short" label doesn't fit.
+    word: string;
+    checkinQuestionToday: string;
+    checkinQuestionPast: string;
+  }
+> = {
+  lbstransformation: {
+    name: "Walk/Workout Streak",
+    short: "Walk/Workout streak",
+    word: "walk",
+    checkinQuestionToday: "Walked/worked out today?",
+    checkinQuestionPast: "Walked/worked out?",
+  },
+  lbsworks: {
+    name: "Work/Innovation Streak",
+    short: "Work/Innovation streak",
+    word: "work",
+    checkinQuestionToday: "Worked on something innovative today?",
+    checkinQuestionPast: "Worked on something innovative?",
+  },
+};
 
 export function todayDateKey() {
   return localDateKey(new Date());

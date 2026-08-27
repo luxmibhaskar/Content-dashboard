@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { logStreakEntry } from "@/app/actions/streaks";
-import { todayDateKey } from "@/lib/streaks";
+import { todayDateKey, WALK_STREAK_LABEL } from "@/lib/streaks";
+import type { Brand } from "@/lib/brand";
 
 // Streak & Goals redesign: relocated off the old StreakStrip's inline
 // popover (that component is gone, this page holds all the actual
@@ -13,12 +14,15 @@ import { todayDateKey } from "@/lib/streaks";
 // toggle exposing a real date input for backfilling a forgotten day,
 // rather than only ever being able to log for today.
 export function StreakLogForm({
+  brand,
   todayWalked,
   todayPosted,
 }: {
+  brand: Brand;
   todayWalked: boolean;
   todayPosted: boolean;
 }) {
+  const label = WALK_STREAK_LABEL[brand];
   const [isPending, startTransition] = useTransition();
   const [backfillOpen, setBackfillOpen] = useState(false);
   const [isBackfillPending, startBackfillTransition] = useTransition();
@@ -34,7 +38,7 @@ export function StreakLogForm({
           <input type="hidden" name="streak_date" value={todayDateKey()} />
           <label className="flex items-center gap-1.5 text-sm">
             <input type="checkbox" name="walked" defaultChecked={todayWalked} className="size-3.5" />
-            Walked today?
+            {label.checkinQuestionToday}
           </label>
           <label className="flex items-center gap-1.5 text-sm">
             <input type="checkbox" name="posted" defaultChecked={todayPosted} className="size-3.5" />
@@ -68,7 +72,7 @@ export function StreakLogForm({
             />
             <label className="flex items-center gap-1.5 text-sm">
               <input type="checkbox" name="walked" className="size-3.5" />
-              Walked?
+              {label.checkinQuestionPast}
             </label>
             <label className="flex items-center gap-1.5 text-sm">
               <input type="checkbox" name="posted" className="size-3.5" />

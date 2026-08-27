@@ -5,6 +5,7 @@ import { archiveIdleContent } from "@/lib/archive-lifecycle";
 import { BRANDS, BRAND_LABELS, type Brand } from "@/lib/brand";
 import { resolveGoalCurrentValues } from "@/lib/goals";
 import { totalAcrossPosts, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
+import { WALK_STREAK_LABEL } from "@/lib/streaks";
 import type { ResearchCopyResult, ScriptsResult, Goal } from "@/lib/types";
 
 type Row = (string | number | boolean | null)[];
@@ -449,7 +450,7 @@ async function buildDailyStreaksTab(supabase: SupabaseClient, brand: Brand): Pro
 
   return {
     title: "Daily Streaks",
-    headers: ["Date", "Walked", "Posted"],
+    headers: ["Date", WALK_STREAK_LABEL[brand].name, "Posted"],
     rows,
   };
 }
