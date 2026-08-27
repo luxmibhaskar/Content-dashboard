@@ -35,3 +35,12 @@ export function currentReviewWeek(today: Date = startOfToday()): { start: string
   const start = addDays(end, -6);
   return { start: localDateKey(start), end: localDateKey(end) };
 }
+
+// The Monday-Sunday review week that contains a given YYYY-MM-DD date,
+// as { start, end } date keys. Snaps any date (or a hand-typed / stored
+// non-Monday value) to its week so the Weekly Review page and its week
+// picker always agree on the same key that weekly_reviews is unique on.
+export function reviewWeekOf(dateKey: string): { start: string; end: string } {
+  const start = startOfWeek(new Date(`${dateKey}T00:00:00`));
+  return { start: localDateKey(start), end: localDateKey(addDays(start, 6)) };
+}
