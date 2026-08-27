@@ -1,16 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ProductionStatusTracker } from "@/components/production-status-tracker";
 import { CopyButton } from "@/components/copy-button";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { FormatPlatformFields, type LongFormTopicOption } from "@/components/format-platform-fields";
 import { PlatformAnalyticsSection } from "@/components/platform-analytics-section";
-import { DirtyFormTracker } from "@/components/dirty-form-tracker";
+import { DirtyFormRegion } from "@/components/dirty-form-tracker";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
 import {
@@ -221,142 +219,111 @@ export default async function TopicPage({
         </p>
       )}
 
-      <DirtyFormTracker key={item.id} action={boundUpdate} className="mt-4 space-y-5">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="final_title">Title</Label>
-            <CopyButton targetId="final_title" />
-          </div>
-          <Input
-            id="final_title"
-            name="final_title"
-            defaultValue={item.final_title ?? ""}
-            placeholder="Untitled"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="production_status">Production status</Label>
-          <select
-            id="production_status"
-            name="production_status"
-            defaultValue={item.production_status ?? ""}
-            className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-          >
-            <option value="">No status yet</option>
-            {PRODUCTION_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <PillarSubTopicSelects
-            structure={structure}
-            initialPillar={item.pillar ?? ""}
-            initialSubTopic={item.sub_topic ?? ""}
-          />
-        </div>
-
-        <FormatPlatformFields
-          initialFormat={item.format ?? ""}
-          initialPlatforms={item.platform ?? []}
-          initialDescription={item.final_description ?? ""}
-          publishDateValue={publishDateValue}
-          knownPlatforms={knownPlatforms}
-          structure={structure}
-          longFormTopics={(longFormTopics ?? []) as LongFormTopicOption[]}
-          initialPillar={item.pillar ?? ""}
-          initialDerivedFromContentId={item.derived_from_content_id ?? ""}
-        />
-
-        {/* Follow-up: relocated out of the removed System & Production
-            section, the only field in there that fed anything outside
-            itself (Analytics Overview's KPIs and charts,
-            src/lib/analytics.ts), moved here rather than lost. Every
-            other field that section held (core/detailed tags,
-            repurposed-from, sequence step, evidence condition, script
-            outline/published URL, performance notes, series/playlist,
-            search demand signal, success metric focus, analytics
-            review date, follow-up ideas, retention drop notes, earned-
-            the-click) is gone from the UI and from updateContentItem's
-            own write (./actions.ts), on purpose, not an oversight:
-            leaving those keys in that update while removing their only
-            inputs would have silently nulled them out on the next Save
-            for any unrelated reason. The columns themselves stay in the
-            schema, unused, per this project's "superseded field stays
-            schema-only" convention, nothing already stored is deleted.
-
-            docs/platform-performance-tracking.md Phase G: views/likes/
-            comments/shares/saves used to live here too, superseded by
-            per-platform check-ins (PlatformAnalyticsSection below) and
-            removed along with the columns themselves
-            (supabase/migrations/0019_drop_legacy_content_metrics.sql).
-            Conversions has no per-platform equivalent (a business
-            outcome, not a platform engagement signal, per the explicit
-            Phase F decision), stays here on its own column. */}
-        <div className="space-y-1.5 border-t border-border pt-4">
-          <Label>Performance metrics</Label>
-          <p className="text-xs text-muted-foreground">
-            Leave blank if not tracked yet, that&apos;s different from entering
-            0, Analytics Overview hides KPIs it has no data for rather than
-            showing a misleading zero.
-          </p>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="conversions">Conversions</Label>
-              <Input
-                id="conversions"
-                name="conversions"
-                type="number"
-                min={0}
-                defaultValue={item.conversions ?? ""}
-              />
+      <DirtyFormRegion formId="topic-form" key={item.id}>
+        <div className="mt-4 space-y-5">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="final_title">Title</Label>
+              <CopyButton targetId="final_title" />
             </div>
+            <Input
+              id="final_title"
+              name="final_title"
+              defaultValue={item.final_title ?? ""}
+              placeholder="Untitled"
+              form="topic-form"
+            />
           </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="production_status">Production status</Label>
+            <select
+              id="production_status"
+              name="production_status"
+              defaultValue={item.production_status ?? ""}
+              className="h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+              form="topic-form"
+            >
+              <option value="">No status yet</option>
+              {PRODUCTION_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <PillarSubTopicSelects
+              structure={structure}
+              initialPillar={item.pillar ?? ""}
+              initialSubTopic={item.sub_topic ?? ""}
+              formId="topic-form"
+            />
+          </div>
+
+          {/* Owns the real <form id="topic-form">, further down: Reference
+              Videos (between here and there, for Short; right after here
+              for Long) has its own Add/Remove/Save-notes forms that can't
+              nest inside it. See format-platform-fields.tsx's header
+              comment. */}
+          <FormatPlatformFields
+            initialFormat={item.format ?? ""}
+            initialPlatforms={item.platform ?? []}
+            initialDescription={item.final_description ?? ""}
+            publishDateValue={publishDateValue}
+            knownPlatforms={knownPlatforms}
+            structure={structure}
+            longFormTopics={(longFormTopics ?? []) as LongFormTopicOption[]}
+            initialPillar={item.pillar ?? ""}
+            initialDerivedFromContentId={item.derived_from_content_id ?? ""}
+            formId="topic-form"
+            formAction={boundUpdate}
+            productionStatus={item.production_status}
+            contentId={item.id}
+            referenceVideos={(referenceVideos ?? []) as ReferenceVideo[]}
+          />
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <ProductionStatusTracker status={item.production_status} />
-          <Button type="submit">Save</Button>
+        {/* docs/platform-performance-tracking.md Sections 4-5: directly
+            below Production Status (the Save/ProductionStatusTracker row,
+            now inside FormatPlatformFields' own <form>, immediately
+            above), same as Long Form and Short Form alike, own
+            collapsible container. Outside the main form, same reasoning
+            as TopicPageTabs below: each platform's "Log a check-in" is
+            its own tiny form. Conversions (Analytics and Conversion,
+            topic page restructuring 2026-08-27) stays part of the one
+            atomic Save via form="topic-form" despite living here, not
+            inside FormatPlatformFields' <form>. */}
+        <div className="mt-5">
+          <PlatformAnalyticsSection
+            contentId={item.id}
+            brand={item.brand}
+            format={item.format ?? ""}
+            platforms={(platformPosts ?? []) as ContentPlatformPost[]}
+            sourceItem={sourceItem}
+            liveHook={liveHook}
+            conversions={item.conversions}
+            formId="topic-form"
+          />
         </div>
-      </DirtyFormTracker>
 
-      {/* docs/platform-performance-tracking.md Sections 4-5: directly
-          below Production Status (the Save/ProductionStatusTracker row
-          just above), same as Long Form and Short Form alike, own
-          collapsible container. Outside the main form, same reasoning as
-          TopicPageTabs below: each platform's "Log a check-in" is its
-          own tiny form. */}
-      <div className="mt-5">
-        <PlatformAnalyticsSection
-          contentId={item.id}
-          brand={item.brand}
-          format={item.format ?? ""}
-          platforms={(platformPosts ?? []) as ContentPlatformPost[]}
-          sourceItem={sourceItem}
-          liveHook={liveHook}
-        />
-      </div>
-
-      {/* docs/topic-page-redesign.md Section 2: outside the main form on
-          purpose, same reasoning as before, Tab 1's Use This/Run/Save
-          are each their own tiny form and HTML doesn't allow nesting
-          forms. */}
-      <div className="mt-5">
-        <TopicPageTabs
-          contentId={item.id}
-          brand={item.brand}
-          briefIntent={item.brief_intent}
-          keywords={item.raw_keywords_topics}
-          researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
-          scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
-          referenceVideos={(referenceVideos ?? []) as ReferenceVideo[]}
-          manualWorkflowPhases={(manualWorkflowPhases ?? []) as ManualWorkflowPhaseRow[]}
-        />
-      </div>
+        {/* docs/topic-page-redesign.md Section 2: outside the main form on
+            purpose, same reasoning as before, Tab 1's Use This/Run/Save
+            are each their own tiny form and HTML doesn't allow nesting
+            forms. */}
+        <div className="mt-5">
+          <TopicPageTabs
+            contentId={item.id}
+            brand={item.brand}
+            briefIntent={item.brief_intent}
+            keywords={item.raw_keywords_topics}
+            researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
+            scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
+            manualWorkflowPhases={(manualWorkflowPhases ?? []) as ManualWorkflowPhaseRow[]}
+          />
+        </div>
+      </DirtyFormRegion>
     </div>
   );
 }

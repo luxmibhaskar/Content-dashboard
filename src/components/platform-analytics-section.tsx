@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PerformanceOverTimeChart } from "@/components/charts/performance-over-time-chart";
@@ -35,6 +36,8 @@ export function PlatformAnalyticsSection({
   platforms,
   sourceItem,
   liveHook,
+  conversions,
+  formId,
 }: {
   contentId: string;
   brand: string;
@@ -42,9 +45,36 @@ export function PlatformAnalyticsSection({
   platforms: ContentPlatformPost[];
   sourceItem: { id: string; final_title: string | null } | null;
   liveHook: { variant_text: string; performance_rating: number | null } | null;
+  conversions: number | null;
+  // Topic page restructuring (2026-08-27): Conversions moved here from
+  // the old Performance Metrics section (now removed) since it's a
+  // business outcome, not a platform engagement signal, and has no
+  // per-platform equivalent among these check-ins. Stays part of the
+  // main form's single atomic Save via the native form={formId}
+  // attribute rather than nesting (this component isn't inside that
+  // <form>, its own "Log a check-in" forms couldn't nest inside it
+  // either way), see dirty-form-tracker.tsx's comment for the pattern.
+  formId: string;
 }) {
   return (
-    <CollapsibleSection title="Analytics" neutral>
+    <CollapsibleSection title="Analytics and Conversion" neutral>
+      <div className="space-y-1.5">
+        <Label htmlFor="conversions">Conversions</Label>
+        <Input
+          id="conversions"
+          name="conversions"
+          type="number"
+          min={0}
+          defaultValue={conversions ?? ""}
+          form={formId}
+          className="max-w-40"
+        />
+        <p className="text-xs text-muted-foreground">
+          Leave blank if not tracked yet, that&apos;s different from entering 0, Analytics
+          Overview hides KPIs it has no data for rather than showing a misleading zero.
+        </p>
+      </div>
+
       {format === "Short" && sourceItem && (
         <p className="text-sm text-muted-foreground">
           Idea derived from:{" "}

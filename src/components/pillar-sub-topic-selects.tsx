@@ -26,10 +26,16 @@ export function PillarSubTopicSelects({
   structure,
   initialPillar,
   initialSubTopic,
+  formId,
 }: {
   structure: PillarStructure;
   initialPillar: string;
   initialSubTopic: string;
+  // Set when these selects render outside their owning <form>'s own DOM
+  // subtree (calendar/[id]/page.tsx), see dirty-form-tracker.tsx's
+  // comment for why. Idea Panel's quick-add form still nests these
+  // normally and leaves it unset.
+  formId?: string;
 }) {
   const pillars = Object.keys(structure);
   const [pillar, setPillar] = useState(initialPillar);
@@ -56,6 +62,7 @@ export function PillarSubTopicSelects({
           value={pillar}
           onChange={(e) => setPillar(e.target.value)}
           className={SELECT_CLASSNAME}
+          form={formId}
         >
           <option value="">-</option>
           {pillarOptions.map((p) => (
@@ -77,6 +84,7 @@ export function PillarSubTopicSelects({
           name="sub_topic"
           defaultValue={pillar === initialPillar ? initialSubTopic : ""}
           className={SELECT_CLASSNAME}
+          form={formId}
         >
           <option value="">-</option>
           {subTopicOptions.map((s) => (

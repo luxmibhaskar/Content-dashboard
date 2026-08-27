@@ -5,7 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { ReferenceVideosSection } from "@/components/reference-videos-section";
+import { ProductionStatusTracker } from "@/components/production-status-tracker";
 import type { PillarStructure } from "@/lib/pillars";
+import type { ProductionStatus, ReferenceVideo } from "@/lib/types";
 
 export type LongFormTopicOption = {
   id: string;
@@ -24,19 +27,35 @@ const CONTENT_FORMAT_OPTIONS: { value: string; label: string }[] = [
 // Format + Publish date + (Short and Long) the "posted on" platform
 // multiselect, one client component since the multiselect's visibility
 // depends on Format's own live value, plain server-rendered selects
-// can't react to each other. No nested <form>: like
-// pillar-sub-topic-selects.tsx, this renders directly inside the
-// topic page's own outer <form>, its inputs (format, publish_date,
-// platform x N) submit as part of that same Save. knownPlatforms comes
-// from goals.platform_name (Streak & Goals' "add a platform goal" form
-// is the one place platform names get typed in freely) and is the only
-// source for this list, no static fallback list, per explicit direction:
-// the option pool here is meant to be exactly what Goals shows, add or
-// delete a platform goal there and this picker reflects it on next load,
-// in both Short and Long. initialPlatforms is unioned in too, but only
-// so a value already saved on this item never silently disappears from
-// its own picker after its goal is deleted elsewhere, not as a second
-// source of new options.
+// can't react to each other. knownPlatforms comes from goals.platform_name
+// (Streak & Goals' "add a platform goal" form is the one place platform
+// names get typed in freely) and is the only source for this list, no
+// static fallback list, per explicit direction: the option pool here is
+// meant to be exactly what Goals shows, add or delete a platform goal
+// there and this picker reflects it on next load, in both Short and
+// Long. initialPlatforms is unioned in too, but only so a value already
+// saved on this item never silently disappears from its own picker
+// after its goal is deleted elsewhere, not as a second source of new
+// options.
+//
+// Topic page restructuring (2026-08-27): Reference Videos moved from a
+// TopicPageTabs tab to always-visible, right after Format/Publish date
+// for Long Video (no Short Description/Idea Derived From to anchor to
+// there), or between Short Description and Idea Derived From for Short.
+// Reference Videos has its own Add/Remove/Save-notes forms, which can't
+// nest inside another <form> (invalid HTML, and a nested form's submit
+// button would silently target the wrong one) - so the real <form id=
+// {formId}> now only wraps the tail end this component already owns the
+// state for (Idea Derived From, the platform picker, and, since it also
+// needs to stay inside a real <form> for its useFormStatus-driven
+// loading spinner, the Save button + ProductionStatusTracker). Format,
+// Publish date, and Short Description render earlier, detached via the
+// native form={formId} attribute rather than DOM nesting, same pattern
+// Title/Production status/Pillar/Sub-topic use one level up
+// (calendar/[id]/page.tsx) and Analytics and Conversion's Conversions
+// field uses one section down (platform-analytics-section.tsx). See
+// dirty-form-tracker.tsx for how unsaved-changes tracking still
+// reaches all of these despite the split.
 export function FormatPlatformFields({
   initialFormat,
   initialPlatforms,
@@ -47,6 +66,11 @@ export function FormatPlatformFields({
   longFormTopics,
   initialPillar,
   initialDerivedFromContentId,
+  formId,
+  formAction,
+  productionStatus,
+  contentId,
+  referenceVideos,
 }: {
   initialFormat: string;
   initialPlatforms: string[];
@@ -57,6 +81,11 @@ export function FormatPlatformFields({
   longFormTopics: LongFormTopicOption[];
   initialPillar: string;
   initialDerivedFromContentId: string;
+  formId: string;
+  formAction: (formData: FormData) => void | Promise<void>;
+  productionStatus: ProductionStatus | null;
+  contentId: string;
+  referenceVideos: ReferenceVideo[];
 }) {
   const [format, setFormat] = useState(initialFormat);
   // Kept independent of Format's own value (not reset when Format
@@ -98,6 +127,7 @@ export function FormatPlatformFields({
             value={format}
             onChange={(e) => setFormat(e.target.value)}
             className={SELECT_CLASSNAME}
+            form={formId}
           >
             <option value="">-</option>
             {CONTENT_FORMAT_OPTIONS.map((f) => (
@@ -109,9 +139,22 @@ export function FormatPlatformFields({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="publish_date">Publish date</Label>
-          <Input id="publish_date" name="publish_date" type="datetime-local" defaultValue={publishDateValue} />
+          <Input
+            id="publish_date"
+            name="publish_date"
+            type="datetime-local"
+            defaultValue={publishDateValue}
+            form={formId}
+          />
         </div>
       </div>
+
+      {/* Long Video has no Short Description/Idea Derived From to sit
+          between, so it goes right after Format/Publish date instead
+          (topic page restructuring, 2026-08-27). */}
+      {format === "Long Video" && (
+        <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
+      )}
 
       {/* docs/platform-performance-tracking.md Section 3: Short Form's
           title container gets a short description field Long Form's
@@ -127,61 +170,76 @@ export function FormatPlatformFields({
             name="final_description"
             defaultValue={initialDescription}
             placeholder="A brief description for this Short"
+            form={formId}
           />
         </div>
       )}
 
-      {/* docs/platform-performance-tracking.md Section 6: a proper picker
-          on top of the already-working derived_from_content_id field
-          (previously read-only, no UI setter since topic-page-redesign.md
-          Section 9 removed System & Production). Short-only, matching the
-          doc's own scoping: a Long Form item doesn't derive from
-          anything. */}
       {format === "Short" && (
-        <DerivedFromPicker
-          structure={structure}
-          longFormTopics={longFormTopics}
-          initialPillar={initialPillar}
-          initialValue={initialDerivedFromContentId}
-        />
+        <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
       )}
 
-      {(format === "Short" || format === "Long Video") && (
-        <div className="space-y-1.5">
-          <Label>Posted on (select all that apply)</Label>
-          <p className="text-xs text-muted-foreground">
-            Only the platforms this actually went out on, analytics work off this. Need a
-            platform that isn&apos;t listed? Add it from Streak &amp; Goals&apos; &quot;Add a
-            platform goal&quot; form, it&apos;ll show up here too.
-          </p>
-          {platformOptions.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {platformOptions.map((p) => {
-                const selected = platforms.includes(p);
-                return (
-                  <Button
-                    key={p}
-                    type="button"
-                    size="xs"
-                    variant={selected ? "default" : "outline"}
-                    aria-pressed={selected}
-                    onClick={() => togglePlatform(p)}
-                  >
-                    {p}
-                  </Button>
-                );
-              })}
-            </div>
-          ) : (
+      {/* The real <form>: only from here down does this component still
+          own literal DOM descendants of it (see the header comment for
+          why the split happens here). */}
+      <form id={formId} action={formAction} className="space-y-5">
+        {/* docs/platform-performance-tracking.md Section 6: a proper
+            picker on top of the already-working derived_from_content_id
+            field (previously read-only, no UI setter since
+            topic-page-redesign.md Section 9 removed System &
+            Production). Short-only, matching the doc's own scoping: a
+            Long Form item doesn't derive from anything. */}
+        {format === "Short" && (
+          <DerivedFromPicker
+            structure={structure}
+            longFormTopics={longFormTopics}
+            initialPillar={initialPillar}
+            initialValue={initialDerivedFromContentId}
+          />
+        )}
+
+        {(format === "Short" || format === "Long Video") && (
+          <div className="space-y-1.5">
+            <Label>Posted on (select all that apply)</Label>
             <p className="text-xs text-muted-foreground">
-              No platforms in Streak &amp; Goals yet, add one there first.
+              Only the platforms this actually went out on, analytics work off this. Need a
+              platform that isn&apos;t listed? Add it from Streak &amp; Goals&apos; &quot;Add a
+              platform goal&quot; form, it&apos;ll show up here too.
             </p>
-          )}
-          {platforms.map((p) => (
-            <input key={p} type="hidden" name="platform" value={p} />
-          ))}
+            {platformOptions.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {platformOptions.map((p) => {
+                  const selected = platforms.includes(p);
+                  return (
+                    <Button
+                      key={p}
+                      type="button"
+                      size="xs"
+                      variant={selected ? "default" : "outline"}
+                      aria-pressed={selected}
+                      onClick={() => togglePlatform(p)}
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No platforms in Streak &amp; Goals yet, add one there first.
+              </p>
+            )}
+            {platforms.map((p) => (
+              <input key={p} type="hidden" name="platform" value={p} />
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-2">
+          <ProductionStatusTracker status={productionStatus} />
+          <Button type="submit">Save</Button>
         </div>
-      )}
+      </form>
     </>
   );
 }

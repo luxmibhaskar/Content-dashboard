@@ -83,9 +83,16 @@ and has since been restored. See Tab 3 below.
 
 **⚠ Restructured twice since, see `docs/manual-workflow-redesign.md`.**
 The flat three-tab pill this section describes no longer exists in
-either form. Top level is a Manual/AI toggle (same pill styling) plus
+either form. Top level was a Manual/AI toggle (same pill styling) plus
 Reference Videos alongside it, since Reference Videos belongs to
 neither side, not a third flat tab:
+
+**⚠ Reference Videos moved again, topic page restructuring 2026-08-27.**
+No longer a tab or pill at all: it's always-visible now, inline in the
+main form area (`format-platform-fields.tsx`), positioned right after
+Format/Publish date for Long Video, or between Short Description and
+Idea Derived From for Short. This top level is back to a plain Manual/AI
+toggle, see the corrected Tab 3 note below.
 
 - **AI** (selected by default): the same phase-gated Research/
   Packaging/Scripting pill switcher Manual uses (see below), applied to
@@ -104,9 +111,8 @@ neither side, not a third flat tab:
   inside Tab 1/Tab 2 (still there as of this note, removing it is a
   separate pending decision, not yet done). Full spec in
   `docs/manual-workflow-redesign.md`.
-- **Reference Videos**: unchanged, still Tab 3 as described below, just
-  positioned alongside the Manual/AI toggle now instead of inside the
-  same flat pill as Tab 1/Tab 2.
+- **Reference Videos**: no longer here at all, see the 2026-08-27 note
+  above, it moved to the main form area instead.
 
 Remove entirely as separate sections: Creator Input, Audience Strategy,
 Viewer POV, Normal POV, Recording Section. Replace with tabs styled
@@ -181,11 +187,11 @@ each a complete, self-contained video, living within one container,
 separated from each other by dividers, same visual pattern as the source
 containers in Tab 1.
 
-### Tab 3: "Reference Videos"
+### Reference Videos (no longer Tab 3, see the 2026-08-27 note above)
 
-Full spec lives in builder-brief.md Section 10.2.1, unaffected by this
-doc otherwise, this entry just records that it's a tab on this same page
-alongside Tab 1 and Tab 2, not a separate route.
+Full spec lives in builder-brief.md Section 10.2.1. It's inline in the
+main form area now (`format-platform-fields.tsx`), not a tab alongside
+Tab 1 and Tab 2, and not a separate route.
 
 ## 3. Navigation cleanup
 
@@ -452,7 +458,16 @@ Conversions) was the one field group in that section verified to feed
 something outside itself, `src/lib/analytics.ts` reads those exact
 columns for Analytics Overview's KPIs and charts, so it moved into the
 always-visible block rather than being lost, right after Format/Publish
-date. Every other field the section held (core/detailed tags,
+date. **Update, 2026-08-27: moved again.** The "Performance metrics"
+section itself is gone (Views/Likes/Comments/Shares/Saves already left
+it for per-platform check-ins, Phase G, below); Conversions, the one
+field it still held, now lives in a new "Analytics and Conversion"
+section merged into the per-platform Analytics collapsible
+(`platform-analytics-section.tsx`), submitted via the native
+`form="topic-form"` attribute rather than DOM nesting since that section
+renders outside the main form (own "Log a check-in" forms, same
+reasoning as Reference Videos). Every other field the section held
+(core/detailed tags,
 repurposed-from, sequence step, evidence condition, script outline/
 published URL, performance notes, series/playlist, search demand
 signal, success metric focus, analytics review date, follow-up ideas,

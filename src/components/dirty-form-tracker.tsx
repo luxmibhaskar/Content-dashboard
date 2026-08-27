@@ -3,24 +3,33 @@
 import { useEffect } from "react";
 import { useUnsavedChanges } from "@/lib/unsaved-changes-context";
 
-// Marks the shared unsaved-changes flag dirty on any change inside this
-// form (native inputs/selects only, plain DOM change-event bubbling, no
-// Radix controls in the topic page's main form) and clears it the moment
-// Save is clicked - "touched since load or last save," not "confirmed
-// saved by the server," matching this app's existing pattern of trusting
-// an explicit Save action rather than tracking request success/failure.
+// Tracks "touched since load or last save" for one logical <form> (by id)
+// that isn't a single contiguous DOM subtree - Reference Videos and the
+// Analytics and Conversion section's Conversions field both need to sit
+// between/alongside the topic page's own fields without ever nesting
+// inside their <form> (Reference Videos has its own Add/Remove/Save
+// notes forms; nested <form> elements are invalid HTML and a nested
+// form's own submit button would silently target the wrong one). Those
+// fields instead use the native form="<id>" attribute to stay part of
+// the one atomic Save while living elsewhere in the DOM, so dirty-
+// detection here can't rely on DOM containment (a plain onChange on the
+// <form> element itself would miss them) - it filters by the changed
+// element's owning form (the native .form property, which correctly
+// resolves through the form="" attribute regardless of DOM position)
+// instead, on a wrapper that can safely surround unrelated forms
+// (PlatformAnalyticsSection's "Log a check-in", Reference Videos' own)
+// too, since only elements owned by `formId` ever mark this dirty.
+//
 // Render with key={contentId} at the call site so navigating between two
 // topic pages in-app (no full unload, same route template) remounts this
 // and resets the flag instead of leaking dirty state from one item to
 // the next.
-export function DirtyFormTracker({
-  action,
+export function DirtyFormRegion({
+  formId,
   children,
-  className,
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  formId: string;
   children: React.ReactNode;
-  className?: string;
 }) {
   const { dirty, setDirty } = useUnsavedChanges();
 
@@ -38,14 +47,21 @@ export function DirtyFormTracker({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [dirty]);
 
+  function isOwnedByTrackedForm(target: EventTarget | null) {
+    const el = target as { form?: HTMLFormElement | null } | null;
+    return el?.form?.id === formId;
+  }
+
   return (
-    <form
-      action={action}
-      className={className}
-      onChange={() => setDirty(true)}
-      onSubmit={() => setDirty(false)}
+    <div
+      onChange={(e) => {
+        if (isOwnedByTrackedForm(e.target)) setDirty(true);
+      }}
+      onSubmit={(e) => {
+        if ((e.target as HTMLFormElement).id === formId) setDirty(false);
+      }}
     >
       {children}
-    </form>
+    </div>
   );
 }
