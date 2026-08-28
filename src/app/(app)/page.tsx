@@ -20,6 +20,12 @@ import {
 } from "@/lib/audience-growth";
 import type { JourneyEntry } from "@/lib/types";
 
+// The dashboard's "Sync now" button runs a full two-brand backup as a
+// Server Action, which executes within this page's function invocation
+// and inherits its limit. Matches the cron route's maxDuration so a
+// manual sync gets the same headroom (60 = Hobby ceiling, 300 on Pro).
+export const maxDuration = 60;
+
 // Streak & Goals redesign: the "Dashboard · Brand" heading and the
 // next-up-suggestion placeholder are gone entirely (item 1), not moved
 // elsewhere. Streak/goals display also left this page for good, it now
