@@ -234,7 +234,7 @@ Every backend service the dashboard depends on, listed plainly:
 | Google Sheets + Drive | Backup (two layers) | Free | $0 | Any spreadsheet + cloud storage combo |
 | YouTube Data API | Research automation | Free (daily quota) | $0 | — (no real substitute for YouTube-specific data) |
 | Reddit API | Research automation | Free (approval required) | $0 | SerpApi site:reddit.com search, see note below |
-| SERP API (e.g. SerpApi) | Google search behavior research | Free tier, then paid | $0–25+/mo | Any competing SERP API provider |
+| SERP API (e.g. SerpApi) | Currently unused/dormant (Google search behavior research pull has no caller, see Section 16 note); key stays configured for the Live Status account check | Free tier, then paid | $0–25+/mo | Any competing SERP API provider |
 | AI provider (starts as Anthropic) | Research synthesis, ranked suggestions | Paid, usage-based | Small, usage-based | Gemini, GPT, any provider (Section 2) |
 
 **Two tiers of what this panel actually shows:**
@@ -978,6 +978,17 @@ Data model note: `pillar` on `content_calendar` becomes `Build` / `Sell` / `Scal
 ***
 
 ## 16. Research Sources (Automated vs Manual)
+
+**Status note:** the per-source SerpApi pull described below
+(`searchGoogleSignals`, `searchRedditSignals`, `searchQuoraSignals` in
+`src/lib/serpapi.ts`) is currently unused/dormant, not an active research
+dependency. The actual research pipeline is the AI Research & Copy tab
+(`docs/topic-page-redesign.md` Tab 1), which synthesizes research
+directly via the Anthropic key rather than calling SerpApi per source.
+The three functions are kept in the codebase, documented-dormant, in
+case this per-source model is wanted back. `SERPAPI_KEY` itself stays
+configured for an unrelated, still-active use: the System & Services
+panel's Live Status account check.
 
 - **Fully automatic:**
   - YouTube (top 10 videos, transcripts where available, hook/structure analysis, own channel stats). **Honest caveat:** not every video has an accessible transcript, and auto-generated ones can contain real errors. When a transcript isn't available, fall back to that video's title, description, and top comments for signal instead of silently returning less, and mark that video's entry as "no transcript" rather than leaving it ambiguous why the analysis is thinner.

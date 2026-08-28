@@ -93,18 +93,22 @@ video's own channel owner, not available for other people's videos with
 just an API key, title/description/comments are the actual signal this
 pulls, not a fallback for when a transcript happens to be missing.
 
-## SerpApi (Research automation)
+## SerpApi (currently unused/dormant)
 
 **SERPAPI_KEY**
-Powers the Research tab's Google, Reddit, and Quora pulls. Google search
-behavior (autocomplete, People Also Ask, related searches) uses SerpApi
-directly. Reddit and Quora both run through site-scoped Google searches
-on this same key (`site:reddit.com`, `site:quora.com`) rather than
-dedicated integrations, neither has a workable official public API,
-Reddit's official API access was not approved after two attempts, and
-this is the documented fallback for exactly that case. Each Refresh
-Research click uses about 4 SerpApi searches, worth watching against
-your plan's monthly allowance.
+Not an active research dependency right now. The Google/Reddit/Quora
+per-source pull this key was originally built for (`searchGoogleSignals`,
+`searchRedditSignals`, `searchQuoraSignals` in `src/lib/serpapi.ts`) has
+no caller anywhere in the app, research now runs entirely through the AI
+Research & Copy tab (`docs/topic-page-redesign.md` Tab 1), which
+synthesizes research via the Anthropic key above instead of calling
+SerpApi per source. Those three functions are kept in the codebase,
+documented-dormant, in case that per-source model is wanted back.
+
+The key is still read in one place: the System & Services panel's Live
+Status check (`getSerpApiLiveStatus`) pings SerpApi's own account
+endpoint to show searches remaining, so the key stays worth keeping
+configured even while the research pull itself is dormant.
 
 ## Backup automation
 

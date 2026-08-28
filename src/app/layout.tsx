@@ -44,6 +44,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       data-brand={brand}
       className={`${manrope.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         {/* Applies the stored/system theme before first paint, in <head>

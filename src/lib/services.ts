@@ -70,7 +70,7 @@ export const SERVICES: ServiceInfo[] = [
   {
     id: "serpapi",
     service: "SERP API (e.g. SerpApi)",
-    powers: "Google search behavior research",
+    powers: "Currently unused/dormant (research runs through the AI Research & Copy tab instead)",
     tier: "Free tier, then paid",
     estCost: "$0-25+/mo",
     swapAlternatives: "Any competing SERP API provider",

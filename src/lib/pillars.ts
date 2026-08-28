@@ -57,10 +57,6 @@ export function pillarsFor(brand: Brand): string[] {
   return Object.keys(PILLAR_STRUCTURE[brand]);
 }
 
-export function subTopicsFor(brand: Brand): string[] {
-  return Object.values(PILLAR_STRUCTURE[brand]).flat();
-}
-
 // Section 4.3: "one consistent color per pillar, used everywhere."
 // Exact hex values from docs/brand-tokens.md (authoritative source),
 // not approximated. BODY = Clay Terracotta, MIND = Iron Charcoal,

@@ -10,5 +10,6 @@
 -- setup; this migration is what actually fixes the already-existing
 -- live table.
 alter table hook_library_entries enable row level security;
+drop policy if exists "Authenticated access only" on hook_library_entries;
 create policy "Authenticated access only" on hook_library_entries
   for all to authenticated using (true) with check (true);
