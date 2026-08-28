@@ -802,6 +802,26 @@ html[data-brand="lbsworks"].dark .glow-card[data-neutral="true"] {
     0 0 14px -2px color-mix(in oklch, var(--glow-1) 70%, transparent);
 }
 
+/* Responsive audit #2: on a narrow screen or any touch device, give
+   every interactive control a ~40px tap floor. A desktop mouse at a
+   normal window width keeps the dense sizing untouched. `group/button`
+   is on every <Button> instance; the second selector is the filter/view
+   pill pattern (rounded-md px-2.5 py-1 text-sm) used as <a> and <button>
+   on Analytics, Content Calendar, Quick Capture, and the dashboard's
+   audience toggle. */
+@media (max-width: 640px), (pointer: coarse) {
+  [class~="group/button"] {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+  }
+
+  [class~="rounded-md"][class~="px-2.5"][class~="py-1"] {
+    min-height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
 /* Tremor's own component markup (chart legends here) is written for
    Tailwind v3 and sizes its legend swatch with `h-2 w-2` utility classes
    on an <svg viewBox="0 0 8 8">. This app runs Tailwind v4 and only

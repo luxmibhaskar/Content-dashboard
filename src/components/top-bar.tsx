@@ -88,7 +88,9 @@ function MoreMenu({
           type="button"
           aria-label="More menu"
           className={cn(
-            "flex items-center justify-center rounded-md p-1 outline-none hover:text-foreground aria-expanded:text-foreground",
+            // -m-1.5 offsets the extra padding so the visual footprint
+            // is unchanged while the tap target reaches ~40px.
+            "-m-1.5 flex min-h-10 min-w-10 items-center justify-center rounded-md p-1.5 outline-none hover:text-foreground aria-expanded:text-foreground",
             containsActivePage && "nav-link-active text-foreground",
           )}
         >
@@ -224,7 +226,9 @@ export function TopBar({
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
-            className="text-muted-foreground hover:text-foreground md:hidden"
+            // -m-2 offsets the padding so the icon stays put visually
+            // while the tap target reaches 44px (was a bare 20px icon).
+            className="-m-2 flex min-h-11 min-w-11 items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
           >
             {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
