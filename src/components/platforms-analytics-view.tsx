@@ -1,5 +1,7 @@
 import { PlatformGoalCard } from "@/components/streak-goals/platform-goal-card";
 import { AddPlatformGoalForm } from "@/components/streak-goals/add-platform-goal-form";
+import { YouTubeRefreshButton } from "@/components/streak-goals/youtube-refresh-button";
+import { isYouTubeGoal } from "@/lib/goals";
 import type { Goal } from "@/lib/types";
 
 // GROUP J: the Analytics page's "Platforms" view. Same platform list and
@@ -17,7 +19,10 @@ export function PlatformsAnalyticsView({ goals }: { goals: Goal[] }) {
         there are the same data, a change in one shows in the other.
       </p>
       {goals.map((g) => (
-        <PlatformGoalCard key={g.id} goal={g} />
+        <div key={g.id}>
+          <PlatformGoalCard goal={g} />
+          {isYouTubeGoal(g.platform_name) && g.source_ref && <YouTubeRefreshButton />}
+        </div>
       ))}
       {goals.length === 0 && (
         <p className="text-sm text-muted-foreground">No platform goals yet. Add your first one below.</p>

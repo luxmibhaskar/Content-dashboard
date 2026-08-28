@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { localDateKey } from "@/lib/date";
+import { isYouTubeGoal } from "@/lib/goals";
+import { fetchYouTubeChannelStats } from "@/lib/youtube";
 
 // Platforms/Streak & Goals consolidation: the old Platforms modal (a
 // fixed 4-platform bulk form) is gone, the current-count entry that
@@ -70,4 +72,40 @@ export async function getLatestPlatformSnapshots(brand: string): Promise<Record<
     if (!(row.platform in latest)) latest[row.platform] = row.follower_count;
   }
   return latest;
+}
+
+// GROUP J: on-demand YouTube subscriber pull. Writes the same
+// platform_snapshots row a manual save would (upsert on
+// brand,platform,snapshot_date), so whichever of a refresh or a manual
+// edit happened last today is the number shown, no separate column, no
+// merge. Returns the error string rather than throwing so the button can
+// show it inline and leave the previous value untouched.
+export async function refreshYouTubeSnapshot(): Promise<
+  { ok: true; count: number } | { ok: false; error: string }
+> {
+  const cookieStore = await cookies();
+  const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
+  const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
+
+  const supabase = await createClient();
+  const { data: goalRows } = await supabase
+    .from("goals")
+    .select("platform_name, source_ref")
+    .eq("brand", brand)
+    .not("platform_name", "is", null)
+    .not("source_ref", "is", null);
+
+  const goal = (goalRows ?? []).find((g) => isYouTubeGoal(g.platform_name));
+  if (!goal?.source_ref || !goal.platform_name) {
+    return { ok: false, error: "Set a YouTube channel ID on the YouTube platform first." };
+  }
+
+  try {
+    const stats = await fetchYouTubeChannelStats(goal.source_ref);
+    await upsertSnapshot(brand, goal.platform_name, stats.subscriberCount, localDateKey(new Date()));
+    revalidatePath("/", "layout");
+    return { ok: true, count: stats.subscriberCount };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "YouTube refresh failed." };
+  }
 }

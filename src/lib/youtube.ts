@@ -1,5 +1,56 @@
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
+// GROUP J: live channel stats for the platform-goal auto-update. One
+// quota unit per call. Accepts a bare channel id (UC...) or an @handle;
+// anything else (a legacy /user/ name, a full URL) is rejected with a
+// clear message rather than silently returning nothing.
+export type YouTubeChannelStats = {
+  subscriberCount: number;
+  viewCount: number;
+  videoCount: number;
+};
+
+export async function fetchYouTubeChannelStats(sourceRef: string): Promise<YouTubeChannelStats> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    throw new Error("YOUTUBE_API_KEY is not configured.");
+  }
+
+  const ref = sourceRef.trim();
+  if (!ref) {
+    throw new Error("No YouTube channel ID or handle set for this platform.");
+  }
+
+  const url = new URL(`${YOUTUBE_API_BASE}/channels`);
+  url.searchParams.set("part", "statistics");
+  if (ref.startsWith("@")) {
+    url.searchParams.set("forHandle", ref);
+  } else if (/^UC[\w-]{20,}$/.test(ref)) {
+    url.searchParams.set("id", ref);
+  } else {
+    throw new Error(`"${ref}" is not a channel ID (UC...) or an @handle.`);
+  }
+  url.searchParams.set("key", apiKey);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`YouTube channel lookup failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    items?: { statistics?: { subscriberCount?: string; viewCount?: string; videoCount?: string } }[];
+  };
+  const stats = data.items?.[0]?.statistics;
+  if (!stats) {
+    throw new Error(`No YouTube channel found for "${ref}".`);
+  }
+
+  return {
+    subscriberCount: Number(stats.subscriberCount ?? 0),
+    viewCount: Number(stats.viewCount ?? 0),
+    videoCount: Number(stats.videoCount ?? 0),
+  };
+}
+
 export type YouTubeVideoSignal = {
   videoId: string;
   title: string;
