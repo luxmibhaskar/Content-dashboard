@@ -801,3 +801,20 @@ html[data-brand="lbsworks"].dark .glow-card[data-neutral="true"] {
     0 0 0 1px color-mix(in oklch, var(--glow-1) 30%, transparent),
     0 0 14px -2px color-mix(in oklch, var(--glow-1) 70%, transparent);
 }
+
+/* Tremor's own component markup (chart legends here) is written for
+   Tailwind v3 and sizes its legend swatch with `h-2 w-2` utility classes
+   on an <svg viewBox="0 0 8 8">. This app runs Tailwind v4 and only
+   safelists the colour utilities Tremor needs (the @source inline(...)
+   near the top of this file), not layout/sizing ones, and Tremor itself
+   isn't in @source, so `.h-2` / `.w-2` are never generated. The swatch
+   SVG then has a viewBox but no width/height and the browser renders it
+   at a context-dependent replaced-element size (~20-50px) - the "giant
+   circle" - which also shoves the truncating label out and overflows
+   the Recharts legend wrapper. Pin the swatch and the gap it relies on
+   explicitly. */
+.tremor-Legend-legendItem svg {
+  height: 0.5rem;
+  width: 0.5rem;
+  margin-right: 0.375rem;
+}
