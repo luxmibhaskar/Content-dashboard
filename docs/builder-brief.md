@@ -87,7 +87,7 @@ Set these up before or during the phase noted. Nothing here needs to be perfect 
 - **GitHub** — free account; hosts the code and connects to Vercel for auto‑deploy on every push.
 - **Vercel** — free account (Hobby tier); link it to the GitHub repo.
 - **Supabase** — free account; create a project, then note the Project URL, anon key, and service role key. (Free‑tier projects pause after 7 days of inactivity, not a concern given daily use.)
-- **Google Cloud Console** — create a project, generate a **service account** for Google Sheets access (produces a JSON credentials file, not a simple API key), then share the backup Sheet with that service account's email address directly. Free at this volume. This same service account gets the Drive API scope added when Phase 2's full-content archive is built (Section 17.2), no separate account needed.
+- **Google Cloud Console** — create a project, generate a **service account** for Google Sheets access (produces a JSON credentials file, not a simple API key), then share the backup Sheet with that service account's email address directly. Free at this volume. The Phase 2 Drive archive does **not** use this service account (service accounts have no Drive storage quota of their own, so they can't create files): it authenticates as your own Google account via OAuth instead, set up with a one-time `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_REFRESH_TOKEN` in the same Cloud project (Section 17.2, `docs/env-reference.md`).
 - **AI API key** (separate from the Claude Code subscription used to build this) — **no free tier on any major provider, billed per token from the start.** Starting recommendation: Anthropic API key from console.anthropic.com, since it's already the most natural fit while building with Claude Code, but this is a swappable choice, not a commitment (see the AI provider note in top-level Section 2). The live dashboard needs its own way to call an AI model at runtime, since generating ranked Title/Hook/Thumbnail suggestions (10.1.3 on the topic page) and synthesizing research into the Viewer Research Panel is a reasoning task, not something the database performs on its own. Given the actual call pattern here, occasional synthesis, not constant use, expect a genuinely small monthly cost regardless of provider chosen.
 
 **Needed before Phase 2 (Research automation)**
@@ -1061,7 +1061,7 @@ Proposed structure (nest it under the existing Goddessify Content Library folder
 
 Each file is plain Markdown, readable by opening it directly in Drive, and just as easily read by any AI with Drive access, since Markdown is plain structured text, nothing proprietary to parse. This is what actually answers "can an AI extract from this later": pointing a future AI at this folder and asking "what did I cover about X three months ago" works far better against a folder of dated, readable files than against spreadsheet cells or a database it can't see into directly.
 
-**Setup note:** this uses the same Google Cloud service account already set up for Sheets (Section 2.5), just with the Drive API scope added too, not a separate account or credential.
+**Setup note:** Drive writes authenticate as your own Google account via OAuth (`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` / `GOOGLE_OAUTH_REFRESH_TOKEN`), **not** the Sheets service account. Service accounts have no Drive storage quota of their own, so they can edit a file a human already shared with them (fine for Sheets, where the workbook already exists) but can't create the new files and folders the archive needs as topics accumulate. One-time setup: create an OAuth Client ID (Desktop app type) in the same Cloud project as the service account, then run `node scripts/get-drive-refresh-token.mjs`. See `docs/env-reference.md` and `src/lib/google-drive.ts`.
 
 ### 17.3. System Manifest
 
@@ -1104,7 +1104,7 @@ This is your safety net — plain, readable, yours, independent of any single to
 - **Tree visualization:** react-d3-tree (D3 tree layout, minimal custom code) + Framer Motion (animation) for the Pillar Tree.
 - **General UI components:** shadcn/ui for buttons, dropdowns, modals, and other small interactive pieces.
 - **Styling:** Tailwind CSS — the shared foundation under Tremor, shadcn/ui, and any custom components.
-- **Backup:** Google Sheets API for the structured index, plus Google Drive API (same service account) for the full-content Markdown archive, both via nightly scheduled sync (Section 17).
+- **Backup:** Google Sheets API (service account auth) for the structured index, plus Google Drive API (OAuth as the account owner, not the service account, see Section 17.2) for the full-content Markdown archive, both via nightly scheduled sync (Section 17).
 - **Privacy:** simple password or magic‑link login, private URL, not publicly discoverable.
 
 ***
@@ -1134,7 +1134,7 @@ This is your safety net — plain, readable, yours, independent of any single to
 - Potential Data tab + History tab + Refresh Research button (10.2.2, 10.2.3). *(new in v1.3)*
 - Reference Videos tab (10.2.1). *(new in v1.3)*
 - Title/Hook/Thumbnail variants + Copy‑Ready Panel.
-- **Full‑content Drive archive + System Manifest (Section 17.2, 17.3)** — this is when raw research first gets long enough to need it; add the Drive API scope to the existing service account and start writing full‑detail Markdown files. *(new in v1.3)*
+- **Full‑content Drive archive + System Manifest (Section 17.2, 17.3)** — this is when raw research first gets long enough to need it; set up Drive OAuth (owner account, not the service account, see Section 17.2) and start writing full‑detail Markdown files. *(new in v1.3)*
 - Hot/cold archiving lifecycle (Section 17.4) — depends on the Drive archive above already existing; can land in Phase 2 alongside it or slip to Phase 3, whichever fits the pace of the build. *(new in v1.3)*
 - Structured competition tracking:
   - `competitor_benchmarks` child table in 10.1.6.

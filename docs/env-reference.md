@@ -37,9 +37,11 @@ auto-reload stays off.
 
 **GOOGLE_SERVICE_ACCOUNT_EMAIL**
 The email address of the "robot" identity Google Cloud created. This is
-the exact address the backup Google Sheet and Drive folders were shared
-with, which is what gives the app permission to write to them, same as
-sharing with a colleague, except this "colleague" is code.
+the exact address the backup Google Sheet was shared with, which is what
+gives the app permission to write to it, same as sharing with a
+colleague, except this "colleague" is code. Sheets only: the Drive
+archive doesn't use this identity at all (see the `GOOGLE_OAUTH_*` vars
+below), so the Drive backup folders don't need to be shared with it.
 
 **GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY**
 The private credential that proves to Google's servers that a request
