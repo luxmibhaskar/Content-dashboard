@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getDriveClient,
   findOrCreateFolder,
+  indexFolder,
   upsertMarkdownFile,
   upsertJsonFile,
   trashOrphans,
@@ -57,6 +58,33 @@ function buildContentFilenames(rows: ContentCalendarDetail[]): Map<string, strin
   return filenames;
 }
 
+// Bounded parallelism for the per-item Drive writes. The archive used to
+// walk content items and snapshots in a plain serial for-loop, ~4 API
+// round-trips each, which for the larger brand added up past Vercel's
+// 60s function ceiling on its own. Drive's default quota is 1000
+// requests / 100s / user and each task here is a handful of calls, so a
+// small in-flight limit stays well inside it while collapsing the
+// wall-clock. Fails fast like the old loop: the first task to throw
+// rejects the whole run (caught and retried once a layer up).
+async function mapWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < items.length) {
+      const i = cursor++;
+      await fn(items[i]);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+}
+
+const DRIVE_WRITE_CONCURRENCY = 8;
+
 export type DriveLinks = {
   contentLinks: Map<string, string>;
   snapshotLinks: Map<string, string>;
@@ -73,9 +101,23 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
   const manifest = fs.readFileSync(path.join(process.cwd(), "docs", "builder-brief.md"), "utf-8");
   await upsertMarkdownFile(drive, rootId, "SYSTEM_MANIFEST.md", manifest);
 
-  const contentFolderId = await findOrCreateFolder(drive, rootId, "content-calendar");
-  const researchFolderId = await findOrCreateFolder(drive, rootId, "research-snapshots");
-  const journeyFolderId = await findOrCreateFolder(drive, rootId, "journey-log");
+  const [contentFolderId, researchFolderId, journeyFolderId] = await Promise.all([
+    findOrCreateFolder(drive, rootId, "content-calendar"),
+    findOrCreateFolder(drive, rootId, "research-snapshots"),
+    findOrCreateFolder(drive, rootId, "journey-log"),
+  ]);
+
+  // One listing per folder up front, reused for every existence check
+  // and the orphan sweep below, instead of a files.list per file. The
+  // content-calendar folder alone was ~2 lookups per item x (item count)
+  // before this. research-snapshots is indexed at the folder-of-topics
+  // level (its children are the per-topic folders); each topic folder
+  // gets its own index inside the loop.
+  const [contentIndex, researchIndex, journeyIndex] = await Promise.all([
+    indexFolder(drive, contentFolderId),
+    indexFolder(drive, researchFolderId),
+    indexFolder(drive, journeyFolderId),
+  ]);
 
   const contentLinks = new Map<string, string>();
   const snapshotLinks = new Map<string, string>();
@@ -167,7 +209,13 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     (platformPostRows ?? []) as (ContentPlatformPost & { content_id: string })[],
   );
 
-  for (const row of contentRows) {
+  // Each item is independent (its own two filenames, no shared Drive
+  // parent state beyond contentIndex, which is a Map and safe to mutate
+  // from interleaved microtasks), so these run with bounded concurrency.
+  // buildContentFilenames already guarantees the .md names are unique
+  // and the .json names are `${id}.json`, so no two tasks ever touch the
+  // same index key.
+  await mapWithConcurrency(contentRows, DRIVE_WRITE_CONCURRENCY, async (row) => {
     const itemResearchCopy = researchCopyByContent.get(row.id) ?? [];
     const itemScripts = scriptsByContent.get(row.id) ?? [];
     const itemPlatformPosts = platformPostsByContent.get(row.id) ?? [];
@@ -181,6 +229,7 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
       contentFolderId,
       filename,
       buildContentCalendarMarkdown(row, itemResearchCopy, itemScripts, itemPlatformPosts, derivedFromTitle),
+      contentIndex,
     );
     contentLinks.set(row.id, webViewLink);
 
@@ -225,19 +274,21 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
         data: v.data,
       })),
     };
-    await upsertJsonFile(drive, contentFolderId, `${row.id}.json`, companion);
-  }
+    await upsertJsonFile(drive, contentFolderId, `${row.id}.json`, companion, contentIndex);
+  });
 
   // Sweep files for content items no longer in Supabase (never hard
   // delete: trashed files are recoverable for 30 days). Hygiene only,
   // guarded so a sweep hiccup can't fail the archive write that already
-  // succeeded above.
+  // succeeded above. contentIndex now holds the pre-existing files plus
+  // everything just written; anything in it not in expectedContentFiles
+  // belongs to a deleted content row.
   try {
     const expectedContentFiles = new Set<string>([
       ...filenames.values(),
       ...contentRows.map((r) => `${r.id}.json`),
     ]);
-    await trashOrphans(drive, contentFolderId, expectedContentFiles);
+    await trashOrphans(drive, contentFolderId, expectedContentFiles, contentIndex);
   } catch (err) {
     console.warn("[drive-archive] content-calendar orphan sweep failed:", err);
   }
@@ -248,49 +299,76 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     .eq("brand", brand);
   const snapshotRows = (snapshots ?? []) as ResearchSnapshot[];
 
-  const topicFolderCache = new Map<string, string>();
-  // Per-topic-folder set of the filenames written this run, for the
-  // orphan sweep below (a topic renamed or with snapshots since deleted
-  // otherwise strands its old folder / files).
-  const expectedByTopic = new Map<string, Set<string>>();
+  // Group snapshots by their topic folder first: multiple snapshots can
+  // share a topic (and even a date label), so a topic is processed by a
+  // single task, serially within it, while different topics run
+  // concurrently. That keeps two same-date snapshots from racing to
+  // create the same `${dateLabel}.md`.
+  const snapshotsByTopic = new Map<string, ResearchSnapshot[]>();
   for (const snap of snapshotRows) {
-    const title = titleById.get(snap.content_id) ?? "Untitled";
-    const topicFolderName = sanitizeName(title);
-    let topicFolderId = topicFolderCache.get(topicFolderName);
-    if (!topicFolderId) {
-      topicFolderId = await findOrCreateFolder(drive, researchFolderId, topicFolderName);
-      topicFolderCache.set(topicFolderName, topicFolderId);
-    }
-    const dateLabel = new Date(snap.snapshot_date).toISOString().slice(0, 10);
-    const { webViewLink } = await upsertMarkdownFile(
-      drive,
-      topicFolderId,
-      `${dateLabel}.md`,
-      buildResearchSnapshotMarkdown(snap, title),
-    );
-    snapshotLinks.set(snap.id, webViewLink);
-
-    const researchCompanion: ResearchArchiveCompanion = {
-      youtube_data: snap.youtube_data,
-      google_data: snap.google_data,
-      reddit_data: snap.reddit_data,
-      quora_data: snap.quora_data,
-    };
-    await upsertJsonFile(drive, topicFolderId, `${snap.id}.json`, researchCompanion);
-
-    const names = expectedByTopic.get(topicFolderName) ?? new Set<string>();
-    names.add(`${dateLabel}.md`);
-    names.add(`${snap.id}.json`);
-    expectedByTopic.set(topicFolderName, names);
+    const topicFolderName = sanitizeName(titleById.get(snap.content_id) ?? "Untitled");
+    const bucket = snapshotsByTopic.get(topicFolderName) ?? [];
+    bucket.push(snap);
+    snapshotsByTopic.set(topicFolderName, bucket);
   }
 
+  await mapWithConcurrency(
+    [...snapshotsByTopic.entries()],
+    DRIVE_WRITE_CONCURRENCY,
+    async ([topicFolderName, snaps]) => {
+      const topicFolderId = await findOrCreateFolder(
+        drive,
+        researchFolderId,
+        topicFolderName,
+        researchIndex,
+      );
+      const topicIndex = await indexFolder(drive, topicFolderId);
+      const expected = new Set<string>();
+
+      for (const snap of snaps) {
+        const title = titleById.get(snap.content_id) ?? "Untitled";
+        const dateLabel = new Date(snap.snapshot_date).toISOString().slice(0, 10);
+        const { webViewLink } = await upsertMarkdownFile(
+          drive,
+          topicFolderId,
+          `${dateLabel}.md`,
+          buildResearchSnapshotMarkdown(snap, title),
+          topicIndex,
+        );
+        snapshotLinks.set(snap.id, webViewLink);
+
+        const researchCompanion: ResearchArchiveCompanion = {
+          youtube_data: snap.youtube_data,
+          google_data: snap.google_data,
+          reddit_data: snap.reddit_data,
+          quora_data: snap.quora_data,
+        };
+        await upsertJsonFile(drive, topicFolderId, `${snap.id}.json`, researchCompanion, topicIndex);
+
+        expected.add(`${dateLabel}.md`);
+        expected.add(`${snap.id}.json`);
+      }
+
+      // Stale files inside a topic folder that survives this run.
+      try {
+        await trashOrphans(drive, topicFolderId, expected, topicIndex);
+      } catch (err) {
+        console.warn(`[drive-archive] topic "${topicFolderName}" orphan sweep failed:`, err);
+      }
+    },
+  );
+
   try {
-    // Trash whole topic folders no longer backed by any snapshot, then
-    // stale files inside the folders that remain.
-    await trashOrphans(drive, researchFolderId, new Set(expectedByTopic.keys()));
-    for (const [topicFolderName, folderId] of topicFolderCache) {
-      await trashOrphans(drive, folderId, expectedByTopic.get(topicFolderName) ?? new Set());
-    }
+    // Trash whole topic folders no longer backed by any snapshot.
+    // researchIndex holds the topic folders that existed at the start
+    // plus any created above; the ones not in snapshotsByTopic have lost
+    // all their snapshots.
+    await trashOrphans(
+      drive,
+      researchFolderId,
+      new Set(snapshotsByTopic.keys()),
+      researchIndex,
+    );
   } catch (err) {
     console.warn("[drive-archive] research-snapshots orphan sweep failed:", err);
   }
@@ -310,20 +388,26 @@ export async function syncDriveArchive(supabase: SupabaseClient, brand: Brand): 
     bucket.push(entry);
     byMonth.set(month, bucket);
   }
-  for (const [month, entries] of byMonth) {
-    await upsertMarkdownFile(
-      drive,
-      journeyFolderId,
-      `${month}.md`,
-      buildJourneyMonthMarkdown(month, entries),
-    );
-  }
+  await mapWithConcurrency(
+    [...byMonth.entries()],
+    DRIVE_WRITE_CONCURRENCY,
+    async ([month, entries]) => {
+      await upsertMarkdownFile(
+        drive,
+        journeyFolderId,
+        `${month}.md`,
+        buildJourneyMonthMarkdown(month, entries),
+        journeyIndex,
+      );
+    },
+  );
 
   try {
     await trashOrphans(
       drive,
       journeyFolderId,
       new Set([...byMonth.keys()].map((month) => `${month}.md`)),
+      journeyIndex,
     );
   } catch (err) {
     console.warn("[drive-archive] journey-log orphan sweep failed:", err);

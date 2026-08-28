@@ -1043,6 +1043,8 @@ One workbook per brand, one tab per table, for anything short enough to scan at 
 
 For anything genuinely too long to read comfortably in a cell, full research snapshot data (raw YouTube transcripts, Reddit threads, Quora questions), full scripts, and longer Journey Log entries, the nightly sync also writes a plain **Markdown file per entry** into a Drive folder, not a spreadsheet cell.
 
+The archive write is the slow half of a brand's backup (a full Drive pass plus every Sheets tab has to finish inside one 60s function on Hobby). It is built to stay well under that: each folder is listed once up front into an in-memory index rather than one existence-check per file, and the per-item Markdown/JSON writes run with bounded concurrency (`src/lib/drive-archive.ts`). It stays an idempotent upsert, running it twice in a row leaves the exact same files with the same ids; the orphan sweep only trashes a name that isn't among the ones written this run, so a real row is never swept even mid-run.
+
 Proposed structure (nest it under the existing Goddessify Content Library folder, or as its own root folder, whichever fits better on the day):
 
 ```
