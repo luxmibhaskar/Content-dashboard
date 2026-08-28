@@ -29,11 +29,13 @@ import {
   type ExtendedMetricsRow,
   type ContentPlatformPostWithFormat,
 } from "@/lib/analytics";
-import { aggregateByContentId } from "@/lib/platform-analytics";
+import { aggregateByContentId, totalAcrossPosts, type ContentPlatformPostWithSnapshots } from "@/lib/platform-analytics";
+import { getLatestPlatformSnapshots } from "@/app/actions/platforms";
 import { computeRetentionDropTrends, formatSecondsAsTimestamp, type RetentionDropPost } from "@/lib/retention-drop";
 import { computeStreak, computeStreakHeatmap, WALK_STREAK_LABEL, type StreakRow } from "@/lib/streaks";
-import { isViewsGoal } from "@/lib/goals";
-import type { HookLibraryType } from "@/lib/types";
+import { isViewsGoal, resolveGoalCurrentValues } from "@/lib/goals";
+import type { Goal, HookLibraryType } from "@/lib/types";
+import { PlatformsAnalyticsView } from "@/components/platforms-analytics-view";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GlowCard } from "@/components/glow-card";
@@ -69,23 +71,33 @@ function isContentFormatFilter(value: string | undefined): value is ContentForma
 export default async function AnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; format?: string; platform?: string }>;
+  searchParams: Promise<{ range?: string; format?: string; platform?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const range: AnalyticsRange = isAnalyticsRange(params.range) ? params.range : "30d";
   const { from, to } = computeAnalyticsRange(range);
   const formatFilter = isContentFormatFilter(params.format) ? params.format : null;
   const platformFilter = params.platform?.trim() || null;
+  // GROUP J: "Content" (every existing chart) vs "Platforms" (the
+  // platform-goal list, same data the top bar and Streak and Goals use).
+  const view: "content" | "platforms" = params.view === "platforms" ? "platforms" : "content";
 
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
 
-  // buildHref preserves whichever of range/format/platform aren't the one
-  // being changed by a given pill, so the three filters combine instead
-  // of each link resetting the other two.
-  function buildHref(next: { range?: string; format?: string | null; platform?: string | null }) {
+  // buildHref preserves whichever of view/range/format/platform aren't the
+  // one being changed by a given pill, so the toggles combine instead of
+  // each link resetting the others.
+  function buildHref(next: {
+    range?: string;
+    format?: string | null;
+    platform?: string | null;
+    view?: "platforms" | null;
+  }) {
     const search = new URLSearchParams();
+    const nextView = next.view === undefined ? (view === "platforms" ? "platforms" : null) : next.view;
+    if (nextView) search.set("view", nextView);
     const nextRange = next.range ?? range;
     if (nextRange !== "30d") search.set("range", nextRange);
     const nextFormat = next.format === undefined ? formatFilter : next.format;
@@ -140,6 +152,8 @@ export default async function AnalyticsPage({
     { data: liveHookRows },
     { data: platformPostRows },
     { data: goalRows },
+    latestPlatformSnapshots,
+    { data: platformViewRows },
   ] = await Promise.all([
       contentQuery,
       supabase
@@ -187,11 +201,27 @@ export default async function AnalyticsPage({
       // Analytics filters (2026-08-27): the Platform filter pill row's
       // option list, same source of truth as Content Calendar's and Idea
       // Panel's own platform pickers, no separate hardcoded list.
+      // GROUP J: the full row set now, not just platform_name, so the
+      // Platforms view can render each platform goal's own edit card
+      // (same shape src/app/(app)/layout.tsx feeds the top bar).
       supabase
         .from("goals")
-        .select("platform_name")
+        .select(
+          "id, brand, goal_text, target_metric, target_value, current_value, target_date, status, platform_name, icon_slug, icon_url",
+        )
         .eq("brand", brand)
-        .not("platform_name", "is", null),
+        .not("platform_name", "is", null)
+        .order("created_at", { ascending: false }),
+      // GROUP J: same two reads layout.tsx does to resolve each platform
+      // goal's live current count, latest platform_snapshots row per
+      // platform, plus the brand-wide views sum for the "Views" goal.
+      getLatestPlatformSnapshots(brand),
+      supabase
+        .from("content_platform_posts")
+        .select(
+          "content_id, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts)",
+        )
+        .eq("brand", brand),
     ]);
 
   // Described locally rather than extending ContentPlatformPostWithSnapshots
@@ -230,6 +260,17 @@ export default async function AnalyticsPage({
         .filter((p): p is string => !!p && !isViewsGoal(p)),
     ),
   ];
+
+  // GROUP J: resolve each platform goal's live current count exactly as
+  // layout.tsx does for the top bar, latest platform_snapshots row per
+  // platform, and the summed-views total for the "Views" goal.
+  const platformGoalsTotalViews =
+    totalAcrossPosts((platformViewRows ?? []) as ContentPlatformPostWithSnapshots[]).views ?? 0;
+  const platformGoals = resolveGoalCurrentValues(
+    (goalRows ?? []) as Goal[],
+    platformGoalsTotalViews,
+    latestPlatformSnapshots,
+  );
 
   // Analytics audit (2026-08-27) Phase 1: an item absent from
   // statsByContentId has zero platform-posts at all, same "nothing
@@ -321,6 +362,28 @@ export default async function AnalyticsPage({
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold">Analytics Overview</h1>
 
+      {/* GROUP J: Content (every existing chart) vs Platforms (the
+          platform-goal list). Same server-rendered pill pattern as the
+          filters below, which only apply to the Content view. */}
+      <div className="mt-4 inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
+        {(["content", "platforms"] as const).map((v) => (
+          <Link
+            key={v}
+            href={buildHref({ view: v === "platforms" ? "platforms" : null })}
+            className={cn(
+              "rounded-md px-3 py-1 text-sm capitalize",
+              view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {v}
+          </Link>
+        ))}
+      </div>
+
+      {view === "platforms" ? (
+        <PlatformsAnalyticsView goals={platformGoals} />
+      ) : (
+        <>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {ANALYTICS_RANGES.map((r) => (
           <Link
@@ -665,6 +728,8 @@ export default async function AnalyticsPage({
           </section>
         </CollapsibleSection>
       </div>
+        </>
+      )}
     </div>
   );
 }
