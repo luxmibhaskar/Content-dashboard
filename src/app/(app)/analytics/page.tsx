@@ -207,7 +207,7 @@ export default async function AnalyticsPage({
       supabase
         .from("goals")
         .select(
-          "id, brand, goal_text, target_metric, target_value, current_value, target_date, status, platform_name, icon_slug, icon_url",
+          "id, brand, goal_text, target_metric, target_value, current_value, target_date, status, platform_name, icon_slug, icon_url, source_ref",
         )
         .eq("brand", brand)
         .not("platform_name", "is", null)

@@ -603,6 +603,9 @@ export type Goal = {
   platform_name: string | null;
   icon_slug: string | null;
   icon_url: string | null;
+  // GROUP J: external account id for API auto-sync (YouTube channel id
+  // or @handle today). Null for platforms with no auto-sync.
+  source_ref: string | null;
 };
 
 // docs/platform-performance-tracking.md Section 2:

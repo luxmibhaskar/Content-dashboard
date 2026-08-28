@@ -57,6 +57,7 @@ export async function addGoal(formData: FormData) {
     icon_slug: str(formData, "icon_slug"),
     target_value: num(formData, "target_value"),
     target_date: str(formData, "target_date"),
+    source_ref: str(formData, "source_ref"),
   });
 
   if (error) throw new Error(error.message);
@@ -80,6 +81,10 @@ export async function updateGoal(goalId: string, formData: FormData) {
       target_value: num(formData, "target_value"),
       target_date: str(formData, "target_date"),
       status: str(formData, "status"),
+      // GROUP J: only overwrite source_ref when the field was actually
+      // present in this submit (YouTube cards), never blank it out for
+      // every other platform whose form has no such input.
+      ...(formData.has("source_ref") ? { source_ref: str(formData, "source_ref") } : {}),
     })
     .eq("id", goalId);
 

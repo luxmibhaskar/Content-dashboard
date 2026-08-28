@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PlatformIconPicker } from "@/components/streak-goals/platform-icon-picker";
 import { findPlatformIcon } from "@/lib/platform-icons";
-import { isViewsGoal } from "@/lib/goals";
+import { isViewsGoal, isYouTubeGoal } from "@/lib/goals";
 import { updateGoal, deleteGoal } from "@/app/actions/goals";
 import { logPastPlatformSnapshot } from "@/app/actions/platforms";
 import { todayDateKey } from "@/lib/streaks";
@@ -41,6 +41,10 @@ export function PlatformGoalCard({ goal }: { goal: Goal }) {
   // count is editable and writes a platform_snapshots row on save
   // (src/app/actions/goals.ts), the single source of truth for it now.
   const isViews = isViewsGoal(goal.platform_name);
+  // GROUP J: YouTube's number can auto-update from the Data API. Show the
+  // channel-id field when this is the YouTube goal, or whenever one's
+  // already saved (so renaming the platform never strands the value).
+  const showSourceRef = isYouTubeGoal(goal.platform_name) || !!goal.source_ref;
   const label = progressLabel(goal);
 
   return (
@@ -59,6 +63,20 @@ export function PlatformGoalCard({ goal }: { goal: Goal }) {
             <iconEntry.Icon className="hidden size-4 shrink-0 text-muted-foreground sm:block" />
           )}
         </div>
+
+        {showSourceRef && (
+          <div>
+            <label className="text-xs text-muted-foreground">
+              YouTube channel ID or @handle (for auto-update)
+            </label>
+            <Input
+              name="source_ref"
+              defaultValue={goal.source_ref ?? ""}
+              placeholder="UCxxxxxxxx or @handle"
+              className="h-8 text-sm"
+            />
+          </div>
+        )}
 
         {label && <p className="text-lg font-semibold">{label}</p>}
 

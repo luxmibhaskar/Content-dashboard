@@ -11,6 +11,15 @@ export function isViewsGoal(platformName: string | null): boolean {
   return (platformName ?? "").trim().toLowerCase() === "views";
 }
 
+// GROUP J: which platform goal the YouTube auto-update applies to.
+// Name match (like isViewsGoal), case-insensitive, tolerant of "YT".
+// The refresh button itself only shows when source_ref is also set, so
+// a false positive here is harmless.
+export function isYouTubeGoal(platformName: string | null): boolean {
+  const n = (platformName ?? "").trim().toLowerCase();
+  return n === "youtube" || n === "yt";
+}
+
 export function resolveGoalCurrentValues(
   goals: Goal[],
   totalViews: number,

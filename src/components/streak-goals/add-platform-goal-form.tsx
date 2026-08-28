@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PlatformIconPicker } from "@/components/streak-goals/platform-icon-picker";
 import { addGoal } from "@/app/actions/goals";
+import { isYouTubeGoal } from "@/lib/goals";
 
 // Streak & Goals redesign: any platform, freeform name, "add new
 // platforms freely" rather than choosing from TARGET_METRIC_OPTIONS.
@@ -17,6 +18,9 @@ import { addGoal } from "@/app/actions/goals";
 export function AddPlatformGoalForm() {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  // GROUP J: reveal the channel-id field only once the typed name looks
+  // like YouTube, so it doesn't clutter every other platform's add flow.
+  const [name, setName] = useState("");
 
   return (
     <GlowCard glow={3} className="p-4">
@@ -27,14 +31,29 @@ export function AddPlatformGoalForm() {
           startTransition(async () => {
             await addGoal(formData);
             formRef.current?.reset();
+            setName("");
           })
         }
         className="mt-3 space-y-3"
       >
         <div className="flex items-center gap-2">
           <PlatformIconPicker name="icon_slug" />
-          <Input name="platform_name" placeholder="Platform name (e.g. Instagram, Newsletter...)" required />
+          <Input
+            name="platform_name"
+            placeholder="Platform name (e.g. Instagram, Newsletter...)"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
         </div>
+        {isYouTubeGoal(name) && (
+          <div>
+            <label className="text-xs text-muted-foreground">
+              YouTube channel ID or @handle (for auto-update)
+            </label>
+            <Input name="source_ref" placeholder="UCxxxxxxxx or @handle" className="h-8 text-sm" />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
             <label className="text-xs text-muted-foreground">Target</label>
