@@ -114,7 +114,7 @@ export default async function CompetitorsPage({
 
       <form action={createCompetitor} className="mt-6">
         <GlowCard neutral className="space-y-3 p-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="name">Name</Label>
             <Input id="name" name="name" required placeholder="e.g. Competitor A" />

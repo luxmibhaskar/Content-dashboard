@@ -48,7 +48,7 @@ export default async function CollaboratorsPage() {
 
       <form action={createCollaborator} className="mt-6">
         <GlowCard neutral className="space-y-5 p-6">
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="space-y-2.5">
             <Label htmlFor="name">Name</Label>
             <Input id="name" name="name" required placeholder="Who are they" />

@@ -96,7 +96,7 @@ export default async function IdeasPage() {
           <Label htmlFor="brief_description">Brief description (optional)</Label>
           <Textarea id="brief_description" name="brief_description" rows={2} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-2.5">
             <Label htmlFor="reference_url">Reference URL (optional)</Label>
             <Input id="reference_url" name="reference_url" />
