@@ -494,20 +494,24 @@ html[data-brand="lbsworks"].dark .glow-card[data-neutral="true"] {
    specular highlight are painted inline (glow-card.tsx) as
    color-mix(oklch, var(--glow-color) 40% / 75%, transparent). On a
    neutral card --glow-color is var(--primary) = Build Indigo, bright and
-   saturated, so on touch (a tap puts the card into sticky :hover) both
-   layers flare noticeably brighter than the same effect on
-   LBsTransformation, whose Iron Charcoal stays quiet at the identical
-   mix. Same hue-vs-lightness mismatch as the --outer-glow-color and
-   lavender-cast --halo-strength fixes above. The gradients are set
-   inline so CSS can't retint them; their on-state opacity is pure CSS,
-   so that's the lever. Dialed back here only, LBsTransformation and
-   pillar-colored LBsWorks cards are untouched (same call as the halo
-   fix, which also left pillar cards at full strength). */
+   saturated, so at the same opacity both layers read brighter than the
+   same effect on LBsTransformation, whose Iron Charcoal stays quiet.
+   Same hue-vs-lightness mismatch as the --outer-glow-color and
+   lavender-cast --halo-strength fixes above. This is hue compensation,
+   NOT a stacked discount: it brings Build Indigo down to the perceived
+   quietness Iron Charcoal already has at the base opacity above. So it
+   tracks that base, currently 0.4 / 0.3, and sits a step under it
+   (0.26 / 0.2), roughly the old 0.55-of-full ratio carried onto the
+   lowered base. If the base changes again, move these with it. Removing
+   the rule would let LBsWorks neutral cards read brighter than
+   LBsTransformation's again; leaving them above the base would invert
+   it. Neutral only, LBsTransformation and pillar-colored LBsWorks cards
+   run on the base. */
 html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-sheen {
-  opacity: 0.55;
+  opacity: 0.26;
 }
 html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-specular {
-  opacity: 0.5;
+  opacity: 0.2;
 }
 
 /* Same card-type scoping as the rest of this pass: dial every one of
@@ -545,8 +549,17 @@ html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-s
   pointer-events: none;
 }
 
+/* On-hover / on-tap strength of the cursor-following ambient glow. Was
+   1: a full-strength wash of var(--glow-color) that read as a heavy blob
+   on every card, worst in light mode (Iron Charcoal at full opacity is a
+   dark smudge on a near-white card) and on any saturated hue (all pillar
+   colors, all of LBsWorks). 0.4 keeps a gentle "the cursor is here" cue
+   without competing with the card's own content. Not theme-scoped on
+   purpose, the reduction is wanted in both light and dark; dark reads a
+   touch stronger at the same value (light glow, dark backdrop) but still
+   lands in the quiet range at 0.4. Companion: specular below at 0.3. */
 .group:hover > .glow-card-sheen {
-  opacity: 1;
+  opacity: 0.4;
 }
 
 /* Five-refinement pass (src/components/glow-card.tsx), on top of the
@@ -661,8 +674,14 @@ html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-s
   pointer-events: none;
 }
 
+/* On-hover / on-tap strength of the tighter specular hotspot. Was 1.
+   This is the sharper, brighter-core layer (75% glow-color mix, narrow
+   falloff), so it's the one that most read as a "hot spot" under the
+   cursor, cut harder than the ambient sheen above: 0.3. Same reasoning
+   as the sheen, quieter everywhere, both themes, both brands, neutral
+   and pillar alike. */
 .group:hover > .glow-card-specular {
-  opacity: 1;
+  opacity: 0.3;
 }
 
 /* Refinement 4: the click/tap ripple's ring itself, expanding via
