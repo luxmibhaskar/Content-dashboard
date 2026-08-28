@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runBackupSyncAllBrands } from "@/lib/backup";
+import { refreshYouTubeSnapshotsAllBrands } from "@/lib/youtube-sync";
 
 // A full sync is 18 Sheets tabs plus the Drive archive across both
 // brands, well past Vercel's default function limit (~10-15s). 60 is the
@@ -15,6 +16,16 @@ export async function GET(request: Request) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
+  // GROUP J: keep each brand's YouTube subscriber count fresh once a day
+  // without anyone pressing Refresh. Independent of the backup, its own
+  // failures never block it, at most one Data API call per brand per day.
+  let youtube: Awaited<ReturnType<typeof refreshYouTubeSnapshotsAllBrands>> | { error: string };
+  try {
+    youtube = await refreshYouTubeSnapshotsAllBrands();
+  } catch (err) {
+    youtube = { error: err instanceof Error ? err.message : String(err) };
+  }
+
   const results = await runBackupSyncAllBrands();
-  return NextResponse.json({ results });
+  return NextResponse.json({ results, youtube });
 }
