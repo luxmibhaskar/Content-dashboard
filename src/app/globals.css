@@ -490,6 +490,26 @@ html[data-brand="lbsworks"].dark .glow-card[data-neutral="true"] {
   --outer-glow-strength: 16%;
 }
 
+/* LBsWorks-specific, neutral cards: the cursor/tap sheen and the tighter
+   specular highlight are painted inline (glow-card.tsx) as
+   color-mix(oklch, var(--glow-color) 40% / 75%, transparent). On a
+   neutral card --glow-color is var(--primary) = Build Indigo, bright and
+   saturated, so on touch (a tap puts the card into sticky :hover) both
+   layers flare noticeably brighter than the same effect on
+   LBsTransformation, whose Iron Charcoal stays quiet at the identical
+   mix. Same hue-vs-lightness mismatch as the --outer-glow-color and
+   lavender-cast --halo-strength fixes above. The gradients are set
+   inline so CSS can't retint them; their on-state opacity is pure CSS,
+   so that's the lever. Dialed back here only, LBsTransformation and
+   pillar-colored LBsWorks cards are untouched (same call as the halo
+   fix, which also left pillar cards at full strength). */
+html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-sheen {
+  opacity: 0.55;
+}
+html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-specular {
+  opacity: 0.5;
+}
+
 /* Same card-type scoping as the rest of this pass: dial every one of
    refinements 6/7's custom properties back together in one place,
    rather than repeating [data-text-heavy] per property below. */

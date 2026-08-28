@@ -253,7 +253,14 @@ export function GlowCard({
       style={{
         rotateX,
         rotateY,
-        perspective: 800,
+        // transformPerspective, not the plain `perspective` CSS property:
+        // Framer Motion folds transformPerspective into THIS element's own
+        // transform string (`perspective(800px) rotateX(...) ...`), which
+        // is what gives the card's own tilt its depth. The bare CSS
+        // `perspective` property only applies perspective to an element's
+        // children, so with that the rotateX/rotateY here rendered flat
+        // (a barely-visible squash) on every platform.
+        transformPerspective: 800,
         ["--glow-color" as string]: neutral ? "var(--primary)" : `var(--glow-${glow})`,
       }}
       data-text-heavy={textHeavy ? "true" : undefined}

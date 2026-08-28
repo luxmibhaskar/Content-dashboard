@@ -39,7 +39,14 @@ export function QuickAccessCards() {
               <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
               <p className="mt-2 text-sm font-medium">{label}</p>
             </GlowCardParallax>
-            <p className="text-xs text-muted-foreground">{description}</p>
+            {/* line-clamp-2 + min-h-8 (two text-xs lines) pin every card's
+                description to the same two-line box: without it the one
+                longer string ("Swipe file and live patterns") wraps to an
+                extra line at mobile widths where the other three don't,
+                and CSS grid's per-row stretch drags that whole row taller
+                than the other. Fixed box, no copy change, robust to width
+                and future edits. */}
+            <p className="text-xs text-muted-foreground line-clamp-2 min-h-8">{description}</p>
           </GlowCard>
         </Link>
       ))}
