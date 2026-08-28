@@ -201,7 +201,7 @@ export default async function HookLibraryPage() {
             (or Build/Sell/Scale) pillar taxonomy those glow colors
             actually represent, cycling them here implied a pillar
             distinction that was never being made. */}
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {HOOK_LIBRARY_TYPES.map((type) => (
             <CollapsibleSection
               key={type}
