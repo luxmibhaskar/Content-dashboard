@@ -1,5 +1,29 @@
 import { google, sheets_v4 } from "googleapis";
 
+// A PEM key survives a lot of mis-pasting between .env.local, the Vercel
+// dashboard, and a JSON credentials file. Left unhandled, any of these
+// reaches Node's crypto as "error:1E08010C:DECODER routines::unsupported"
+// with no hint which one it was (this exact error took a production
+// backup outage to diagnose). Normalize the common damage instead:
+//   - surrounding whitespace / trailing newline from a copy-paste
+//   - one pair of wrapping quotes (Vercel keeps them; dotenv strips them)
+//   - newlines stored as literal "\n" (and "\r\n"), which real PEM needs
+//     as actual newlines, plus stray CRs from Windows clipboards
+function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+  return key
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+}
+
 function getAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
@@ -10,9 +34,7 @@ function getAuth() {
 
   return new google.auth.JWT({
     email,
-    // .env files store the key with literal "\n" sequences, not real
-    // newlines, PEM parsing needs the real thing.
-    key: key.replace(/\\n/g, "\n"),
+    key: normalizePrivateKey(key),
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 }
@@ -95,11 +117,13 @@ export async function writeSheetTabs(
 
   // One batchClear + one batchUpdate for all tabs, not a clear+update
   // per tab. The per-tab loop was 2 write requests x 18 tabs = 36 per
-  // brand, and runBackupSyncAllBrands runs both brands in parallel, so
-  // 72 write requests land in the same minute against Sheets' 60/min
-  // per-user write quota - already fragile, and adding the reorder
-  // batchUpdate above tipped it over. Batched, the whole write is 2 (or
-  // 3 with a reorder) requests per brand.
+  // brand, well into Sheets' 60/min per-user write quota on its own
+  // (and it tipped over once the reorder batchUpdate above was added).
+  // Batched, the whole write is 2 (or 3 with a reorder) requests per
+  // brand. Brands now run in separate invocations a few minutes apart
+  // (see runBackupSyncBrands), so the quota is really only ever hit by
+  // one brand at a time, but keeping the write batched is still what
+  // gives that stagger enough headroom to matter.
   await sheets.spreadsheets.values.batchClear({
     spreadsheetId,
     requestBody: { ranges: tabs.map((t) => `${t.title}!A:ZZ`) },

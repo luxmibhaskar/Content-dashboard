@@ -45,9 +45,15 @@ sharing with a colleague, except this "colleague" is code.
 The private credential that proves to Google's servers that a request
 really is coming from that service account. Comes from the JSON file
 downloaded during setup, always used together with the email above, one
-doesn't work without the other. Also used for Drive now, the Drive API
-scope was enabled on this same service account rather than needing a
-separate credential.
+doesn't work without the other. Sheets only: the Drive archive
+authenticates as a real Google account via OAuth instead (see the
+`GOOGLE_OAUTH_*` vars below and `src/lib/google-drive.ts`), so this key
+is never parsed on the Drive path. A mis-pasted value here (wrapping
+quotes left in, `\n` not converted to real newlines, stray carriage
+returns) surfaces only as `error:1E08010C:DECODER routines::unsupported`
+from the Sheets sync; `getAuth()` in `src/lib/google-sheets.ts`
+normalizes the common cases, but the value in the Vercel dashboard
+should still be the raw PEM with real newlines.
 
 **GOOGLE_SHEETS_BACKUP_ID_LBSTRANSFORMATION** /
 **GOOGLE_SHEETS_BACKUP_ID_LBSWORKS**
@@ -116,4 +122,10 @@ configured even while the research pull itself is dormant.
 A shared password that proves a request to `/api/cron/backup` really
 came from Vercel's scheduled Cron job, not some random visitor hitting
 the URL. Any string works, generated once and reused, set the same
-value here and in the Vercel project's env vars after deploying.
+value here and in the Vercel project's env vars after deploying. The
+endpoint runs one brand per call: `vercel.json` schedules it twice,
+`?brand=lbstransformation` and `?brand=lbsworks`, a few minutes apart,
+so each brand's sync gets its own function time budget instead of both
+racing one 60s Hobby-plan ceiling (see builder-brief.md Section 17,
+"Execution model"). Hitting it with no `brand` param still syncs both
+in sequence, for a manual curl, but that form will time out on Hobby.

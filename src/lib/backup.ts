@@ -1128,7 +1128,26 @@ export async function runBackupSync(brand: Brand) {
   return { drive: driveSummary, sheets: sheetsResult, archive: archiveResult };
 }
 
+// One backup run per brand, each in its own request. On Vercel's Hobby
+// plan a function is killed at a hard 60s, and a full run (Drive archive
+// + 18 Sheets tabs) for a single brand already sits close to that, two
+// brands in one Promise.all reliably blew the limit and, worse, did it
+// silently: whichever brand failed fast (e.g. LBsWorks' crypto error)
+// logged its failure row, while the other was killed mid-Drive-archive
+// before it could log anything at all. So brands are split across
+// invocations now (nightly: one Vercel Cron entry each, staggered a few
+// minutes apart so their Sheets writes don't compete for the 60/min
+// per-user quota; manual: one "Sync now" button per brand). Sequencing
+// them inside a single request would not help, they'd still share the
+// one 60s budget and the total would only get longer.
+export async function runBackupSyncBrands(brands: Brand[]) {
+  const out: { brand: Brand; label: string; result: Awaited<ReturnType<typeof runBackupSync>> }[] = [];
+  for (const brand of brands) {
+    out.push({ brand, label: BRAND_LABELS[brand], result: await runBackupSync(brand) });
+  }
+  return out;
+}
+
 export async function runBackupSyncAllBrands() {
-  const results = await Promise.all(BRANDS.map((brand) => runBackupSync(brand)));
-  return BRANDS.map((brand, i) => ({ brand, label: BRAND_LABELS[brand], result: results[i] }));
+  return runBackupSyncBrands([...BRANDS]);
 }
