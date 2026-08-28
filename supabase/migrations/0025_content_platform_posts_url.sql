@@ -1,0 +1,24 @@
+-- GROUP I: track own YouTube channel videos, tied to Content Calendar.
+--
+-- Deliberately not a new table. content_platform_posts (0018) is
+-- already "one row per platform a content item was posted to", and
+-- content_platform_stats_snapshots is already "one row per check-in,
+-- views/likes/comments/saves/shares/reposts", more granular than
+-- platform_snapshots precisely because it's already scoped to one
+-- platform-post, i.e. one video. Group I only needs a way to identify
+-- *which* video a YouTube platform-post refers to, then an automatic
+-- writer into content_platform_stats_snapshots alongside the existing
+-- manual "Log a check-in" one, same table, same shape.
+--
+-- Generic post_url, not youtube_url: this project's "build full schemas
+-- upfront" standing rule, in case another platform's post ever wants a
+-- stored link too. Only YouTube parses a video id out of it and
+-- auto-refreshes today, everything else leaves it null and unused,
+-- costing nothing.
+--
+-- Not relied on for matching: per explicit instruction, title-matching
+-- was rejected as unreliable, this column is the one and only link
+-- between a content_platform_posts row and its real-world video, set
+-- once by pasting the URL after publishing.
+alter table content_platform_posts
+  add column post_url text;

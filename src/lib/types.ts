@@ -637,6 +637,10 @@ export type ContentPlatformPost = {
   id: string;
   platform: string;
   published_at: string;
+  // GROUP I: the pasted post URL, only meaningfully used for YouTube
+  // today (auto-refresh parses a video id out of it), generic per this
+  // project's build-full-schemas-upfront convention. Null until pasted.
+  post_url: string | null;
   content_platform_stats_snapshots: ContentPlatformStatsSnapshot[];
 };
 

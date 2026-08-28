@@ -152,7 +152,7 @@ export default async function TopicPage({
     supabase
       .from("content_platform_posts")
       .select(
-        "id, platform, published_at, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts, retention_drop_timestamp, retention_drop_note)",
+        "id, platform, published_at, post_url, content_platform_stats_snapshots(snapshot_date, views, likes, comments, saves, shares, reposts, retention_drop_timestamp, retention_drop_note)",
       )
       .eq("content_id", id)
       .order("published_at", { ascending: true }),

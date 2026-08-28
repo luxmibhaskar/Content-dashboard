@@ -51,6 +51,73 @@ export async function fetchYouTubeChannelStats(sourceRef: string): Promise<YouTu
   };
 }
 
+// GROUP I: pull the video id out of whatever URL shape got pasted after
+// publishing (watch?v=, youtu.be/, /shorts/), so the topic page just
+// takes a plain paste rather than asking for a bare id. Returns null on
+// anything unrecognized rather than guessing, callers surface that as
+// "not a YouTube video URL" instead of silently failing the API call.
+export function parseYouTubeVideoId(url: string): string | null {
+  try {
+    const u = new URL(url.trim());
+    if (u.hostname === "youtu.be") {
+      const id = u.pathname.slice(1);
+      return id || null;
+    }
+    if (!/(^|\.)youtube\.com$/.test(u.hostname)) return null;
+    const shortsMatch = u.pathname.match(/^\/shorts\/([\w-]+)/);
+    if (shortsMatch) return shortsMatch[1];
+    const v = u.searchParams.get("v");
+    return v || null;
+  } catch {
+    return null;
+  }
+}
+
+export type YouTubeVideoStats = {
+  viewCount: number;
+  likeCount: number | null;
+  commentCount: number | null;
+};
+
+type YouTubeVideoStatsResponse = {
+  items?: { statistics?: { viewCount?: string; likeCount?: string; commentCount?: string } }[];
+};
+
+// GROUP I: single-video statistics for the per-item Analytics section's
+// "Refresh from YouTube" button, sibling to fetchYouTubeChannelStats
+// above (same API, same key, one video instead of one channel).
+// likeCount/commentCount come back missing (not zero) when a creator has
+// disabled likes or comments on that specific video, distinct from a
+// genuine 0, so those stay nullable here same as
+// content_platform_stats_snapshots' own columns.
+export async function fetchYouTubeVideoStats(videoId: string): Promise<YouTubeVideoStats> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    throw new Error("YOUTUBE_API_KEY is not configured.");
+  }
+
+  const url = new URL(`${YOUTUBE_API_BASE}/videos`);
+  url.searchParams.set("part", "statistics");
+  url.searchParams.set("id", videoId);
+  url.searchParams.set("key", apiKey);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`YouTube video lookup failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as YouTubeVideoStatsResponse;
+  const stats = data.items?.[0]?.statistics;
+  if (!stats) {
+    throw new Error(`No YouTube video found for id "${videoId}".`);
+  }
+
+  return {
+    viewCount: Number(stats.viewCount ?? 0),
+    likeCount: stats.likeCount != null ? Number(stats.likeCount) : null,
+    commentCount: stats.commentCount != null ? Number(stats.commentCount) : null,
+  };
+}
+
 export type YouTubeVideoSignal = {
   videoId: string;
   title: string;

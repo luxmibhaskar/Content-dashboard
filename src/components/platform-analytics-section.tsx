@@ -9,8 +9,13 @@ import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PerformanceOverTimeChart } from "@/components/charts/performance-over-time-chart";
 import { todayDateKey } from "@/lib/streaks";
-import { logPlatformStatsSnapshot } from "@/app/(app)/calendar/[id]/platform-stats-actions";
+import {
+  logPlatformStatsSnapshot,
+  updatePlatformPostUrl,
+  refreshYouTubeVideoStats,
+} from "@/app/(app)/calendar/[id]/platform-stats-actions";
 import { engagementOfSnapshot } from "@/lib/platform-analytics";
+import { isYouTubeGoal } from "@/lib/goals";
 import type { ContentPlatformPost } from "@/lib/types";
 import type { OverTimePoint } from "@/lib/analytics";
 
@@ -142,6 +147,10 @@ function PlatformAnalyticsCard({
         </span>
       </div>
 
+      {isYouTubeGoal(post.platform) && (
+        <YouTubeVideoLink contentId={contentId} brand={brand} post={post} />
+      )}
+
       <div className="mt-3">
         {points.length > 0 ? (
           <PerformanceOverTimeChart data={points} />
@@ -219,5 +228,76 @@ function PlatformAnalyticsCard({
         )}
       </div>
     </GlowCard>
+  );
+}
+
+// GROUP I: "paste the published YouTube URL once after publishing"
+// becomes the reliable link (not automatic title-matching, titles can
+// be edited and can collide, see updatePlatformPostUrl's own comment).
+// Once a URL is saved, Refresh pulls that one video's view/like/comment
+// counts and logs them as today's check-in, same table and same
+// upsert-by-day rule the manual form below already uses, so a refresh
+// and a same-day manual edit never conflict.
+function YouTubeVideoLink({
+  contentId,
+  brand,
+  post,
+}: {
+  contentId: string;
+  brand: string;
+  post: ContentPlatformPost;
+}) {
+  const [savePending, startSave] = useTransition();
+  const [refreshPending, startRefresh] = useTransition();
+  const [refreshMsg, setRefreshMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const boundSaveUrl = updatePlatformPostUrl.bind(null, post.id, contentId);
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <form
+        action={(formData) => startSave(() => boundSaveUrl(formData))}
+        className="flex flex-wrap items-end gap-2"
+      >
+        <div className="flex flex-1 min-w-48 flex-col gap-1">
+          <label className="text-xs text-muted-foreground" htmlFor={`post_url-${post.id}`}>
+            Video URL
+          </label>
+          <Input
+            id={`post_url-${post.id}`}
+            name="post_url"
+            type="url"
+            placeholder="https://youtube.com/watch?v=..."
+            defaultValue={post.post_url ?? ""}
+            className="h-8 text-sm"
+          />
+        </div>
+        <Button type="submit" size="xs" variant="outline" loading={savePending}>
+          Save link
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          loading={refreshPending}
+          onClick={() =>
+            startRefresh(async () => {
+              const res = await refreshYouTubeVideoStats(post.id, contentId, brand);
+              setRefreshMsg(
+                res.ok
+                  ? { kind: "ok", text: `Updated to ${res.views.toLocaleString()} views` }
+                  : { kind: "error", text: res.error },
+              );
+            })
+          }
+        >
+          Refresh from YouTube
+        </Button>
+      </form>
+      {refreshMsg && (
+        <span className={refreshMsg.kind === "ok" ? "text-xs text-emerald-600" : "text-xs text-destructive"}>
+          {refreshMsg.text}
+        </span>
+      )}
+    </div>
   );
 }
