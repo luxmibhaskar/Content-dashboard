@@ -6,14 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { COLLABORATOR_STATUSES, PLATFORMS, type Collaborator } from "@/lib/types";
+import { EntryReadView, ReadField } from "@/components/entry-read-view";
 import { updateCollaborator, deleteCollaborator } from "./actions";
 
 export default async function CollaboratorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ edit?: string }>;
 }) {
   const { id } = await params;
+  const { edit } = await searchParams;
+  // ?edit=1 shows the form; without it, a read-only summary with an Edit
+  // action. Tapping a saved collaborator from the list lands in read mode.
+  const isEditing = edit === "1";
   const supabase = await createClient();
 
   const { data: collaborator } = await supabase
@@ -35,6 +42,57 @@ export default async function CollaboratorPage({
         &larr; Collaboration &amp; Outreach
       </Link>
 
+      {!isEditing && (
+        <EntryReadView
+          editHref={`/collaborators/${collaborator.id}?edit=1`}
+          header={
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-base font-semibold">{collaborator.name}</span>
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {collaborator.status}
+              </span>
+            </div>
+          }
+        >
+          {collaborator.platform && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Platform</p>
+              <p>{collaborator.platform}</p>
+            </div>
+          )}
+          {collaborator.profile_url && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Profile URL</p>
+              <a
+                href={collaborator.profile_url}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-sm text-primary underline underline-offset-2"
+              >
+                {collaborator.profile_url}
+              </a>
+            </div>
+          )}
+          {collaborator.last_contact_date && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Last contact date</p>
+              <p>{collaborator.last_contact_date}</p>
+            </div>
+          )}
+          <ReadField label="Notes" value={collaborator.notes} />
+          {!collaborator.platform &&
+            !collaborator.profile_url &&
+            !collaborator.last_contact_date &&
+            !collaborator.notes && (
+              <p className="text-sm text-muted-foreground">
+                Only a name and status so far. Use Edit to add details.
+              </p>
+            )}
+        </EntryReadView>
+      )}
+
+      {isEditing && (
+      <>
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="name">Name</Label>
@@ -103,8 +161,11 @@ export default async function CollaboratorPage({
           />
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2 pt-2">
           <Button type="submit">Save</Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/collaborators/${collaborator.id}`}>Cancel</Link>
+          </Button>
         </div>
       </form>
 
@@ -113,6 +174,8 @@ export default async function CollaboratorPage({
           Delete collaborator
         </Button>
       </form>
+      </>
+      )}
     </div>
   );
 }

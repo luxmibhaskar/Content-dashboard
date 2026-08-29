@@ -6,16 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SubTopicMultiSelect } from "@/components/sub-topic-multiselect";
+import { EntryReadView, ReadField } from "@/components/entry-read-view";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { PLATFORMS, type Competitor } from "@/lib/types";
 import { updateCompetitor, deleteCompetitor } from "./actions";
 
 export default async function CompetitorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ edit?: string }>;
 }) {
   const { id } = await params;
+  const { edit } = await searchParams;
+  // ?edit=1 shows the form; without it, a read-only summary with an Edit
+  // action. Tapping a saved competitor from the list lands in read mode.
+  const isEditing = edit === "1";
   const supabase = await createClient();
 
   const { data: competitor } = await supabase
@@ -44,6 +51,64 @@ export default async function CompetitorPage({
         &larr; Competitors
       </Link>
 
+      {!isEditing && (
+        <EntryReadView
+          editHref={`/competitors/${competitor.id}?edit=1`}
+          header={
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-base font-semibold">{competitor.name}</span>
+                {!competitor.active && (
+                  <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                    Inactive
+                  </span>
+                )}
+              </div>
+              {competitor.sub_topics.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {competitor.sub_topics.map((s) => (
+                    <span
+                      key={s}
+                      className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+        >
+          {competitor.platform && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Platform</p>
+              <p>{competitor.platform}</p>
+            </div>
+          )}
+          {competitor.profile_url && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Profile URL</p>
+              <a
+                href={competitor.profile_url}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-sm text-primary underline underline-offset-2"
+              >
+                {competitor.profile_url}
+              </a>
+            </div>
+          )}
+          <ReadField label="Notes" value={competitor.notes} />
+          {!competitor.platform && !competitor.profile_url && !competitor.notes && (
+            <p className="text-sm text-muted-foreground">
+              Only a name so far. Use Edit to add details.
+            </p>
+          )}
+        </EntryReadView>
+      )}
+
+      {isEditing && (
+      <>
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="name">Name</Label>
@@ -91,10 +156,21 @@ export default async function CompetitorPage({
           Active
         </label>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2 pt-2">
           <Button type="submit">Save</Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/competitors/${competitor.id}`}>Cancel</Link>
+          </Button>
         </div>
       </form>
+
+      <form action={boundDelete} className="mt-6">
+        <Button type="submit" variant="destructive" size="sm">
+          Delete competitor
+        </Button>
+      </form>
+      </>
+      )}
 
       <div className="mt-8 border-t border-border pt-6">
         <p className="text-sm font-medium">Used in {benchmarks?.length ?? 0} topics</p>
@@ -114,12 +190,6 @@ export default async function CompetitorPage({
           </ul>
         )}
       </div>
-
-      <form action={boundDelete} className="mt-6">
-        <Button type="submit" variant="destructive" size="sm">
-          Delete competitor
-        </Button>
-      </form>
     </div>
   );
 }
