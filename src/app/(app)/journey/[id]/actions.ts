@@ -31,6 +31,9 @@ export async function updateJourneyEntry(id: string, formData: FormData) {
   }
 
   revalidatePath("/journey");
+  // The detail page's own Past Journey Log list reads journey_log too, so
+  // revalidate this route as well, not just the index.
+  revalidatePath("/journey/[id]", "page");
   // ?saved=<ts> drives <SaveToast> on the detail page, this redirect
   // lands back on the same URL and otherwise gives no visible signal the
   // save worked. Fresh timestamp each save so repeats re-trigger it.

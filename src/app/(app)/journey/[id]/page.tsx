@@ -37,20 +37,26 @@ export default async function JourneyEntryPage({
 
   const [structure, { data: pastEntriesData }] = await Promise.all([
     getMergedPillarStructure(entry.brand),
-    // Same list /journey shows, scoped to this brand and minus the entry
-    // open in the form above. No date/pillar/keyword filters here, this
-    // is a quick "what else have I logged" reference, not the full
-    // searchable index that page already is.
+    // Same list /journey shows, scoped to this brand. The entry open in
+    // the form above is kept in this list (tagged "Editing"), not
+    // filtered out, so a just-created-then-saved entry appears here
+    // straight away instead of only showing once you go back to
+    // /journey. Mirrors Weekly Review's Past Reviews. No
+    // date/pillar/keyword filters here, this is a quick "what else have I
+    // logged" reference, not the full searchable index that page is.
     supabase
       .from("journey_log")
       .select(
         "id, entry_date, pillar_focus, sub_topic, what_i_did_experienced, key_lesson_insight, angle_worthy",
       )
       .eq("brand", entry.brand)
-      .neq("id", entry.id)
       .order("entry_date", { ascending: false }),
   ]);
   const pastEntries = (pastEntriesData ?? []) as JourneyEntry[];
+  // Gate the section on there being an entry other than the one in the
+  // form, so a brand-new first entry doesn't get a "Past Journey Log"
+  // heading over a single row that's itself.
+  const hasOtherEntries = pastEntries.some((e) => e.id !== entry.id);
 
   const boundUpdate = updateJourneyEntry.bind(null, entry.id);
   const boundDelete = deleteJourneyEntry.bind(null, entry.id);
@@ -149,32 +155,40 @@ export default async function JourneyEntryPage({
         </Button>
       </form>
 
-      {pastEntries.length > 0 && (
+      {hasOtherEntries && (
         <div className="mt-10 border-t border-border pt-6">
           <h2 className="text-sm font-medium text-muted-foreground">Past Journey Log</h2>
           <GlowCard neutral className="mt-2 divide-y divide-border">
-            {pastEntries.map((e) => (
-              <Link
-                key={e.id}
-                href={`/journey/${e.id}`}
-                className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{e.entry_date}</span>
-                    {e.angle_worthy && <span title="Angle-worthy">&#9733;</span>}
-                    {[...e.pillar_focus, ...e.sub_topic].length > 0 && (
-                      <span className="truncate">
-                        {[...e.pillar_focus, ...e.sub_topic].join(" / ")}
-                      </span>
-                    )}
+            {pastEntries.map((e) => {
+              const isCurrent = e.id === entry.id;
+              return (
+                <Link
+                  key={e.id}
+                  href={`/journey/${e.id}`}
+                  className="flex items-center justify-between gap-4 px-3 py-2.5 hover:bg-muted/30"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{e.entry_date}</span>
+                      {e.angle_worthy && <span title="Angle-worthy">&#9733;</span>}
+                      {isCurrent && (
+                        <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Editing
+                        </span>
+                      )}
+                      {[...e.pillar_focus, ...e.sub_topic].length > 0 && (
+                        <span className="truncate">
+                          {[...e.pillar_focus, ...e.sub_topic].join(" / ")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-sm">
+                      {e.key_lesson_insight || e.what_i_did_experienced || "No lesson recorded yet"}
+                    </p>
                   </div>
-                  <p className="truncate text-sm">
-                    {e.key_lesson_insight || e.what_i_did_experienced || "No lesson recorded yet"}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </GlowCard>
         </div>
       )}
