@@ -841,6 +841,38 @@ html[data-brand="lbsworks"] .glow-card[data-neutral="true"]:hover > .glow-card-s
     0 0 14px -2px color-mix(in oklch, var(--glow-1) 70%, transparent);
 }
 
+/* Later ask: in light mode the top bar (src/components/top-bar.tsx) had
+   only `border-b border-border` separating it from the page, and
+   --border (oklch(0.922 0 0)) is nearly invisible against a near-white
+   page. Give it the same real surface + shadow separation the cards got
+   in the light-mode tonal pass, in the scaled-down glass language
+   .brand-switcher / .nav-dropdown-content already use (no GlowCard
+   breathing/tilt: the top bar is deliberately kept off that, see
+   docs/dashboard-redesign.md). A blurred --popover fill so content sits
+   on a distinct raised surface, plus a downward --glow-1 shadow (the
+   same always-on accent .brand-switcher uses) that reads as the bar
+   floating above the page rather than a hairline edge. */
+.top-bar {
+  background: color-mix(in oklch, var(--popover) 82%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid color-mix(in oklch, var(--glow-1) 30%, var(--border));
+  box-shadow:
+    0 1px 0 0 color-mix(in oklch, var(--glow-1) 22%, transparent),
+    0 8px 24px -14px color-mix(in oklch, var(--glow-1) 40%, transparent);
+}
+
+/* Dark mode already separates fine on its own (its --border is a
+   visible oklch(1 0 0 / 10%) against a dark page). Keep the surface
+   treatment but lighter: no colored halo, a fainter fill and a soft
+   neutral drop, matching the ".dark .glow-card" call that the rim/border
+   is cue enough there and the halo comes off. */
+.dark .top-bar {
+  background: color-mix(in oklch, var(--popover) 55%, transparent);
+  border-bottom-color: var(--border);
+  box-shadow: 0 6px 20px -16px rgba(0, 0, 0, 0.6);
+}
+
 /* Responsive audit #2: on a narrow screen or any touch device, give
    every interactive control a ~40px tap floor. A desktop mouse at a
    normal window width keeps the dense sizing untouched. `group/button`

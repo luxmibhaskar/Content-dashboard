@@ -154,7 +154,7 @@ export function TopBar({
   const openGoalsModal = () => setGoalsModalOpen(true);
 
   return (
-    <header className="border-b border-border">
+    <header className="top-bar">
       <div className="flex justify-center border-b border-border px-4 py-3">
         <BrandSwitcher brand={brand} />
       </div>
