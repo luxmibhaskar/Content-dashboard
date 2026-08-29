@@ -23,7 +23,9 @@ export async function createJourneyEntry() {
     throw new Error(error?.message ?? "Failed to create journey entry.");
   }
 
-  redirect(`/journey/${data.id}`);
+  // Straight into the form (?edit=1): the detail page defaults to a
+  // read-only view now, and a brand-new entry has nothing to read.
+  redirect(`/journey/${data.id}?edit=1`);
 }
 
 export type QuickEntryState = { error: string | null };

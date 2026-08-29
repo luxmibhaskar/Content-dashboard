@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
@@ -38,4 +39,8 @@ export async function saveWeeklyReview(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/review");
   revalidatePath("/");
+  // Land back on the read-only summary for the week just saved (drops
+  // ?edit=1 if it was there), so a save visibly resolves to the saved
+  // view instead of leaving the form sitting open unchanged.
+  redirect(`/review?week=${weekStartDate}`);
 }

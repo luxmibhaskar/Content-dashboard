@@ -10,14 +10,15 @@ import { Label } from "@/components/ui/label";
 import type { WeeklyReview } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
 import { WeekPicker } from "@/components/week-picker";
+import { EntryReadView, ReadField } from "@/components/entry-read-view";
 import { saveWeeklyReview } from "./actions";
 
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; edit?: string }>;
 }) {
-  const { week } = await searchParams;
+  const { week, edit } = await searchParams;
   const defaultWeek = currentReviewWeek();
   // Snap whatever ?week= holds to its Monday-Sunday week so weekStart is
   // always the exact key weekly_reviews is unique on.
@@ -50,6 +51,13 @@ export default async function ReviewPage({
       .limit(20),
   ]);
 
+  // ?edit=1 shows the form. Without it, a saved week shows a read-only
+  // summary with an Edit action; a week with nothing saved yet goes
+  // straight to the form (nothing to read, and the point of opening it
+  // is to fill it in).
+  const isEditing = edit === "1";
+  const showForm = isEditing || !review;
+
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold">Weekly Review</h1>
@@ -64,16 +72,57 @@ export default async function ReviewPage({
       {!isCurrentWeek && (
         <p className="mt-1 text-xs text-muted-foreground">
           {isPastWeek ? "Editing a past week" : "Getting a head start on an upcoming week"}
-          {review ? " - its saved answers are loaded below." : " - nothing saved for it yet."}
+          {review ? " - it already has a saved review below." : " - nothing saved for it yet."}
         </p>
       )}
 
       <WeekPicker weekStart={weekStart} currentWeekStart={defaultWeek.start} />
 
+      {!showForm && review && (
+        <EntryReadView
+          editHref={`/review?week=${weekStart}&edit=1`}
+          header={<p className="text-sm font-medium">Saved answers</p>}
+        >
+          <ReadField
+            label="1. Posted what you planned?"
+            value={review.posted_as_planned}
+          />
+          <ReadField label="2. Pillar balance" value={review.pillar_balance_notes} />
+          <ReadField
+            label="3. Retention drop patterns"
+            value={review.retention_drop_patterns}
+          />
+          <ReadField label="4. Hook Library insights" value={review.hook_library_insights} />
+          <ReadField
+            label="5. Did I Earn the Click updates"
+            value={review.earned_click_updates}
+          />
+          {review.next_week_adjustment ? (
+            <div className="space-y-1 border-t border-border pt-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                What to adjust next week
+              </p>
+              <p className="text-sm">{review.next_week_adjustment}</p>
+            </div>
+          ) : null}
+          {!review.posted_as_planned &&
+            !review.pillar_balance_notes &&
+            !review.retention_drop_patterns &&
+            !review.hook_library_insights &&
+            !review.earned_click_updates &&
+            !review.next_week_adjustment && (
+              <p className="text-sm text-muted-foreground">
+                This review was saved with no answers filled in. Use Edit to add them.
+              </p>
+            )}
+        </EntryReadView>
+      )}
+
       {/* key on the week so switching weeks with the picker remounts the
           form: the fields are uncontrolled (defaultValue), which React
           otherwise won't refresh on a query-only navigation, leaving the
           previous week's answers sitting in a new week's blank form. */}
+      {showForm && (
       <form key={weekStart} action={saveWeeklyReview} className="mt-6">
         <input type="hidden" name="week_start_date" value={weekStart} />
         <input type="hidden" name="week_end_date" value={weekEnd} />
@@ -175,33 +224,43 @@ export default async function ReviewPage({
           <Input id="next_week_adjustment" name="next_week_adjustment" defaultValue={review?.next_week_adjustment ?? ""} />
         </div>
 
-        <Button type="submit">
-          {isCurrentWeek
-            ? "Save this week's review"
-            : review
-              ? "Save changes to this review"
-              : "Save this review"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="submit">
+            {isCurrentWeek
+              ? "Save this week's review"
+              : review
+                ? "Save changes to this review"
+                : "Save this review"}
+          </Button>
+          {review && (
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/review?week=${weekStart}`}>Cancel</Link>
+            </Button>
+          )}
+        </div>
         </GlowCard>
       </form>
+      )}
 
       {(pastReviews?.length ?? 0) > 0 && (
         <div className="mt-10 border-t border-border pt-6">
           <h2 className="text-sm font-medium text-muted-foreground">Past Reviews</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Click any week to load it into the form above and edit it.
+            Click any week to open it above as a summary, then Edit to change it.
           </p>
           <ul className="mt-2">
-            {/* Every week is a link that loads that review into the form
-                above for editing (upsert keyed on the week). The week
-                currently in the form is kept in this list, not filtered
-                out, and tagged so it is clear which row is open. */}
+            {/* Every week is a link that loads that review into the panel
+                above (upsert keyed on the week). The week currently open
+                is kept in this list, not filtered out, and tagged so it
+                is clear which row is showing. */}
             {pastReviews!.map((r) => {
               const tag =
                 r.week_start_date === defaultWeek.start
                   ? "This week"
                   : r.week_start_date === weekStart
-                    ? "Editing"
+                    ? isEditing
+                      ? "Editing"
+                      : "Viewing"
                     : null;
               return (
                 <li key={r.id}>
@@ -221,7 +280,7 @@ export default async function ReviewPage({
                       <span className="truncate text-muted-foreground">- {r.next_week_adjustment}</span>
                     )}
                     <span aria-hidden className="ml-auto shrink-0 text-muted-foreground">
-                      Edit ›
+                      Open ›
                     </span>
                   </Link>
                 </li>

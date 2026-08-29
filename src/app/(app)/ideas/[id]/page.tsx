@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
+import { CONTENT_FORMAT_OPTIONS, IDEA_SOURCES, IDEA_STATUSES, type Idea } from "@/lib/types";
 import { GlowCard } from "@/components/glow-card";
+import { PillarTag } from "@/components/pillar-tag";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { IdeaFormatPlatformFields } from "@/components/idea-format-platform-fields";
 import { SaveToast } from "@/components/save-toast";
+import { EntryReadView, ReadField } from "@/components/entry-read-view";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
 import { updateIdea, deleteIdea, transferToCalendar } from "./actions";
@@ -19,10 +21,13 @@ export default async function IdeaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; edit?: string }>;
 }) {
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, edit } = await searchParams;
+  // ?edit=1 shows the real form; without it, a read-only summary with an
+  // Edit action. Tapping a saved idea from the Idea Panel lands in read mode.
+  const isEditing = edit === "1";
   const supabase = await createClient();
 
   const { data: idea } = await supabase
@@ -97,6 +102,65 @@ export default async function IdeaPage({
         </form>
       </GlowCard>
 
+      {!isEditing && (
+        <EntryReadView
+          editHref={`/ideas/${idea.id}?edit=1`}
+          header={
+            <>
+              <h1 className="text-lg font-semibold leading-snug">{idea.idea_title}</h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {idea.status}
+                </span>
+                {idea.pillar && <PillarTag pillar={idea.pillar} />}
+                {idea.sub_topic && (
+                  <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                    {idea.sub_topic}
+                  </span>
+                )}
+              </div>
+            </>
+          }
+        >
+          {(idea.format || idea.platform.length > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              {idea.format && (
+                <span className="rounded-full bg-muted px-2 py-0.5">
+                  {CONTENT_FORMAT_OPTIONS.find((f) => f.value === idea.format)?.label ?? idea.format}
+                </span>
+              )}
+              {idea.platform.map((p) => (
+                <span key={p} className="rounded-full bg-muted px-2 py-0.5">
+                  {p}
+                </span>
+              ))}
+            </div>
+          )}
+          <ReadField label="Brief description" value={idea.brief_description} />
+          {(idea.idea_source || idea.source_detail) && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Source</p>
+              <p>{[idea.idea_source, idea.source_detail].filter(Boolean).join(" - ")}</p>
+            </div>
+          )}
+          {idea.reference_url && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Reference URL</p>
+              <a
+                href={idea.reference_url}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-sm text-primary underline underline-offset-2"
+              >
+                {idea.reference_url}
+              </a>
+            </div>
+          )}
+        </EntryReadView>
+      )}
+
+      {isEditing && (
+      <>
       <form action={boundUpdate} className="mt-4">
         <GlowCard glow={2} className="space-y-5 p-4">
         <div className="space-y-2.5">
@@ -186,8 +250,11 @@ export default async function IdeaPage({
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2 pt-2">
           <Button type="submit">Save</Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/ideas/${idea.id}`}>Cancel</Link>
+          </Button>
         </div>
         </GlowCard>
       </form>
@@ -197,6 +264,8 @@ export default async function IdeaPage({
           Delete idea
         </Button>
       </form>
+      </>
+      )}
     </div>
   );
 }

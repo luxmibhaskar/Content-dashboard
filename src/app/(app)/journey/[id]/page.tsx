@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PillarSubtopicPicker } from "@/components/pillar-subtopic-picker";
+import { PillarTag } from "@/components/pillar-tag";
 import { GlowCard } from "@/components/glow-card";
 import { SaveToast } from "@/components/save-toast";
+import { EntryReadView, ReadField } from "@/components/entry-read-view";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { MOOD_ENERGY_OPTIONS, type JourneyEntry } from "@/lib/types";
 import { updateJourneyEntry, deleteJourneyEntry } from "./actions";
@@ -17,10 +19,13 @@ export default async function JourneyEntryPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; edit?: string }>;
 }) {
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, edit } = await searchParams;
+  // ?edit=1 shows the real form; without it, a read-only summary with an
+  // Edit action. Tapping a saved entry from any list lands in read mode.
+  const isEditing = edit === "1";
   const supabase = await createClient();
 
   const { data: entry } = await supabase
@@ -68,6 +73,60 @@ export default async function JourneyEntryPage({
         &larr; My Journey Log
       </Link>
 
+      {!isEditing && (
+        <EntryReadView
+          editHref={`/journey/${entry.id}?edit=1`}
+          header={
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">{entry.entry_date}</span>
+                {entry.angle_worthy && (
+                  <span className="text-xs text-muted-foreground" title="Angle-worthy">
+                    &#9733; Angle-worthy
+                  </span>
+                )}
+              </div>
+              {(entry.pillar_focus.length > 0 || entry.sub_topic.length > 0) && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {entry.pillar_focus.map((p) => (
+                    <PillarTag key={p} pillar={p} />
+                  ))}
+                  {entry.sub_topic.map((s) => (
+                    <span
+                      key={s}
+                      className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+        >
+          <ReadField label="What I did / experienced" value={entry.what_i_did_experienced} />
+          <ReadField label="Key lesson / insight" value={entry.key_lesson_insight} />
+          <ReadField label="Proof / results" value={entry.proof_results} />
+          {(entry.mood_energy || entry.tags_keywords) && (
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+              {entry.mood_energy && <span>Mood / energy: {entry.mood_energy}</span>}
+              {entry.tags_keywords && <span>Tags: {entry.tags_keywords}</span>}
+            </div>
+          )}
+          {!entry.what_i_did_experienced &&
+            !entry.key_lesson_insight &&
+            !entry.proof_results &&
+            !entry.mood_energy &&
+            !entry.tags_keywords && (
+              <p className="text-sm text-muted-foreground">
+                Nothing recorded yet. Use Edit to fill this entry in.
+              </p>
+            )}
+        </EntryReadView>
+      )}
+
+      {isEditing && (
+      <>
       <form action={boundUpdate} className="mt-4 space-y-5">
         <div className="space-y-1.5">
           <Label htmlFor="entry_date">Date</Label>
@@ -144,8 +203,11 @@ export default async function JourneyEntryPage({
           Angle-worthy (shows with the &quot;Angle-worthy only&quot; filter on My Journey Log)
         </label>
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2 pt-2">
           <Button type="submit">Save</Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/journey/${entry.id}`}>Cancel</Link>
+          </Button>
         </div>
       </form>
 
@@ -154,6 +216,8 @@ export default async function JourneyEntryPage({
           Delete entry
         </Button>
       </form>
+      </>
+      )}
 
       {hasOtherEntries && (
         <div className="mt-10 border-t border-border pt-6">
