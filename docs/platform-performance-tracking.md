@@ -32,16 +32,21 @@ items instead:
 
 **content_platform_posts** — one row per platform a specific content
 item was actually posted to. Fields: content_id (FK), platform name,
-published_at (date + time, not date only), retention_drop_note.
-A single content item can have multiple rows here, one per platform it
-went out on, added individually as it's actually published there, not
-all upfront.
+published_at (date + time, not date only). (`post_url` was added later
+for Group I, see Section 9.) A single content item can have multiple
+rows here, one per platform it went out on, added individually as it's
+actually published there, not all upfront.
 
 **content_platform_stats_snapshots** — one row per check-in, repeatable
 over time. Fields: content_platform_post_id (FK), snapshot_date, views,
-likes, comments, saves, shares, reposts. This is what "fill in time to
-time" means, multiple entries per platform-post as it accumulates
-performance, not one static number.
+likes, comments, saves, shares, reposts, plus retention_drop_timestamp
+and retention_drop_note (added by `0020_retention_drop_check_ins.sql`,
+which also dropped the coarser, never-written
+`content_platform_posts.retention_drop_note` this doc's first draft
+listed above; retention drop is one reading per check-in, so it has to
+live here to be trended). This is what "fill in time to time" means,
+multiple entries per platform-post as it accumulates performance, not
+one static number.
 
 ## 3. Title container fields (Short Form, matching Long Form's existing pattern)
 
