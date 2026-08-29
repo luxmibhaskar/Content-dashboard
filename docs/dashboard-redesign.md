@@ -162,7 +162,10 @@ including the text-heavy work surfaces named in the original ask. Deliberately
 tab/nav chrome (the pill toggles, top bar), and modal dialogs
 (Platforms) — scoped down from "every bordered box" to "real standalone
 cards" per an explicit follow-up decision, since breathing/tilt on
-button-sized micro-UI reads as jitter rather than polish. `<details>`-
+button-sized micro-UI reads as jitter rather than polish. (The top bar
+was later given the *static* half of the treatment only — a real
+surface fill and shadow separation, no breathing or tilt — see "Shared
+filter-bar patterns" at the end of this doc.) `<details>`-
 based `CollapsibleSection` gets the same `.glow-card` CSS class directly
 (no pointer tracking, a native disclosure widget's own semantics aren't
 worth trading for the tilt effect). Nested content inside an
@@ -550,3 +553,73 @@ every platform goal's current count, not just those 4:
   true at desktop width confirmed the mobile panel actually contains
   the streak/goals shuffle, all 5 nav+more links, the Streak and Goals
   trigger, its own independent theme toggle, and Sign out, all together.
+
+## Shared filter-bar patterns (built)
+
+A pass over the two busiest filter bars in the app (Content Calendar,
+Analytics), plus the top bar's light-mode edge, sharing two new small
+components.
+
+### `SegmentedToggle` (`src/components/segmented-toggle.tsx`)
+
+The bordered "pick one" control that Analytics' Content vs Platforms
+view toggle already drew inline, extracted so it's one component. A
+`role="group"` container (`inline-flex rounded-lg border border-border
+p-0.5`) with the selected option filled (`bg-primary
+text-primary-foreground`) and the rest transparent. Plain server
+component — every option carries a precomputed `href`, the caller owns
+building those (and preserving whatever other query params it wants).
+Used by Analytics' view toggle and Content Calendar's Long Form / Short
+Form.
+
+### `FilterMenu` (`src/components/filter-menu.tsx`)
+
+A compact dropdown "select" for filters that are read more often than
+they're changed. Same construction as the top bar's `MoreMenu`: Radix
+`DropdownMenu` with `<Link>` items via `asChild` (navigation stays real
+hrefs, server keeps computing them; only open/close is client JS), menu
+surface reuses `.nav-dropdown-content`. The trigger shows
+`label: value` and lights with `.nav-link-active` when `active` is set,
+so an applied filter is still visible while the menu is closed. `"use
+client"` — it's the one piece here that needs it.
+
+### Content Calendar filter bar
+
+Was two stacked pill rows: Long Form / Short Form, then Week / Month /
+Custom plus a `from to to` text. Now one `justify-between` row —
+`[Long Form | Short Form]` (`SegmentedToggle`) on the left, `[Range: …]`
+(`FilterMenu`) on the right — with the `from to to` text on a small
+muted line beneath, and `CustomRangeForm` still opening below when
+Custom is picked. `buildHref` now also carries `from`/`to` through a
+Long ↔ Short switch, so a picked custom range is no longer silently
+dropped when the format changes (the old hardcoded `?type=X&range=Y`
+hrefs did that). The old `TypeLink` / `RangeLink` helpers are gone.
+
+### Analytics filter bar
+
+Was four stacked rows: view toggle, date range (6 options), format (3),
+platform (~7). Now two: the `SegmentedToggle` view toggle, then a
+single bar with the date range still as visible pills (the
+most-frequently-changed control) followed by `FilterMenu` dropdowns for
+Format and Platform after a thin divider. `buildHref`, the KPI grid,
+and every chart are untouched — the dropdowns feed the same query
+params the pills did, and the filters still deliberately don't touch
+Current Streak / Streak History.
+
+### Top bar surface (light mode)
+
+The top bar's only separation from the page was `border-b
+border-border`, and `--border` (`oklch(0.922 0 0)`) is nearly invisible
+against a near-white page. New `.top-bar` class (`src/app/globals.css`,
+applied to the `<header>` in `src/components/top-bar.tsx` in place of
+the border utilities) gives it the *static* half of the card
+treatment: a blurred `--popover` fill so content sits on a raised
+surface, plus a downward `--glow-1` shadow (the same always-on accent
+`.brand-switcher` / `.nav-link-active` use) reading as the bar floating
+above the page. No `GlowCard`, no breathing or pointer tilt — the top
+bar stays off that, consistent with Phase 4's "not applied to … top
+bar" call. Dark mode keeps the treatment but lighter (fainter fill,
+neutral drop, no colored halo), matching the `.dark .glow-card`
+reasoning that its visible border is cue enough there. Internal
+dividers (the brand-switcher strip, the mobile panel) stay plain
+hairlines.
