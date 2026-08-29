@@ -36,6 +36,8 @@ import { computeStreak, computeStreakHeatmap, WALK_STREAK_LABEL, type StreakRow 
 import { isViewsGoal, resolveGoalCurrentValues } from "@/lib/goals";
 import type { Goal, HookLibraryType } from "@/lib/types";
 import { PlatformsAnalyticsView } from "@/components/platforms-analytics-view";
+import { SegmentedToggle } from "@/components/segmented-toggle";
+import { FilterMenu } from "@/components/filter-menu";
 import { KpiCard } from "@/components/kpi-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GlowCard } from "@/components/glow-card";
@@ -64,6 +66,10 @@ const FORMAT_FILTERS: { value: ContentFormatFilter; label: string }[] = [
   { value: "Short", label: "Short" },
   { value: "Long Video", label: "Long" },
 ];
+const FORMAT_LABEL: Record<ContentFormatFilter, string> = {
+  Short: "Short",
+  "Long Video": "Long",
+};
 function isContentFormatFilter(value: string | undefined): value is ContentFormatFilter {
   return value === "Short" || value === "Long Video";
 }
@@ -363,27 +369,28 @@ export default async function AnalyticsPage({
       <h1 className="text-3xl font-bold">Analytics Overview</h1>
 
       {/* GROUP J: Content (every existing chart) vs Platforms (the
-          platform-goal list). Same server-rendered pill pattern as the
-          filters below, which only apply to the Content view. */}
-      <div className="mt-4 inline-flex items-center gap-0.5 rounded-lg border border-border p-0.5">
-        {(["content", "platforms"] as const).map((v) => (
-          <Link
-            key={v}
-            href={buildHref({ view: v === "platforms" ? "platforms" : null })}
-            className={cn(
-              "rounded-md px-3 py-1 text-sm capitalize",
-              view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {v}
-          </Link>
-        ))}
-      </div>
+          platform-goal list). The filters below only apply to Content. */}
+      <SegmentedToggle
+        className="mt-4"
+        ariaLabel="Analytics view"
+        value={view}
+        options={[
+          { value: "content", label: "Content", href: buildHref({ view: null }) },
+          { value: "platforms", label: "Platforms", href: buildHref({ view: "platforms" }) },
+        ]}
+      />
 
       {view === "platforms" ? (
         <PlatformsAnalyticsView goals={platformGoals} />
       ) : (
         <>
+      {/* Analytics audit had this as four stacked pill rows (view, date
+          range, format, platform). Now two: the view toggle above, then
+          this single bar. Date range stays as visible pills - it's the
+          most-changed control. Format and Platform fold into dropdowns
+          (each still combining with the others via buildHref, still not
+          touching Current Streak / Streak History), with a lit trigger
+          when one is actually narrowing the page. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {ANALYTICS_RANGES.map((r) => (
           <Link
@@ -399,66 +406,41 @@ export default async function AnalyticsPage({
             {r.label}
           </Link>
         ))}
-      </div>
 
-      {/* Analytics filters (2026-08-27): Format and Platform, same pill-
-          link pattern as the date range above (server-rendered, no client
-          JS needed), each combining with the other two via buildHref
-          rather than resetting them. Doesn't touch Current Streak/Streak
-          History below, deliberately - see buildHref's own comment. */}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Link
-          href={buildHref({ format: null })}
-          className={cn(
-            "rounded-md px-2.5 py-1 text-sm",
-            !formatFilter ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
-          )}
-        >
-          All formats
-        </Link>
-        {FORMAT_FILTERS.map((f) => (
-          <Link
-            key={f.value}
-            href={buildHref({ format: f.value })}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-sm",
-              formatFilter === f.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </div>
+        <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />
 
-      {knownPlatforms.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Link
-            href={buildHref({ platform: null })}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-sm",
-              !platformFilter ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            All platforms
-          </Link>
-          {knownPlatforms.map((p) => (
-            <Link
-              key={p}
-              href={buildHref({ platform: p })}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-sm",
-                platformFilter === p
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted",
-              )}
-            >
-              {p}
-            </Link>
-          ))}
-        </div>
-      )}
+        <FilterMenu
+          label="Format"
+          triggerLabel={formatFilter ? FORMAT_LABEL[formatFilter] : "All formats"}
+          active={!!formatFilter}
+          options={[
+            { value: "all", label: "All formats", href: buildHref({ format: null }), active: !formatFilter },
+            ...FORMAT_FILTERS.map((f) => ({
+              value: f.value,
+              label: f.label,
+              href: buildHref({ format: f.value }),
+              active: formatFilter === f.value,
+            })),
+          ]}
+        />
+
+        {knownPlatforms.length > 0 && (
+          <FilterMenu
+            label="Platform"
+            triggerLabel={platformFilter ?? "All platforms"}
+            active={!!platformFilter}
+            options={[
+              { value: "all", label: "All platforms", href: buildHref({ platform: null }), active: !platformFilter },
+              ...knownPlatforms.map((p) => ({
+                value: p,
+                label: p,
+                href: buildHref({ platform: p }),
+                active: platformFilter === p,
+              })),
+            ]}
+          />
+        )}
+      </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiCard label="Total Published" value={kpis.totalPublished.toLocaleString()} />
