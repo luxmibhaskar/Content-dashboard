@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { computeRange, type CalendarRange } from "@/lib/date-range";
 import { CalendarList } from "@/components/calendar-list";
+import { SegmentedToggle } from "@/components/segmented-toggle";
+import { FilterMenu } from "@/components/filter-menu";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { createBlankContentItem } from "./actions";
 import type { ContentCalendarItem } from "@/lib/types";
 
@@ -27,6 +27,12 @@ const CONTENT_TYPE_FORMAT: Record<ContentType, "Long Video" | "Short"> = {
   short: "Short",
 };
 
+const RANGE_LABEL: Record<CalendarRange, string> = {
+  week: "Week",
+  month: "Month",
+  custom: "Custom",
+};
+
 export default async function CalendarPage({
   searchParams,
 }: {
@@ -45,6 +51,21 @@ export default async function CalendarPage({
 
   const supabase = await createClient();
   const boundCreate = createBlankContentItem.bind(null, contentFormat);
+
+  // Both the format toggle and the range menu link back here with the
+  // other axis preserved. For a custom range, from/to ride along too, so
+  // switching Long <-> Short no longer silently drops a picked range
+  // (the old hardcoded `?type=X&range=Y` hrefs did).
+  function buildHref(next: { type?: ContentType; range?: CalendarRange }) {
+    const nextType = next.type ?? contentType;
+    const nextRange = next.range ?? range;
+    const search = new URLSearchParams({ type: nextType, range: nextRange });
+    if (nextRange === "custom") {
+      if (params.from) search.set("from", params.from);
+      if (params.to) search.set("to", params.to);
+    }
+    return `/calendar?${search.toString()}`;
+  }
 
   // Items with no production_status yet (still being scoped in the Idea
   // Panel/Scout flow, before Transfer to Calendar assigns a first real
@@ -84,29 +105,29 @@ export default async function CalendarPage({
         </form>
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
-        <TypeLink type="long" active={contentType === "long"} range={range}>
-          Long Form
-        </TypeLink>
-        <TypeLink type="short" active={contentType === "short"} range={range}>
-          Short Form
-        </TypeLink>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <SegmentedToggle
+          ariaLabel="Content format"
+          value={contentType}
+          options={[
+            { value: "long", label: "Long Form", href: buildHref({ type: "long" }) },
+            { value: "short", label: "Short Form", href: buildHref({ type: "short" }) },
+          ]}
+        />
+        <FilterMenu
+          label="Range"
+          triggerLabel={RANGE_LABEL[range]}
+          options={[
+            { value: "week", label: "Week", href: buildHref({ range: "week" }), active: range === "week" },
+            { value: "month", label: "Month", href: buildHref({ range: "month" }), active: range === "month" },
+            { value: "custom", label: "Custom", href: buildHref({ range: "custom" }), active: range === "custom" },
+          ]}
+        />
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <RangeLink range="week" active={range === "week"} type={contentType}>
-          Week
-        </RangeLink>
-        <RangeLink range="month" active={range === "month"} type={contentType}>
-          Month
-        </RangeLink>
-        <RangeLink range="custom" active={range === "custom"} type={contentType}>
-          Custom
-        </RangeLink>
-        <span className="ml-2 text-xs text-muted-foreground">
-          {from} to {to}
-        </span>
-      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {from} to {to}
+      </p>
 
       {range === "custom" && <CustomRangeForm from={params.from} to={params.to} type={contentType} />}
 
@@ -130,58 +151,6 @@ export default async function CalendarPage({
         )}
       </section>
     </div>
-  );
-}
-
-function TypeLink({
-  type,
-  active,
-  range,
-  children,
-}: {
-  type: ContentType;
-  active: boolean;
-  range: CalendarRange;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={`/calendar?type=${type}&range=${range}`}
-      className={cn(
-        "rounded-md px-2.5 py-1 text-sm font-medium",
-        active
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-muted",
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function RangeLink({
-  range,
-  active,
-  type,
-  children,
-}: {
-  range: CalendarRange;
-  active: boolean;
-  type: ContentType;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={`/calendar?type=${type}&range=${range}`}
-      className={cn(
-        "rounded-md px-2.5 py-1 text-sm",
-        active
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-muted",
-      )}
-    >
-      {children}
-    </Link>
   );
 }
 
