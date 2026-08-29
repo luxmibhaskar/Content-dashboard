@@ -90,16 +90,32 @@ Client ID and Secret here, then run
 instructions to get the refresh token. Only needs redoing if the token
 is ever revoked.
 
-## YouTube (Research automation)
+## YouTube
 
 **YOUTUBE_API_KEY**
-Powers the Research tab's video pull: search for the top 10 videos
-matching a topic's title, their view counts, descriptions, and top
-comments. Free within the standard daily quota. Doesn't grant access to
-real transcripts, captions.download requires OAuth consent from the
-video's own channel owner, not available for other people's videos with
-just an API key, title/description/comments are the actual signal this
-pulls, not a fallback for when a transcript happens to be missing.
+One Data API v3 key, three uses now:
+
+1. **Research tab video pull**: search for the top 10 videos matching a
+   topic's title, their view counts, descriptions, and top comments.
+   Doesn't grant access to real transcripts, captions.download requires
+   OAuth consent from the video's own channel owner, not available for
+   other people's videos with just an API key, so title/description/
+   comments are the actual signal this pulls, not a fallback for when a
+   transcript happens to be missing.
+2. **Platform-goal subscriber count (Group J)**: `fetchYouTubeChannelStats`
+   (`src/lib/youtube.ts`) resolves a channel id / `@handle` (stored in
+   `goals.source_ref`) to a live subscriber count, upserted into
+   `platform_snapshots`. Triggered by the "Refresh from YouTube" button
+   on the YouTube platform-goal card and nightly by the backup cron (see
+   CRON_SECRET below).
+3. **Own-video stats (Group I)**: `fetchYouTubeVideoStats`
+   (`src/lib/youtube.ts`) pulls view/like/comment counts for a published
+   topic's YouTube video via its pasted `content_platform_posts.post_url`,
+   into `content_platform_stats_snapshots`. Button-only, on the topic
+   page's per-platform Analytics card.
+
+Free within the standard daily quota; all three uses together are a
+handful of calls a day at solo volume.
 
 ## SerpApi (currently unused/dormant)
 
@@ -131,3 +147,10 @@ so each brand's sync gets its own function time budget instead of both
 racing one 60s Hobby-plan ceiling (see builder-brief.md Section 17,
 "Execution model"). Hitting it with no `brand` param still syncs both
 in sequence, for a manual curl, but that form will time out on Hobby.
+
+The same endpoint also runs the nightly YouTube subscriber refresh
+(`refreshYouTubeSnapshotsAllBrands`, `src/lib/youtube-sync.ts`) on the
+first brand's invocation. For each brand whose YouTube platform goal has
+a `source_ref` and no `platform_snapshots` row yet today, it pulls and
+stores the current count. Idempotent and non-fatal, so it never
+disrupts the backup it rides alongside.

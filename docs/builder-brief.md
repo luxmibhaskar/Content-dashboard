@@ -184,6 +184,16 @@ These apply across every screen in this spec, not just one section. The goal thr
 
 ## 5. Today View
 
+**⚠ Superseded, see `docs/dashboard-redesign.md`.** This page was rebuilt
+as the "Command Center" and then relabeled "Dashboard" (same route `/`).
+The next-up-suggestion hero and the two-column heading row are gone;
+streak counts and the rotating platform-goal display moved into the top
+bar; the quick-entry box moved into the Journey Log sidebar widget; the
+Sunday weekly-review callout and backup-failure warning stayed as plain
+blocks. The `daily_streaks` computation in 5.0 and the System & Services
+panel (5.3, with its own ⚠ note below) are still accurate as data/
+behavior, only their placement and framing here are outdated.
+
 Purpose: "What should I do right now?"
 
 **Visual hierarchy, top to bottom** *(new in v1.3)*: streak numbers stay small and quiet, motivational context, not the task itself. The next-up suggestion is the clear visual hero, a large, pillar-colored card, unmistakably the one thing to tap. Any second option sits noticeably quieter below it, an alternative, not competing for attention. The System & Services panel stays collapsed at the very bottom, infrastructure belongs out of sight until deliberately sought.
@@ -223,6 +233,15 @@ After Month One, LBsWorks can also use a Pillar Tree (digital products, tech/AI,
 
 ### 5.3. System & Services Panel *(new in v1.3)*
 
+**⚠ Partially superseded, see `docs/dashboard-redesign.md`** ("System &
+Services restructuring" bullet in the Platforms/Streak & Goals
+consolidation section). The service table and the on-expand live-status
+numbers are still accurate. What changed: "Check Alternatives" was built
+then removed from the UI entirely (schema and `checkAlternatives` action
+left unused); and Live Status plus Backup were moved out into their own
+sibling "Live Status & Backup" collapsible directly below this one, so
+`src/components/services-panel.tsx` renders two `CollapsibleSection`s now.
+
 A small collapsible section at the very bottom of the Today screen, collapsed by default so it never competes with the actual "what do I do right now" purpose of this view, one tap to expand when you want to check on it. This is the in-app companion to the System Manifest (Section 17.3): the manifest is the portable file for a new system to read, this panel is the live view for you.
 
 Every backend service the dashboard depends on, listed plainly:
@@ -255,7 +274,19 @@ New table (system-level, not brand-scoped, since the infrastructure is shared ac
 
 ## 6. Analytics Overview
 
-Opens first when you launch the dashboard.
+**⚠ Partially superseded.** Two docs carry the current state:
+`docs/platform-performance-tracking.md` (Section 8) for the metrics
+rebuild, every KPI and graph now reads per-platform, time-series data
+from `content_platform_stats_snapshots`, not the dropped
+`content_calendar` columns, and "Best Time to Post" is now "Content
+Posted Time"; and `docs/dashboard-redesign.md` ("Analytics Platforms
+view" and "Shared filter-bar patterns") for the page chrome, a
+`Content | Platforms` toggle up top and a single consolidated filter bar
+(date-range pills plus Format and Platform dropdowns) rather than the
+stacked rows this section implies. The time-filter values in 6.1 and the
+KPI/graph concepts in 6.2 to 6.4 are still broadly right; the data
+sources and layout are not. Also outdated: the app lands on the
+Dashboard page, not here.
 
 ### 6.1. Global Time Filter
 
@@ -323,6 +354,34 @@ All graphs must be filterable by the global time filter.
 ***
 
 ## 6.5. Goals & Milestones *(new in v1.3)*
+
+**⚠ Superseded, see `docs/dashboard-redesign.md`.** The "Streak & Goals
+redesign" and "Platforms/Streak & Goals consolidation" sections there
+are the current authority for how goals actually work. What changed:
+
+- Goals are **per-platform** now, not the fixed `target_metric` list
+  below (`Subscribers/Followers | Views | Revenue | Community Members |
+  Custom`). A goal is a freeform platform name plus an icon
+  (`platform_name`, `icon_slug`, `icon_url`, added by migration `0013`;
+  plus `source_ref` from `0024` holding a YouTube channel id / `@handle`).
+  `goal_text` / `target_metric` stay in the schema for old rows only, no
+  UI reads or writes them directly (`goal_text` just mirrors
+  `platform_name` on save to satisfy its not-null constraint).
+- `current_value` is **never written** for a platform goal. It resolves
+  live at read time (`resolveGoalCurrentValues`, `src/lib/goals.ts`):
+  a goal named "views" from Analytics, everything else from that
+  platform's latest `platform_snapshots` row. YouTube goals with a
+  `source_ref` also auto-refresh their subscriber count (button on the
+  Platforms view, plus nightly via the backup cron).
+- **UI**: not a progress strip on one page. Walk/posting streaks and a
+  rotating platform-goal display live in the top bar; full add/edit CRUD
+  is in the Streak & Goals pop-out modal and the Analytics Platforms
+  view. The dedicated `/streaks-goals` page described in the redesign
+  doc's first pass was itself later replaced by that modal.
+
+The vision framing below (progress toward the Skool community, real
+subscriber targets) still holds; only the data model and UI are
+outdated.
 
 Genuinely absent until now, and worth having: everything else in this system tracks activity, this is the only place that tracks progress toward something. Ties directly back to the actual long-term vision behind this whole build, the Skool community down the line, real subscriber and revenue targets along the way.
 
@@ -1025,20 +1084,35 @@ Two layers, working together, not one sheet trying to do everything: a **fast st
 
 ### 17.1. Structured Index (Google Sheets)
 
-One workbook per brand, one tab per table, for anything short enough to scan at a glance on your phone.
+One workbook per brand, for anything short enough to scan at a glance on
+your phone. 18 tabs, written in this fixed order every sync
+(`src/lib/backup.ts`). Every tab also ends with `Created At` / `Updated
+At` (see the bullet above).
 
 | Tab | Source table | What it holds |
 |---|---|---|
 | Journey Log | `journey_log` | date, pillar, sub-topic, what you did, key lesson, proof, mood, tags, angle-worthy flag |
 | Ideas | `ideas` | idea title, pillar, sub-topic, format, brief description, reference URL, status |
-| Content Calendar | `content_calendar` | title, viewer problem, promise, pillar/sub-topic, format, platform, publish date, production status, viability status, retention drop, earned-the-click, plus a **Full Detail Link** column (see 17.2) |
-| Variants | `title_variants`, `hook_variants`, `thumbnail_variants` | combined into one tab with a `variant_type` column (Title/Hook/Thumbnail), one place to scan instead of three near-empty tabs |
+| Content Calendar | `content_calendar` | title, viewer problem, promise, pillar/sub-topic, format, platform, publish date, production status, short description, conversions, idea-derived-from, earned-the-click, plus a **Full Detail Link** column (see 17.2) |
+| Research & Copy | `research_copy_versions` | content item, source (Manual/AI), is-live, summary, titles, description, keyword + question tags, source-container names, generated-at. Index only: the full nested per-container detail lives in 17.2 |
+| Manual Workflow Phases | `manual_workflow_phases` | content item, phase (Research/Packaging/Scripting), status badge, raw pasted text, and that phase's parsed fields flattened one-per-column |
+| Scripts | `scripts_versions` | content item, source, is-live, hooks, pain-point answer, long-form script, CTA options, short-form pointers, atomized shorts, generated-at |
+| Variants | `title_variants`, `hook_variants`, `thumbnail_variants` | combined into one tab with a `variant_type` column (Title/Hook/Thumbnail), plus text, rank, source, performance rating, is-live, and hook type |
+| Hook Library | `hook_library_entries` | type (visual/text/verbal), the hook text itself, the standalone swipe file, not tied to a content item |
 | Reference Videos | `reference_videos` | content item, URL, hook note, re-hook note, CTA note, date added |
 | Research Snapshots | `research_snapshots` | content item, snapshot date, the readable `summary` field, source counts (e.g. "12 YouTube videos, 34 Reddit threads, 8 Quora questions"), and a **Full Detail Link** column — the raw source data itself lives in 17.2, not crammed into a cell |
-| Weekly Reviews | `weekly_reviews` | week dates, the five checklist notes, next-week adjustment line |
+| Weekly Reviews | `weekly_reviews` | week start/end, the five checklist notes, next-week adjustment line |
 | Competitors | `competitors` | name, platform, profile URL, notes |
-| Competitor Benchmarks | `competitor_benchmarks` | which content item, competitor, platform, URL, why it's a benchmark |
+| Competitor Benchmarks | `competitor_benchmarks` | content item, competitor, platform, URL, why it's a benchmark |
 | Daily Streaks | `daily_streaks` | date, walked, posted |
+| Platform Snapshots | `platform_snapshots` | platform, follower count, snapshot date (brand-level audience history) |
+| Custom Sub-topics | `custom_sub_topics` | pillar, sub-topic, archived flag |
+| Goals | `goals` | platform name, icon slug, status, target value, current value (recomputed live at sync time, see 6.5's ⚠ note), target date, legacy target-metric, legacy goal-text |
+| Collaborators | `collaborators` | name, platform, profile URL, status, notes, last contact date |
+
+Not synced to Sheets: `content_platform_posts` /
+`content_platform_stats_snapshots` (per-platform post + check-in data)
+and `backup_log` / `service_alternative_checks`.
 
 ### 17.2. Full‑Content Archive (Google Drive)
 

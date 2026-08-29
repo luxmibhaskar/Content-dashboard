@@ -565,8 +565,9 @@ the AI panel itself (that's just Run Again).
 
 **Consistent Run-focused default, confirmed already correct**: checked
 whether a brand-new item and a genuinely old item that's never had
-research run (`g`, real pre-existing Brief Description/Keywords, no
-research_copy_versions rows) render differently. They don't, the
+research run (one carrying real pre-existing Brief Description /
+Keywords but no `research_copy_versions` rows) render differently. They
+don't, the
 Research & Copy tab's rendering is driven entirely by whether Manual or
 AI versions exist for that item (`!manual && !ai`), never by how or when
 the item was created, so both already show the identical clean,

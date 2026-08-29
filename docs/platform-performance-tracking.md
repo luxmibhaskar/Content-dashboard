@@ -1,5 +1,16 @@
 # Per-Platform Performance Tracking
 
+**✅ Complete, shipped.** Everything in this doc is built and live. The
+old `content_calendar` metrics columns
+(`views/likes/comments/shares/saves`) were dropped in
+`0019_drop_legacy_content_metrics.sql`, the retention-drop pair in
+`0023_drop_content_calendar_retention_drop.sql`, and every dependent
+(Analytics Overview KPIs and graphs, Competitors' "Avg Views", the
+Sheets/Drive backup) was migrated to the two new tables first. The
+"Migration" section at the bottom is kept as the historical record of
+what that involved. Own-channel YouTube video tracking (Section 9) was
+added on top of this model afterwards.
+
 Replaces content_calendar's single performance-metrics block (views,
 likes, comments, shares, saves, conversions) with real per-platform,
 time-series tracking. Applies to both Long Form and Short Form content.
@@ -75,6 +86,16 @@ Title's "Use" action auto-fills the item's main Title field.
 
 ## 8. Analytics page: renames and rebuilds
 
+**Sitting above everything described below**, added after this doc was
+written: the Analytics page now opens with a `Content | Platforms`
+`SegmentedToggle` and a single consolidated filter bar (date-range
+pills plus `Format` and `Platform` `FilterMenu` dropdowns). Both are
+documented in `docs/dashboard-redesign.md`, in the "Analytics Platforms
+view" and "Shared filter-bar patterns" sections. The Platforms view
+(`?view=platforms`) renders the platform-goal list instead of the
+content graphs; everything in the rest of this section is the `content`
+view.
+
 - "Best Time to Post" → "Content Posted Time". Sources from
   content_platform_posts.published_at (real date+time, not the vague
   publish_date this used to approximate from). Shows posting-time
@@ -85,6 +106,52 @@ Title's "Use" action auto-fills the item's main Title field.
   single-snapshot metrics.
 - Full audit needed (see migration section) on every other existing
   KPI/graph that read the old metrics fields.
+
+## 9. Own-channel YouTube video tracking (Group I, shipped)
+
+Pull real view/like/comment counts for your own published YouTube video
+straight from the Data API, into the same per-platform check-in model
+above, instead of only ever typing them in by hand.
+
+**Reuses the existing tables, no new one.** `content_platform_posts` /
+`content_platform_stats_snapshots` are already exactly this granularity
+(one row per platform a content item posted to, one row per check-in),
+so this adds a single column rather than a table:
+
+- **`content_platform_posts.post_url`** (`0025_content_platform_posts_url.sql`),
+  nullable, generic name (not `youtube_url`, per the build-full-schemas
+  convention). The one reliable link between a topic's YouTube
+  platform-post and its actual video, pasted once by hand after
+  publishing rather than relying on fuzzy title-matching.
+
+**Library** (`src/lib/youtube.ts`, sibling to Group J's own
+`fetchYouTubeChannelStats`):
+
+- **`parseYouTubeVideoId(url)`**: extracts the video id from all three
+  URL shapes: `watch?v=`, `youtu.be/`, and `shorts/`.
+- **`fetchYouTubeVideoStats(videoId)`**: one `videos.list?part=statistics`
+  call, returns view / like / comment counts.
+
+**Actions** (`src/app/(app)/calendar/[id]/platform-stats-actions.ts`):
+
+- **`updatePlatformPostUrl`**: saves the pasted link onto the
+  platform-post row.
+- **`refreshYouTubeVideoStats`**: on-demand pull that upserts into
+  `content_platform_stats_snapshots` the exact same way a manual
+  check-in does, keyed on `(content_platform_post_id, snapshot_date)`,
+  so a refresh and a same-day manual edit never create a duplicate row,
+  last write for the day wins.
+
+**UI** (`src/components/platform-analytics-section.tsx`): the YouTube
+platform-post's existing card gains a "Video URL" field and a "Refresh
+from YouTube" button, matching Group J's `YouTubeRefreshButton` pattern
+(shows the result or the error inline, leaves the prior numbers intact
+on failure).
+
+**Button-only for now.** No nightly-cron fold-in for per-video stats
+(deferred per explicit instruction), unlike Group J's channel
+subscriber refresh which does run nightly. A published video's counts
+update only when the button is pressed.
 
 ## Migration: what breaks and needs fixing first
 

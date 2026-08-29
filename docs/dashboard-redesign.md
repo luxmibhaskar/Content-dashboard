@@ -553,6 +553,50 @@ every platform goal's current count, not just those 4:
   true at desktop width confirmed the mobile panel actually contains
   the streak/goals shuffle, all 5 nav+more links, the Streak and Goals
   trigger, its own independent theme toggle, and Sign out, all together.
+- **YouTube subscriber count auto-refresh (Group J)**: a YouTube
+  platform goal can pull its own current subscriber count from the Data
+  API instead of only ever being typed in.
+  - **`goals.source_ref`** (migration `0024_goals_source_ref.sql`),
+    nullable, holds the external identity the API needs, a YouTube
+    channel id or `@handle`. Optional field on the YouTube platform-goal
+    card, and on the add-form once the typed name looks like YouTube.
+    `updateGoal` only writes it when the field was in the submit, so
+    editing a non-YouTube card never blanks it.
+  - **`fetchYouTubeChannelStats`** (`src/lib/youtube.ts`) resolves a
+    channel id / `@handle` to a live subscriber count.
+    **`refreshYouTubeSnapshot`** (`src/app/actions/platforms.ts`)
+    upserts that into today's `platform_snapshots` row, the same row a
+    manual save writes, so last-write-today wins with no extra column or
+    merge logic. A **"Refresh from YouTube"** button
+    (`src/components/streak-goals/youtube-refresh-button.tsx`) on the
+    Platforms view triggers it and shows the result or error inline,
+    leaving the prior number intact on failure.
+  - **Nightly:** `refreshYouTubeSnapshotsAllBrands`
+    (`src/lib/youtube-sync.ts`) walks both brands and, for each one
+    whose YouTube goal has a `source_ref` and no `platform_snapshots`
+    row dated today, pulls and upserts. Idempotent (a manual save or
+    button press for today wins and is left alone) and non-fatal
+    (per-brand errors collected, whole-call failure caught), and it runs
+    on the backup cron's first-brand invocation so it never disrupts the
+    backup it rides alongside. (Group I's per-video stats refresh is
+    button-only, no nightly equivalent, see
+    `docs/platform-performance-tracking.md` Section 9.)
+
+## Analytics Platforms view (built)
+
+A `?view=platforms` toggle at the top of the Analytics page
+(`src/app/(app)/analytics/page.tsx`), the `Platforms` half of the
+`Content | Platforms` `SegmentedToggle` (see "Shared filter-bar
+patterns" below). It renders the same platform-goal list as the Streak
+& Goals modal: reuses `PlatformGoalCard` and `AddPlatformGoalForm`, and
+reads the same `goals` + `platform_snapshots` data through
+`resolveGoalCurrentValues`, the exact path `layout.tsx` feeds the top
+bar. Not a copy: an edit made in either place shows in the other. The
+content filter bar (date range / Format / Platform) hides in this view
+since none of it applies, and this view deliberately ignores
+`src/lib/shuffle-visibility.ts` so every tracked platform always shows
+here, not just the ones enabled for the top-bar shuffle. The `content`
+view (every KPI and chart) is unchanged and stays the default.
 
 ## Shared filter-bar patterns (built)
 
