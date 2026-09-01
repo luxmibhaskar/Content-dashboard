@@ -581,6 +581,156 @@ every platform goal's current count, not just those 4:
     backup it rides alongside. (Group I's per-video stats refresh is
     button-only, no nightly equivalent, see
     `docs/platform-performance-tracking.md` Section 9.)
+- **Top bar rebuilt as one adaptive bar with runtime overflow
+  collapsing**: the brand-switcher row and the main row are merged into a
+  single bar at `md` and up, the 3-tier `md`/`lg` breakpoint scheme
+  (desktop inline / tablet folds nav into MoreMenu / mobile hamburger) is
+  gone. The bar now measures its own width at runtime and moves items
+  into the one MoreMenu one at a time as it narrows, expanding them back
+  in reverse as it widens, rather than switching layouts at two fixed
+  breakpoints.
+  - **Grid, not a flex sequence**: the `md:` bar is a
+    `grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]` row. Left column holds
+    the streak items, the centre `auto` column holds BrandSwitcher only,
+    the right column holds ThemeToggle + nav links + MoreMenu trigger +
+    Sign out. Because both side tracks are equal fractions, BrandSwitcher
+    stays optically centred in the bar no matter how full either side is.
+    BrandSwitcher is no longer centred in its own separate strip, it is
+    the centre grid cell of the single row.
+  - **Two independent width budgets**, one per side column, measured with
+    a hand-written `ResizeObserver` (`src/lib/use-element-size.ts`:
+    `useElementWidth` for the two column widths, `useMeasuredWidths` for
+    per-item natural widths off an offscreen `visibility:hidden` clone
+    rig in each column). No resize library: the collapse targets are
+    heterogeneous (streak spans lifted out of `StreakGoalsBar` plus
+    `next/link` nav links, each re-rendered in a different form once in
+    the dropdown), which no generic priority-nav list models, and a
+    resize lib would only cover the measurement third of the job. The
+    observer callbacks match the codebase's existing
+    `useSyncExternalStore` pattern (theme toggle, `shuffle-visibility`)
+    and keep every `setState` off the effect body, clear of the repo's
+    `react-hooks/set-state-in-effect` and `react-hooks/refs` rules.
+  - **Collapse priority** (first to go listed first): platform-goal
+    shuffle, Posting streak, Walk streak (these three against the left
+    column's width); then Review, Idea Panel, Dashboard (against what's
+    left of the right column after ThemeToggle, the MoreMenu trigger and
+    Sign out, which never collapse, are reserved). BrandSwitcher,
+    ThemeToggle, Sign out and the MoreMenu trigger are never collapsed.
+  - **No hysteresis needed**: `computeOverflowCollapse`
+    (`src/lib/overflow-collapse.ts`) is a plain stateless function of
+    (budget, ordered item widths, gap). The usual priority-nav flicker
+    comes from a measure -> mutate -> re-measure loop; here the side
+    tracks are fixed fractions and the measuring rig always renders every
+    item, so collapsing or expanding never changes a measured value and
+    nothing feeds back.
+  - **One MoreMenu, predictable order**: collapsed items sit at the top
+    of the existing MoreMenu, above the static links (My Journey
+    Log / Topic Map / Collaborators) and the Streak and Goals button,
+    ordered by the reverse of the global collapse priority so the most
+    recently collapsed item is highest. Collapsed nav links stay real
+    `<Link>`s; collapsed streak items are non-interactive rows (the
+    shuffle's empty-state "Add a platform goal" stays a button). The
+    trigger still lights with `.nav-link-active` when the current page's
+    nav link has collapsed into it. `MoreMenu` gained a `prependItems`
+    prop for this; its old `[...NAV_LINKS, ...MORE_LINKS]` tablet-tier
+    call site is gone.
+  - **The three visibility toggles are untouched**: `walkStreakVisible` /
+    `postStreakVisible` / `shuffleVisible` (`src/lib/shuffle-visibility.ts`)
+    still gate whether each streak item exists at all, in the bar or
+    collapsed into MoreMenu. The streak rendering, the ~4s shuffle
+    rotation and those three `useSyncExternalStore` reads moved from
+    `StreakGoalsBar` into a new `useStreakItems` hook
+    (`src/lib/use-streak-items.tsx`) so the bar can place each item
+    individually. `StreakGoalsBar` itself is unchanged and still rendered
+    as-is by the mobile panel.
+  - **Below `md`**: a fixed three-item bar, ThemeToggle on the left,
+    BrandSwitcher centred, the same hamburger on the right, outside the
+    adaptive system entirely. The hamburger still opens the existing
+    mobile panel (its own `StreakGoalsBar` + `ThemeToggle` instances, all
+    nav + more links, Streak and Goals, Sign out), unchanged.
+  - Verified live at the actual desktop width plus DOM/class inspection
+    for narrower widths (this session's `resize_window` limitation still
+    applies, true viewport-width screenshots aren't reliable here):
+    the `md:` bar renders as one row with BrandSwitcher centred; forcing
+    the right column narrower confirmed Review, then Idea Panel, then
+    Dashboard move into the MoreMenu (newest on top, above the static
+    links) and return in reverse as it widens; the streak items collapse
+    left-side independently on the same priority; `mobileOpen` forced
+    true at desktop width still shows the full mobile panel.
+- **Streak items: manual toggle instead of automatic collapse**: the
+  three streak/goals items (walk streak, posting streak, platform
+  shuffle) were pulled out of the left column's width-based collapse. The
+  right column's nav-link auto-collapse into MoreMenu is unchanged, only
+  the left side changed. In their place, at `md` and up, a single "Streak
+  and Goals" toggle button sits at the very left edge of the left grid
+  column; when it's on the visible items render inline to its right (each
+  still gated by its own `walkStreakVisible` / `postStreakVisible` /
+  `shuffleVisible` flag). The toggle is manual; the items themselves are
+  width-driven (see "One-line cap" below). BrandSwitcher stays centred
+  because the 3-column grid is untouched.
+  - **Breakpoint-dependent default**: on at `lg` and up, off at
+    `md`-`lg`. State is `streakManual: boolean | null`
+    (`src/components/top-bar.tsx`) read against two `useMediaQuery`
+    breakpoints (`src/lib/use-media-query.ts`, `matchMedia` via
+    `useSyncExternalStore`, server snapshot assumes desktop). While
+    `null` the effective state follows the live breakpoint default, so a
+    resize across `lg` re-applies that side's default; the first click on
+    the toggle freezes it to a fixed boolean that no longer tracks the
+    breakpoint for the rest of the session, so a deliberate choice is
+    never discarded by a later resize.
+  - **Below `md`**: the toggle is not rendered; streak items stay
+    reachable only through the hamburger and the mobile panel's own
+    untouched `StreakGoalsBar`, exactly as before.
+  - **All items hidden**: if `walkStreakVisible` / `postStreakVisible` /
+    `shuffleVisible` are all false (every item turned off on the Streak
+    and Goals settings page), the toggle button itself is removed from
+    the bar, not just its contents, so the left column renders nothing at
+    `md`+. Gated on `anyStreakVisible = visibleStreakItems.length > 0`;
+    live via the same `useSyncExternalStore` reads, so re-enabling one
+    item on the settings page brings the toggle straight back with no
+    refresh, falling back to whatever `streakManual` / breakpoint state
+    it already had.
+  - **One-line cap (priority overflow collapse + "+N" badge)**: the open
+    row is `flex-nowrap` + `overflow-hidden`, so it can never wrap. As the
+    left `1fr` column narrows, visible items are hidden in priority order
+    - **walk streak first, then posting streak, then the platform shuffle
+    (shuffle survives longest)** - and a small non-interactive `+N` badge
+    (N = count hidden) appears in the row. The toggle button never
+    collapses. This reuses `computeOverflowCollapse` (`overflow-collapse.ts`)
+    and `useElementWidth` / `useMeasuredWidths` (`use-element-size.ts`)
+    unchanged, the same machinery as the right column's nav collapse, with
+    a `leftColRef` + offscreen measuring rig re-added to the left column.
+    `N` updates live on width change; it does **not** flicker on the ~4s
+    shuffle rotation.
+  - **Shuffle item's variable width**: the shuffle text rotates every ~4s
+    and each goal is a different width (~140px for the empty-state prompt,
+    ~170px+ for "Tiktok 80/123 reached"). Rather than re-measure on every
+    tick, `useStreakItems` exposes `shuffleVariants` - one node per
+    candidate goal (or the empty-state) - all rendered in the rig, and the
+    collapse maths reserves the **max** measured width. The decision is
+    then rotation-independent: the visible goal swaps inside an
+    already-reserved slot, so no recompute, no badge flip, no one-frame
+    overflow. Recompute triggers only on a real column-width change
+    (`ResizeObserver`) or when `streak.measureSignature` changes (goal
+    set, `current_value` / `target_value`, `platform_name`, brand, streak
+    counts, visibility flags). Font load is handled inside
+    `useMeasuredWidths`. Walk / posting streak widths are treated as
+    stable (server-provided counts, no client timer); their values are in
+    `measureSignature` so a digit-count change re-measures, nothing more.
+  - **Badge slot always reserved**: while the toggle is open the budget
+    subtracts the measured badge width unconditionally, so hiding an item
+    can't free space that adding the badge then re-consumes (no
+    oscillation at the boundary). Costs ~28px of headroom at wide widths
+    where everything fits anyway.
+  - **Walk-streak label shortening** (`src/lib/streaks.ts`): "Walk/Workout
+    streak" -> "Walk streak", "Work/Innovation streak" -> "Work streak"
+    (`name` keeps the fuller wording for CSV headers / form titles). Done
+    to raise the width at which the shuffle item is the only thing left
+    before the row bottoms out; the one-line cap above is what actually
+    guarantees no wrap at any width.
+  - `useStreakItems` (`src/lib/use-streak-items.tsx`) returns
+    `{ items, shuffleVariants, measureSignature }` (was a bare
+    `StreakItem[]`). `DROPDOWN_ITEM_CLASSNAME` lives in `top-bar.tsx`.
 
 ## Analytics Platforms view (built)
 

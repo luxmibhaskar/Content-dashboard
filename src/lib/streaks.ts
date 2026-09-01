@@ -26,14 +26,18 @@ export const WALK_STREAK_LABEL: Record<
 > = {
   lbstransformation: {
     name: "Walk/Workout Streak",
-    short: "Walk/Workout streak",
+    // Kept short to reduce wrapping of the top-bar streak row (toggle +
+    // all visible items) at desktop widths, see
+    // docs/dashboard-redesign.md "Layout follow-ups". `name` keeps the
+    // fuller "Walk/Workout" wording for CSV headers and form titles.
+    short: "Walk streak",
     word: "walk",
     checkinQuestionToday: "Walked/worked out today?",
     checkinQuestionPast: "Walked/worked out?",
   },
   lbsworks: {
     name: "Work/Innovation Streak",
-    short: "Work/Innovation streak",
+    short: "Work streak",
     word: "work",
     checkinQuestionToday: "Worked on something innovative today?",
     checkinQuestionPast: "Worked on something innovative?",
