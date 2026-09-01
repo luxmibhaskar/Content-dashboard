@@ -189,7 +189,7 @@ export function TopBar({
   const streak = useStreakItems({ brand, walkStreak, postStreak, goals, onOpenGoalsModal: openGoalsModal });
   const visibleStreakItems = streak.items.filter((it) => it.visible);
   // When every streak/goal item is hidden from the Streak and Goals
-  // settings page (walk/post/shuffle visibility all false), the toggle
+  // modal (walk/post/shuffle visibility all false), the toggle
   // itself has nothing to reveal, so it's removed from the bar entirely
   // rather than left as an empty control. Live: the three visibility
   // reads live in useStreakItems via useSyncExternalStore, so re-enabling

@@ -591,31 +591,30 @@ every platform goal's current count, not just those 4:
   breakpoints.
   - **Grid, not a flex sequence**: the `md:` bar is a
     `grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]` row. Left column holds
-    the streak items, the centre `auto` column holds BrandSwitcher only,
-    the right column holds ThemeToggle + nav links + MoreMenu trigger +
-    Sign out. Because both side tracks are equal fractions, BrandSwitcher
-    stays optically centred in the bar no matter how full either side is.
-    BrandSwitcher is no longer centred in its own separate strip, it is
-    the centre grid cell of the single row.
-  - **Two independent width budgets**, one per side column, measured with
-    a hand-written `ResizeObserver` (`src/lib/use-element-size.ts`:
-    `useElementWidth` for the two column widths, `useMeasuredWidths` for
-    per-item natural widths off an offscreen `visibility:hidden` clone
-    rig in each column). No resize library: the collapse targets are
-    heterogeneous (streak spans lifted out of `StreakGoalsBar` plus
-    `next/link` nav links, each re-rendered in a different form once in
-    the dropdown), which no generic priority-nav list models, and a
-    resize lib would only cover the measurement third of the job. The
+    the "Streak and Goals" toggle and its collapsible streak row (see the
+    separate "Streak items" entry below), the centre `auto` column holds
+    BrandSwitcher only, the right column holds ThemeToggle + nav links +
+    MoreMenu trigger + Sign out. Because both side tracks are equal
+    fractions, BrandSwitcher stays optically centred in the bar no matter
+    how full either side is. BrandSwitcher is no longer centred in its own
+    separate strip, it is the centre grid cell of the single row.
+  - **Width measurement**: a hand-written `ResizeObserver`
+    (`src/lib/use-element-size.ts`: `useElementWidth` for a column's
+    width, `useMeasuredWidths` for per-item natural widths off an
+    offscreen `visibility:hidden` rig). No resize library: a generic
+    priority-nav list doesn't model this (nav links prepend into a
+    dropdown, the streak row hides items behind a badge - see below), and
+    a resize lib would only cover the measurement third of the job. The
     observer callbacks match the codebase's existing
     `useSyncExternalStore` pattern (theme toggle, `shuffle-visibility`)
     and keep every `setState` off the effect body, clear of the repo's
     `react-hooks/set-state-in-effect` and `react-hooks/refs` rules.
-  - **Collapse priority** (first to go listed first): platform-goal
-    shuffle, Posting streak, Walk streak (these three against the left
-    column's width); then Review, Idea Panel, Dashboard (against what's
-    left of the right column after ThemeToggle, the MoreMenu trigger and
-    Sign out, which never collapse, are reserved). BrandSwitcher,
-    ThemeToggle, Sign out and the MoreMenu trigger are never collapsed.
+  - **Nav-link collapse priority** (first to go listed first): Review,
+    Idea Panel, Dashboard, measured against what's left of the right
+    column after ThemeToggle, the MoreMenu trigger and Sign out (which
+    never collapse) are reserved. BrandSwitcher, ThemeToggle, Sign out
+    and the MoreMenu trigger are never collapsed. (The left-column streak
+    row's own priority is covered in the "Streak items" entry below.)
   - **No hysteresis needed**: `computeOverflowCollapse`
     (`src/lib/overflow-collapse.ts`) is a plain stateless function of
     (budget, ordered item widths, gap). The usual priority-nav flicker
@@ -623,26 +622,23 @@ every platform goal's current count, not just those 4:
     tracks are fixed fractions and the measuring rig always renders every
     item, so collapsing or expanding never changes a measured value and
     nothing feeds back.
-  - **One MoreMenu, predictable order**: collapsed items sit at the top
-    of the existing MoreMenu, above the static links (My Journey
+  - **One MoreMenu, predictable order**: collapsed nav links sit at the
+    top of the existing MoreMenu, above the static links (My Journey
     Log / Topic Map / Collaborators) and the Streak and Goals button,
-    ordered by the reverse of the global collapse priority so the most
-    recently collapsed item is highest. Collapsed nav links stay real
-    `<Link>`s; collapsed streak items are non-interactive rows (the
-    shuffle's empty-state "Add a platform goal" stays a button). The
-    trigger still lights with `.nav-link-active` when the current page's
-    nav link has collapsed into it. `MoreMenu` gained a `prependItems`
-    prop for this; its old `[...NAV_LINKS, ...MORE_LINKS]` tablet-tier
-    call site is gone.
+    ordered so the most recently collapsed link is highest. They stay
+    real `<Link>`s. The trigger still lights with `.nav-link-active` when
+    the current page's nav link has collapsed into it. `MoreMenu` gained
+    a `prependItems` prop for this; its old `[...NAV_LINKS, ...MORE_LINKS]`
+    tablet-tier call site is gone. (Streak items never go into the
+    MoreMenu - the left column caps its own row, see below.)
   - **The three visibility toggles are untouched**: `walkStreakVisible` /
     `postStreakVisible` / `shuffleVisible` (`src/lib/shuffle-visibility.ts`)
-    still gate whether each streak item exists at all, in the bar or
-    collapsed into MoreMenu. The streak rendering, the ~4s shuffle
-    rotation and those three `useSyncExternalStore` reads moved from
-    `StreakGoalsBar` into a new `useStreakItems` hook
-    (`src/lib/use-streak-items.tsx`) so the bar can place each item
-    individually. `StreakGoalsBar` itself is unchanged and still rendered
-    as-is by the mobile panel.
+    still gate whether each streak item exists at all. The streak
+    rendering, the ~4s shuffle rotation and those three
+    `useSyncExternalStore` reads moved from `StreakGoalsBar` into a new
+    `useStreakItems` hook (`src/lib/use-streak-items.tsx`) so the bar can
+    place each item individually. `StreakGoalsBar` itself is unchanged
+    and still rendered as-is by the mobile panel.
   - **Below `md`**: a fixed three-item bar, ThemeToggle on the left,
     BrandSwitcher centred, the same hamburger on the right, outside the
     adaptive system entirely. The hamburger still opens the existing
@@ -654,9 +650,8 @@ every platform goal's current count, not just those 4:
     the `md:` bar renders as one row with BrandSwitcher centred; forcing
     the right column narrower confirmed Review, then Idea Panel, then
     Dashboard move into the MoreMenu (newest on top, above the static
-    links) and return in reverse as it widens; the streak items collapse
-    left-side independently on the same priority; `mobileOpen` forced
-    true at desktop width still shows the full mobile panel.
+    links) and return in reverse as it widens; `mobileOpen` forced true
+    at desktop width still shows the full mobile panel.
 - **Streak items: manual toggle instead of automatic collapse**: the
   three streak/goals items (walk streak, posting streak, platform
   shuffle) were pulled out of the left column's width-based collapse. The
@@ -682,14 +677,14 @@ every platform goal's current count, not just those 4:
     reachable only through the hamburger and the mobile panel's own
     untouched `StreakGoalsBar`, exactly as before.
   - **All items hidden**: if `walkStreakVisible` / `postStreakVisible` /
-    `shuffleVisible` are all false (every item turned off on the Streak
-    and Goals settings page), the toggle button itself is removed from
-    the bar, not just its contents, so the left column renders nothing at
-    `md`+. Gated on `anyStreakVisible = visibleStreakItems.length > 0`;
-    live via the same `useSyncExternalStore` reads, so re-enabling one
-    item on the settings page brings the toggle straight back with no
-    refresh, falling back to whatever `streakManual` / breakpoint state
-    it already had.
+    `shuffleVisible` are all false (every item turned off in the Streak
+    and Goals modal, `StreakGoalsModal`, opened from the MoreMenu), the
+    toggle button itself is removed from the bar, not just its contents,
+    so the left column renders nothing at `md`+. Gated on
+    `anyStreakVisible = visibleStreakItems.length > 0`; live via the same
+    `useSyncExternalStore` reads, so re-enabling one item in the modal
+    brings the toggle straight back with no refresh, falling back to
+    whatever `streakManual` / breakpoint state it already had.
   - **One-line cap (priority overflow collapse + "+N" badge)**: the open
     row is `flex-nowrap` + `overflow-hidden`, so it can never wrap. As the
     left `1fr` column narrows, visible items are hidden in priority order
