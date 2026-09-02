@@ -289,6 +289,51 @@ Return only:
 26. Research Quality Status
 
 
+FORMATTING RULES FOR RESEARCH OUTPUT
+
+These formatting rules are required by the dashboard's "Paste from AI
+chat" import parser. Follow them exactly. RESEARCH OUTPUT must be
+self-contained: do not summarize or point back to earlier parts of
+this response.
+
+
+- Items 20 (Content Gap Analysis) and 21 (Five Content Opportunities)
+  must contain their FULL content written out again, in full, directly
+  under the numbered item itself. Do not write "see above," "full
+  analysis above," or any other pointer back to an earlier section.
+  If this content was already produced earlier in your response (the
+  CONTENT GAP ANALYSIS section, or the five content opportunities
+  section), repeat it here in full rather than abbreviating it.
+  Under item 21, list all five opportunities using the same
+  "Opportunity N: <name>" line format and the full set of labeled
+  fields (Viewer problem, Viewer desire, Unanswered question, What
+  competitors missed, Evidence supporting the opportunity, Missing
+  example, Missing demonstration, Why it provides value, Risk of
+  becoming generic, and all five 0-10 scores), not just the five names.
+
+
+- Items 13 through 19 (Frequently Asked Questions, Unanswered
+  Questions, Viewer Pain Points, Viewer Objections, Viewer
+  Misunderstandings, Viewer Requests, Viewer Suggestions) must each be
+  written one item per line, as a bulleted or numbered list. Never
+  combine multiple items into one semicolon-joined paragraph.
+
+
+- Item 24 (Sources) must list each source as its own block, in this
+  exact label format:
+
+
+  Source title: <title>
+  Direct URL: <url>
+  Publication or update date: <date>
+  Claim supported: <claim>
+  Confidence level: <high/medium/low>
+
+
+  Do not compress a source into a single inline sentence like
+  "Title - URL - date - claim - confidence."
+
+
 At the end, choose one:
 
 
