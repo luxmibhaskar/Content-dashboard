@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { ScoreBadge, Field, ListField, StatusSelect } from "@/components/manual-workflow-ui";
+import {
+  ScoreBadge,
+  Field,
+  ListField,
+  StatusSelect,
+  countMarkers,
+  MarkerCountBadge,
+} from "@/components/manual-workflow-ui";
 import {
   PACKAGING_PASTE_TEMPLATE_HINT,
   type PackagingPhaseData,
@@ -41,8 +48,11 @@ function TitleOptionCard({
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold">
-          Title {index + 1}: {option.title}
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          <span>
+            Title {index + 1}: {option.title}
+          </span>
+          <MarkerCountBadge count={countMarkers(option)} />
         </p>
         <form action={boundUseTitle}>
           <input type="hidden" name="value" value={option.title} />
@@ -102,8 +112,11 @@ function HookListField({
 function ThumbnailCard({ thumbnail, index }: { thumbnail: ThumbnailSuggestion; index: number }) {
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        Thumbnail {index + 1}: {thumbnail.concept}
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span>
+          Thumbnail {index + 1}: {thumbnail.concept}
+        </span>
+        <MarkerCountBadge count={countMarkers(thumbnail)} />
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Main visual" value={thumbnail.mainVisual} />
@@ -166,7 +179,10 @@ export function PackagingPhaseContent({
         <div className="space-y-3">
           {data.titles.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Titles ({data.titles.length})</p>
+              <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span>Titles ({data.titles.length})</span>
+                <MarkerCountBadge count={countMarkers(data.titles)} />
+              </p>
               <div className="space-y-2">
                 {data.titles.map((t, i) => (
                   <TitleOptionCard key={i} option={t} index={i} boundUseTitle={boundUseTitle} />
@@ -175,7 +191,11 @@ export function PackagingPhaseContent({
             </div>
           )}
 
-          <CollapsibleSection title="Copy-Ready Platform Versions" glow={1}>
+          <CollapsibleSection
+            title="Copy-Ready Platform Versions"
+            titleSuffix={<MarkerCountBadge count={countMarkers(data.platformCopy)} />}
+            glow={1}
+          >
             <div className="space-y-3">
               {(Object.keys(PLATFORM_COPY_LABELS) as (keyof PackagingPhaseData["platformCopy"])[]).map(
                 (key) => (
@@ -186,6 +206,12 @@ export function PackagingPhaseContent({
           </CollapsibleSection>
 
           <GlowCard glow={2} className="space-y-3 p-3.5" textHeavy>
+            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Keywords &amp; Phrases</span>
+              <MarkerCountBadge
+                count={countMarkers({ shortKeywords: data.shortKeywords, searchPhrases: data.searchPhrases })}
+              />
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <ListField label="Short Keywords" items={data.shortKeywords} />
               <ListField label="Search Phrases" items={data.searchPhrases} />
@@ -194,8 +220,9 @@ export function PackagingPhaseContent({
 
           {data.thumbnails.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Thumbnails ({data.thumbnails.length})
+              <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span>Thumbnails ({data.thumbnails.length})</span>
+                <MarkerCountBadge count={countMarkers(data.thumbnails)} />
               </p>
               <div className="space-y-2">
                 {data.thumbnails.map((t, i) => (
@@ -206,7 +233,16 @@ export function PackagingPhaseContent({
           )}
 
           <GlowCard glow={3} className="space-y-3 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Hooks</p>
+            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Hooks</span>
+              <MarkerCountBadge
+                count={countMarkers({
+                  visualHooks: data.visualHooks,
+                  textualHooks: data.textualHooks,
+                  verbalHooks: data.verbalHooks,
+                })}
+              />
+            </p>
             <p className="text-xs text-muted-foreground">
               &quot;Use&quot; adds a hook to Hook Library and marks it as the one used on this item.
             </p>
@@ -218,7 +254,10 @@ export function PackagingPhaseContent({
           </GlowCard>
 
           <GlowCard glow={1} className="space-y-3 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Carousel Evaluation</p>
+            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Carousel Evaluation</span>
+              <MarkerCountBadge count={countMarkers(data.carousel)} />
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Recommendation" value={data.carousel.recommendation} />
               <Field label="Best platform" value={data.carousel.bestPlatform} />
@@ -237,7 +276,10 @@ export function PackagingPhaseContent({
           </GlowCard>
 
           <GlowCard glow={2} className="space-y-3 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">CTA Options</p>
+            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>CTA Options</span>
+              <MarkerCountBadge count={countMarkers(data.ctaOptions)} />
+            </p>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Engagement CTA" value={data.ctaOptions.engagement} />
               <Field label="Save/share CTA" value={data.ctaOptions.saveShare} />
@@ -249,7 +291,10 @@ export function PackagingPhaseContent({
           </GlowCard>
 
           <GlowCard glow={3} className="space-y-3 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Recommendations</p>
+            <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Recommendations</span>
+              <MarkerCountBadge count={countMarkers(data.recommendations)} />
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Strongest title" value={data.recommendations.strongestTitle} />
               <Field label="Strongest visual hook" value={data.recommendations.strongestVisualHook} />

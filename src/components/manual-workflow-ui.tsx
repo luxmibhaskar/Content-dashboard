@@ -116,14 +116,33 @@ export function ScoreBadge({ label, value }: { label: string; value: number }) {
 // blending into the surrounding sentence as plain bracketed text.
 // Three different colors, not one shared "flag" color, so the three
 // stay visually distinguishable from each other at a glance too.
-const MARKER_PATTERN = /(\[VERIFY\]|\[PERSONAL INPUT NEEDED\]|\[EXAMPLE NEEDED\])/g;
+//
+// [^\]]* rather than requiring an exact bare "[VERIFY]" etc.: real
+// output usually writes these with the specific ask inside the same
+// brackets - "[PERSONAL INPUT NEEDED to confirm before using this
+// title]", "[EXAMPLE NEEDED - actual search term used]", "[VERIFY exact
+// thresholds before quoting on camera]" - a bare marker is the
+// exception, not the rule. An exact-match pattern would silently miss
+// most real markers, both here and in countMarkers below, which shares
+// this same pattern.
+const MARKER_PATTERN = /(\[VERIFY[^\]]*\]|\[PERSONAL INPUT NEEDED[^\]]*\]|\[EXAMPLE NEEDED[^\]]*\])/g;
 
-const MARKER_CLASSES: Record<string, string> = {
-  "[VERIFY]": "bg-amber-500/20 text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/40",
-  "[PERSONAL INPUT NEEDED]":
+// Keyed by prefix, not the full matched string, for the same reason -
+// "[PERSONAL INPUT NEEDED to confirm before using this title]" needs
+// the same class as the bare "[PERSONAL INPUT NEEDED]" despite being a
+// different string.
+const MARKER_PREFIX_CLASSES: [prefix: string, cls: string][] = [
+  ["[VERIFY", "bg-amber-500/20 text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/40"],
+  [
+    "[PERSONAL INPUT NEEDED",
     "bg-violet-500/20 text-violet-600 dark:text-violet-400 ring-1 ring-inset ring-violet-500/40",
-  "[EXAMPLE NEEDED]": "bg-sky-500/20 text-sky-600 dark:text-sky-400 ring-1 ring-inset ring-sky-500/40",
-};
+  ],
+  ["[EXAMPLE NEEDED", "bg-sky-500/20 text-sky-600 dark:text-sky-400 ring-1 ring-inset ring-sky-500/40"],
+];
+
+function markerClassFor(part: string): string | undefined {
+  return MARKER_PREFIX_CLASSES.find(([prefix]) => part.startsWith(prefix))?.[1];
+}
 
 export function MarkerText({ text }: { text: string }) {
   if (!text) return null;
@@ -132,7 +151,7 @@ export function MarkerText({ text }: { text: string }) {
   return (
     <>
       {parts.map((part, i) => {
-        const cls = MARKER_CLASSES[part];
+        const cls = markerClassFor(part);
         if (!cls) return part ? <span key={i}>{part}</span> : null;
         return (
           <span
