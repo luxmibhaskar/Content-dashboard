@@ -111,13 +111,25 @@ value, Risk of becoming generic, and the five 0-10 scores as e.g.
 "Relevance score: 8".
 Under Sources, each claim starts its own "Source title: <title>" line,
 followed by "Label: value" lines for Direct URL, Publication or update
-date, Claim supported, Confidence level.`;
+date, Claim supported, Confidence level. A one-line "<Title>" - url -
+date - claim - confidence per source (date optional) is also accepted
+when no "Source title:" labels are present.
+Any list field may instead be one semicolon-separated line with no
+bullet/number prefix - each clause still becomes its own entry.`;
 
 function buildHeaderRegex(headers: readonly string[]): RegExp {
   const alternation = headers.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
   return new RegExp(`^#{0,3}\\s*(?:\\d+[.)]\\s*)?(${alternation})\\s*:?\\s*$`, "i");
 }
 
+// A header can legitimately appear twice: once as a full write-up
+// earlier in the response, and again as a short recap line under the
+// final numbered RESEARCH OUTPUT / PACKAGING list (e.g. "20. Content
+// Gap Analysis" followed only by "Full analysis above."). Re-matching a
+// header never resets what was already captured under it - the second
+// occurrence's lines are appended after the first's (with a blank-line
+// separator), so whichever occurrence is fuller survives instead of
+// being silently clobbered by whichever one happens to come last.
 function splitSections(text: string, headers: readonly string[]): Map<string, string[]> {
   const headerRe = buildHeaderRegex(headers);
   const sections = new Map<string, string[]>();
@@ -127,7 +139,12 @@ function splitSections(text: string, headers: readonly string[]): Map<string, st
     const match = line.trim().match(headerRe);
     if (match) {
       current = headers.find((h) => h.toLowerCase() === match[1].toLowerCase()) ?? match[1].toUpperCase();
-      sections.set(current, []);
+      const existing = sections.get(current);
+      if (!existing) {
+        sections.set(current, []);
+      } else if (existing.length > 0 && existing[existing.length - 1].trim() !== "") {
+        existing.push("");
+      }
       continue;
     }
     if (current) sections.get(current)!.push(line);
@@ -139,10 +156,31 @@ function joinBlock(lines: string[] | undefined): string {
   return (lines ?? []).join("\n").trim();
 }
 
+// Most list fields ask for one item per line (bulleted or numbered),
+// but a pasted response sometimes collapses several items into one
+// semicolon-joined sentence instead, with no bullet/number prefix at
+// all (e.g. "How long until a first sale; whether paid tools are
+// required; ..."). Only a line with no recognized bullet/number prefix
+// is split on semicolons - an already-bulleted line keeps its content
+// as one item even if it happens to contain a semicolon.
 function listLines(lines: string[] | undefined): string[] {
-  return (lines ?? [])
-    .map((l) => l.trim().replace(/^[-*]\s+|^\d+[.)]\s+/, "").trim())
-    .filter((l) => l.length > 0);
+  const out: string[] = [];
+  for (const raw of lines ?? []) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const bulletMatch = trimmed.match(/^([-*]\s+|\d+[.)]\s+)/);
+    const withoutBullet = bulletMatch ? trimmed.slice(bulletMatch[0].length).trim() : trimmed;
+    if (!withoutBullet) continue;
+    if (!bulletMatch && withoutBullet.includes(";")) {
+      for (const part of withoutBullet.split(";")) {
+        const item = part.trim();
+        if (item) out.push(item);
+      }
+    } else {
+      out.push(withoutBullet);
+    }
+  }
+  return out;
 }
 
 // Scans a block's lines for the first one matching "<label>: value"
@@ -168,6 +206,44 @@ function labeledScore(lines: string[], ...labels: string[]): number {
   return Math.max(0, Math.min(10, Number(match[1])));
 }
 
+// labeled() above is line-bound: it works when a template's fields each
+// get their own line, but a real paste sometimes packs every "Label:
+// value" pair for one entry into a single dense paragraph instead (e.g.
+// "Viewer problem: ... Viewer desire: ... Risk of becoming generic:
+// ..."), with nothing to stop labeled()'s ".+$" from swallowing every
+// field after the one it's looking for. This finds where each field's
+// own label starts anywhere in the block's text, then bounds each
+// field's value to run only up to wherever the NEXT field's label
+// starts (by position, not by list order) - which works whether the
+// labels are on separate lines or crammed onto one, since in the
+// separate-line case the next label's start is simply the next line.
+function extractSequentialLabels(
+  text: string,
+  fields: readonly { key: string; labels: readonly string[] }[],
+): Record<string, string> {
+  const positions: { key: string; start: number; valueStart: number }[] = [];
+  for (const field of fields) {
+    for (const label of field.labels) {
+      const match = text.match(new RegExp(`${label}\\s*:?\\s*`, "i"));
+      if (match && match.index != null) {
+        positions.push({ key: field.key, start: match.index, valueStart: match.index + match[0].length });
+        break;
+      }
+    }
+  }
+  positions.sort((a, b) => a.valueStart - b.valueStart);
+
+  const out: Record<string, string> = {};
+  for (let i = 0; i < positions.length; i++) {
+    const end = i + 1 < positions.length ? positions[i + 1].start : text.length;
+    out[positions[i].key] = text
+      .slice(positions[i].valueStart, end)
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+  return out;
+}
+
 function splitBlocks(lines: string[] | undefined, startRe: RegExp): string[][] {
   const blocks: string[][] = [];
   let current: string[] | null = null;
@@ -186,29 +262,71 @@ function splitBlocks(lines: string[] | undefined, startRe: RegExp): string[][] {
 const OPPORTUNITY_START_RE =
   /^(?:#{1,3}\s*)?(?:Opportunity\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
 
+// Order doesn't matter for extraction (extractSequentialLabels sorts by
+// where each label actually appears), but this is also the template's
+// own field order. "__scoresBoundary" isn't a real output field, it
+// just gives riskOfBecomingGeneric somewhere to stop before whichever
+// scores format follows it (the per-line "Relevance score: 8" style, or
+// the dense "Scores - relevance 8, evidence 6, ..." one-liner).
+const OPPORTUNITY_FIELD_LABELS = [
+  { key: "viewerProblem", labels: ["Viewer problem"] },
+  { key: "viewerDesire", labels: ["Viewer desire"] },
+  { key: "unansweredQuestion", labels: ["Unanswered question"] },
+  { key: "whatCompetitorsMissed", labels: ["What competitors missed"] },
+  { key: "evidenceSupporting", labels: ["Evidence supporting the opportunity", "Evidence"] },
+  { key: "missingExample", labels: ["Missing example"] },
+  { key: "missingDemonstration", labels: ["Missing demonstration"] },
+  { key: "whyItProvidesValue", labels: ["Why it provides value"] },
+  { key: "riskOfBecomingGeneric", labels: ["Risk of becoming generic"] },
+  { key: "__scoresBoundary", labels: ["Scores", "Relevance score", "Score"] },
+] as const;
+
+// Dense one-liner fallback for the real "Scores - relevance 8, evidence
+// 6, novelty 7, evergreen 8, visual potential 6." format, tried only
+// when none of the five per-line "<Name> score: N" labels were found.
+const SCORES_INLINE_RE =
+  /Scores?\s*[-:]\s*relevance\s*(\d{1,2})\D+evidence\s*(\d{1,2})\D+novelty\s*(\d{1,2})\D+evergreen\s*(\d{1,2})\D+visual\s*potential\s*(\d{1,2})/i;
+
 function parseContentOpportunities(lines: string[] | undefined): ContentOpportunity[] {
   const blocks = splitBlocks(lines, OPPORTUNITY_START_RE);
   return blocks.map((block) => {
     const startMatch = block[0].trim().match(OPPORTUNITY_START_RE);
     const name = (startMatch?.[1] ?? startMatch?.[3] ?? "Untitled opportunity").trim();
+    const text = block.join("\n");
+    const fields = extractSequentialLabels(text, OPPORTUNITY_FIELD_LABELS);
+
+    let scores = {
+      relevance: labeledScore(block, "Relevance score", "Relevance"),
+      evidence: labeledScore(block, "Evidence score"),
+      novelty: labeledScore(block, "Novelty score", "Novelty"),
+      evergreen: labeledScore(block, "Evergreen value score", "Evergreen score", "Evergreen"),
+      visualPotential: labeledScore(block, "Visual potential score", "Visual potential"),
+    };
+    if (!scores.relevance && !scores.evidence && !scores.novelty && !scores.evergreen && !scores.visualPotential) {
+      const inline = text.match(SCORES_INLINE_RE);
+      if (inline) {
+        scores = {
+          relevance: Number(inline[1]),
+          evidence: Number(inline[2]),
+          novelty: Number(inline[3]),
+          evergreen: Number(inline[4]),
+          visualPotential: Number(inline[5]),
+        };
+      }
+    }
+
     return {
       name,
-      viewerProblem: labeled(block, "Viewer problem") ?? "",
-      viewerDesire: labeled(block, "Viewer desire") ?? "",
-      unansweredQuestion: labeled(block, "Unanswered question") ?? "",
-      whatCompetitorsMissed: labeled(block, "What competitors missed") ?? "",
-      evidenceSupporting: labeled(block, "Evidence supporting the opportunity", "Evidence") ?? "",
-      missingExample: labeled(block, "Missing example") ?? "",
-      missingDemonstration: labeled(block, "Missing demonstration") ?? "",
-      whyItProvidesValue: labeled(block, "Why it provides value") ?? "",
-      riskOfBecomingGeneric: labeled(block, "Risk of becoming generic") ?? "",
-      scores: {
-        relevance: labeledScore(block, "Relevance score", "Relevance"),
-        evidence: labeledScore(block, "Evidence score"),
-        novelty: labeledScore(block, "Novelty score", "Novelty"),
-        evergreen: labeledScore(block, "Evergreen value score", "Evergreen score", "Evergreen"),
-        visualPotential: labeledScore(block, "Visual potential score", "Visual potential"),
-      },
+      viewerProblem: fields.viewerProblem ?? "",
+      viewerDesire: fields.viewerDesire ?? "",
+      unansweredQuestion: fields.unansweredQuestion ?? "",
+      whatCompetitorsMissed: fields.whatCompetitorsMissed ?? "",
+      evidenceSupporting: fields.evidenceSupporting ?? "",
+      missingExample: fields.missingExample ?? "",
+      missingDemonstration: fields.missingDemonstration ?? "",
+      whyItProvidesValue: fields.whyItProvidesValue ?? "",
+      riskOfBecomingGeneric: fields.riskOfBecomingGeneric ?? "",
+      scores,
     };
   });
 }
@@ -222,22 +340,88 @@ function normalizeConfidence(raw: string): ResearchSourceClaim["confidence"] {
   return raw || "unspecified";
 }
 
+// Alternative one-line-per-source format this app also accepts:
+// "<Title>" - <url> - <date> - <claim> - <confidence>, e.g.
+// "Etsy Shop No Sales 2026? 7 Proven Fixes That Work" - https://... -
+// May 9, 2026 - supports the CTR/conversion/review-velocity algorithm
+// claim - medium confidence. The date segment is frequently dropped
+// when a source is undated, so this reads whichever of [claim,
+// confidence] or [date, claim, confidence] fits the number of
+// " - "-separated segments found after the URL, rather than requiring
+// a fixed position for each. A row that mashes two sources together
+// (two quoted titles, two URLs) only yields one, best-effort entry -
+// genuinely ambiguous input, not worth guessing apart.
+const INLINE_SOURCE_URL_RE = /https?:\/\/\S+/;
+
+function parseInlineSourceLine(line: string): ResearchSourceClaim | null {
+  const cleaned = line.trim().replace(/^[-*]\s+|^\d+[.)]\s+/, "");
+  const urlMatch = cleaned.match(INLINE_SOURCE_URL_RE);
+  if (!urlMatch || urlMatch.index == null) return null;
+
+  const before = cleaned.slice(0, urlMatch.index);
+  const quoted = before.match(/"([^"]+)"/);
+  const sourceTitle = (quoted ? quoted[1] : before.replace(/[-—:|]\s*$/, "")).trim();
+  if (!sourceTitle) return null;
+
+  const url = urlMatch[0].replace(/[.,;:]+$/, "");
+  const after = cleaned.slice(urlMatch.index + urlMatch[0].length);
+  const segments = after
+    .split(/\s-\s/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  let publicationDate = "";
+  let claimSupported = "";
+  let confidenceRaw = "";
+  if (segments.length === 1) {
+    confidenceRaw = segments[0];
+  } else if (segments.length === 2) {
+    [claimSupported, confidenceRaw] = segments;
+  } else if (segments.length >= 3) {
+    publicationDate = segments[0];
+    confidenceRaw = segments[segments.length - 1];
+    claimSupported = segments.slice(1, -1).join(" - ");
+  }
+
+  return {
+    sourceTitle,
+    url,
+    publicationDate,
+    claimSupported,
+    confidence: normalizeConfidence(confidenceRaw),
+  };
+}
+
 function parseResearchSources(lines: string[] | undefined): ResearchSourceClaim[] {
-  const blocks = splitBlocks(lines, SOURCE_START_RE);
-  return blocks.map((block) => {
-    let url = labeled(block, "Direct URL", "URL") ?? "";
-    if (!url) {
-      const urlLine = block.find((l) => /https?:\/\//.test(l));
-      url = urlLine?.match(/https?:\/\/\S+/)?.[0] ?? "";
-    }
-    return {
-      sourceTitle: labeled(block, "Source title") ?? "Untitled source",
-      url,
-      publicationDate: labeled(block, "Publication or update date", "Publication date", "Update date") ?? "",
-      claimSupported: labeled(block, "Claim supported", "Claim") ?? "",
-      confidence: normalizeConfidence((labeled(block, "Confidence level", "Confidence") ?? "").trim()),
-    };
-  });
+  const raw = lines ?? [];
+
+  if (raw.some((l) => SOURCE_START_RE.test(l.trim()))) {
+    const blocks = splitBlocks(raw, SOURCE_START_RE);
+    return blocks.map((block) => {
+      let url = labeled(block, "Direct URL", "URL") ?? "";
+      if (!url) {
+        const urlLine = block.find((l) => /https?:\/\//.test(l));
+        url = urlLine?.match(/https?:\/\/\S+/)?.[0] ?? "";
+      }
+      return {
+        sourceTitle: labeled(block, "Source title") ?? "Untitled source",
+        url,
+        publicationDate: labeled(block, "Publication or update date", "Publication date", "Update date") ?? "",
+        claimSupported: labeled(block, "Claim supported", "Claim") ?? "",
+        confidence: normalizeConfidence((labeled(block, "Confidence level", "Confidence") ?? "").trim()),
+      };
+    });
+  }
+
+  // Fallback: no "Source title:" labels found anywhere in this section,
+  // try the one-line-per-source inline format instead.
+  const out: ResearchSourceClaim[] = [];
+  for (const line of raw) {
+    if (!/https?:\/\//.test(line)) continue;
+    const parsed = parseInlineSourceLine(line);
+    if (parsed) out.push(parsed);
+  }
+  return out;
 }
 
 // Confidence gate, same principle as paste-import.ts's own CORE_HEADERS
