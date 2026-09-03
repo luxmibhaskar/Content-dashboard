@@ -1117,16 +1117,24 @@ Why it matters, Key information, Example to include, Question answered,
 Mistake to avoid, Transition idea, Approximate timing, Source marker.
 Under 30-Second Script / 60-Second Script and each concept under
 Additional Short-Form Concepts (each starting its own "Concept N: <title>"
-line): "Label: value" lines for Title, Hook, Viewer problem, One clear
-insight, Example, Practical takeaway, Spoken script, Visual plan,
-On-screen text, B-roll, Brief description, Source markers, plus a "CTA
-options:" line followed by its own three bulleted lines.
+line, all its labels may be packed into one dense paragraph instead of
+one per line): "Label: value" lines for Title, Hook, Viewer problem, One
+clear insight, Example, Practical takeaway, Spoken script, Visual plan,
+On-screen text, B-roll, Brief description, Source markers, plus either a
+"CTA options:" line followed by its own three bulleted lines, or all
+three written inline on that same line separated by " / ".
 Under Carousel Script, each slide starts its own "Slide N: <headline>"
-line, then "Label: value" lines for Headline, Body, Visual direction,
-Design note, Source marker.
+line (a bare "Slide N" line with nothing else is also accepted), then
+"Label: value" lines for Headline, Body, Visual direction, Design note,
+Source marker.
 Under Closing: "Label: value" lines for Script strengths, Claims
 requiring verification, Missing examples, Personal information needed,
-Recommended production step, Script status.`;
+Recommended production step, Script status.
+"Long-Form Script" also accepts "Version 1: Detailed Long-Form Script",
+"Pointer Script" also accepts "Version 2: Pointer-Based Long-Form
+Structure", "Closing" also accepts "Script Wrap-Up", and "Additional
+Short-Form Concepts" also accepts "Three Additional Short-Form
+Concepts" as section headers.`;
 
 const SCRIPT_SECTION_START_RE = /^(?:#{1,3}\s*)?(?:Section\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
 
@@ -1187,23 +1195,81 @@ function parseShortFormSuitability(lines: string[] | undefined): ShortFormSuitab
 // no Title line at all, the caller's signal that this optional section
 // simply wasn't in the paste (30/60-second scripts are conditional on
 // the suitability score, per the template).
+// Order doesn't matter for extraction (extractSequentialLabels sorts by
+// where each label actually appears, same as OPPORTUNITY_FIELD_LABELS),
+// but this is also the template's own field order. ctaOptionsRaw isn't
+// a real output field - CTA options is meant to be a "CTA options:"
+// label followed by its own bulleted sub-list, but real output usually
+// writes all three inline on the same line instead ("X / Y / Z"), so
+// this captures the label's raw value and splitCtaOptionsRaw below
+// turns it into separate items.
+const SHORT_FORM_SCRIPT_FIELD_LABELS = [
+  { key: "title", labels: ["Title"] },
+  { key: "hook", labels: ["Hook"] },
+  { key: "viewerProblem", labels: ["Viewer problem"] },
+  { key: "oneClearInsight", labels: ["One clear insight", "Clear insight"] },
+  { key: "example", labels: ["Example"] },
+  { key: "practicalTakeaway", labels: ["Practical takeaway"] },
+  { key: "spokenScript", labels: ["Spoken script"] },
+  { key: "visualPlan", labels: ["Visual plan"] },
+  { key: "onScreenText", labels: ["On-screen text"] },
+  { key: "bRoll", labels: ["B-roll"] },
+  { key: "briefDescription", labels: ["Brief description"] },
+  { key: "ctaOptionsRaw", labels: ["CTA options"] },
+  { key: "sourceMarkers", labels: ["Source markers", "Source marker"] },
+] as const;
+
+// The proper "one bullet per CTA" sub-list form (still supported if a
+// paste ever uses it) is only trusted when labeledSublist actually found
+// more than one bulleted continuation line - its own inline-capture
+// behavior means a lone "CTA options: A / B / C" line already comes
+// back as a length-1 array (the whole remainder as one "item"), which
+// would wrongly short-circuit past the real split below if treated as
+// already-correct. Below that, the label's captured value (whichever of
+// lines/raw actually has it - raw is what a densely-packed concept
+// block relies on, since "CTA options" isn't at the start of any single
+// line there for labeledSublist to find at all) gets split on slashes
+// (the real format: "Comment ... / Save this ... / Follow ...") or
+// semicolons.
+function splitCtaOptionsRaw(lines: string[], raw: string): string[] {
+  const sublist = labeledSublist(lines, "CTA options");
+  if (sublist.length > 1) return sublist;
+  const candidate = sublist[0] ?? raw;
+  if (!candidate) return [];
+  const splitter = candidate.includes(";") ? ";" : candidate.includes("/") ? "/" : null;
+  if (!splitter) return [candidate.trim()].filter(Boolean);
+  return candidate
+    .split(splitter)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// Real output packs every "Label: value" pair for one short-form script
+// or concept onto a single dense paragraph rather than one label per
+// line (the same shape Content Opportunities and Competitor Research
+// had), so this uses the same extractSequentialLabels approach those
+// use - it works equally well when the labels genuinely are one per
+// line (the 30/60-second scripts' own format), since it locates each
+// label by its actual text position, not by line breaks.
 function parseShortFormScriptBlock(lines: string[]): ShortFormScript | null {
-  const title = labeled(lines, "Title");
+  const text = lines.join("\n");
+  const fields = extractSequentialLabels(text, SHORT_FORM_SCRIPT_FIELD_LABELS);
+  const title = fields.title;
   if (!title) return null;
   return {
     title,
-    hook: labeled(lines, "Hook") ?? "",
-    viewerProblem: labeled(lines, "Viewer problem") ?? "",
-    oneClearInsight: labeled(lines, "One clear insight", "Clear insight") ?? "",
-    example: labeled(lines, "Example") ?? "",
-    practicalTakeaway: labeled(lines, "Practical takeaway") ?? "",
-    spokenScript: labeled(lines, "Spoken script") ?? "",
-    visualPlan: labeled(lines, "Visual plan") ?? "",
-    onScreenText: labeled(lines, "On-screen text") ?? "",
-    bRoll: labeled(lines, "B-roll") ?? "",
-    briefDescription: labeled(lines, "Brief description") ?? "",
-    ctaOptions: labeledSublist(lines, "CTA options"),
-    sourceMarkers: labeled(lines, "Source markers", "Source marker") ?? "",
+    hook: fields.hook ?? "",
+    viewerProblem: fields.viewerProblem ?? "",
+    oneClearInsight: fields.oneClearInsight ?? "",
+    example: fields.example ?? "",
+    practicalTakeaway: fields.practicalTakeaway ?? "",
+    spokenScript: fields.spokenScript ?? "",
+    visualPlan: fields.visualPlan ?? "",
+    onScreenText: fields.onScreenText ?? "",
+    bRoll: fields.bRoll ?? "",
+    briefDescription: fields.briefDescription ?? "",
+    ctaOptions: splitCtaOptionsRaw(lines, fields.ctaOptionsRaw ?? ""),
+    sourceMarkers: fields.sourceMarkers ?? "",
   };
 }
 
@@ -1215,14 +1281,22 @@ function parseAdditionalShortFormConcepts(lines: string[] | undefined): ShortFor
     .filter((s): s is ShortFormScript => s !== null);
 }
 
-const SLIDE_START_RE = /^(?:#{1,3}\s*)?(?:Slide\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+// The colon-plus-headline group is optional (real output sometimes uses
+// a bare "Slide N" heading with nothing else on that line, the headline
+// coming only from the "Headline" field inside the block) - group 1 is
+// the slide's own number either way, group 2 the inline headline when
+// present, groups 3/4 the plain-numbered-list form unchanged. Same fix
+// as Packaging's THUMBNAIL_START_RE.
+const SLIDE_START_RE =
+  /^(?:#{1,3}\s*)?(?:Slide\s*(\d*)\s*(?:[:.\-]\s*(.+))?|(\d+)[.)]\s+(.+))$/i;
 
 function parseCarouselScript(lines: string[] | undefined): CarouselScriptSlide[] {
   return splitBlocks(lines, SLIDE_START_RE).map((block, i) => {
     const startMatch = block[0].trim().match(SLIDE_START_RE);
-    const inlineHeadline = (startMatch?.[1] ?? startMatch?.[3] ?? "").trim();
+    const number = startMatch?.[1] || startMatch?.[3];
+    const inlineHeadline = (startMatch?.[2] ?? startMatch?.[4] ?? "").trim();
     return {
-      slideNumber: labeled(block, "Slide number") ?? String(i + 1),
+      slideNumber: labeled(block, "Slide number") ?? number ?? String(i + 1),
       headline: labeled(block, "Headline") ?? inlineHeadline,
       body: labeled(block, "Body") ?? "",
       visualDirection: labeled(block, "Visual direction") ?? "",
@@ -1250,8 +1324,39 @@ const SCRIPTING_HEADERS = [
   "CLOSING",
 ] as const;
 
+// Same approach as Packaging's normalizePackagingHeaderAliases: real
+// Scripting output sometimes uses different header wording for the same
+// section (a skill paraphrasing its own headers), rewritten to the
+// canonical header text, on the same line, before splitSections ever
+// runs.
+const SCRIPTING_HEADER_ALIASES: [RegExp, string][] = [
+  [/^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)VERSION 1: DETAILED LONG-FORM SCRIPT(\s*:?\s*)$/gim, "$1LONG-FORM SCRIPT$2"],
+  [
+    /^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)VERSION 2: POINTER-BASED LONG-FORM STRUCTURE(\s*:?\s*)$/gim,
+    "$1POINTER SCRIPT$2",
+  ],
+  [/^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)SCRIPT WRAP-UP(\s*:?\s*)$/gim, "$1CLOSING$2"],
+  // Not a core header (doesn't affect the gate), but without this alias
+  // the section is never recognized at all, so its content silently
+  // absorbs into whichever section precedes it (60-Second Script) -
+  // found this only by verifying the actual parsed output end to end,
+  // not from the gate-failure investigation alone.
+  [
+    /^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)THREE ADDITIONAL SHORT-FORM CONCEPTS(\s*:?\s*)$/gim,
+    "$1ADDITIONAL SHORT-FORM CONCEPTS$2",
+  ],
+];
+
+function normalizeScriptingHeaderAliases(text: string): string {
+  let normalized = text;
+  for (const [re, replacement] of SCRIPTING_HEADER_ALIASES) {
+    normalized = normalized.replace(re, replacement);
+  }
+  return normalized;
+}
+
 export function parseScriptingPhasePaste(text: string): ScriptingPhaseData | null {
-  const sections = splitSections(text, SCRIPTING_HEADERS);
+  const sections = splitSections(normalizeScriptingHeaderAliases(text), SCRIPTING_HEADERS);
   if (!SCRIPTING_CORE_HEADERS.every((h) => sections.has(h))) return null;
 
   const longFormScript = parseLongFormScript(sections.get("LONG-FORM SCRIPT"));
