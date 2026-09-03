@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 // brand-glow + idle breathing, just without the cursor-follow effects.
 export function CollapsibleSection({
   title,
+  titleSuffix,
   defaultOpen = false,
   glow = 3,
   neutral = false,
@@ -15,6 +16,15 @@ export function CollapsibleSection({
   children,
 }: {
   title: string;
+  // Rendered right after the title text, inside the always-visible
+  // summary - the one place content can still show while collapsed.
+  // Built for MarkerCountBadge (manual-workflow-ui.tsx): a section with
+  // a [VERIFY]/[PERSONAL INPUT NEEDED]/[EXAMPLE NEEDED] marker somewhere
+  // inside it needs to say so without forcing it open first. Optional
+  // and inline (not a flex layout change) so every existing call site
+  // (Sources, Original pasted text, competitor profile cards) is
+  // unaffected.
+  titleSuffix?: React.ReactNode;
   defaultOpen?: boolean;
   glow?: 1 | 2 | 3;
   // Same reasoning as GlowCard's own neutral prop (glow-card.tsx):
@@ -61,6 +71,7 @@ export function CollapsibleSection({
           &rsaquo;
         </span>
         {title}
+        {titleSuffix && <span className="ml-2 align-middle">{titleSuffix}</span>}
       </summary>
       <div
         className={cn(

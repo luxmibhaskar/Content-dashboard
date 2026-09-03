@@ -147,6 +147,42 @@ export function MarkerText({ text }: { text: string }) {
   );
 }
 
+// Recursively counts marker occurrences through any nested combination
+// of strings, arrays, and plain objects - so a call site can pass a
+// single field's value, a whole array of repeating items (competitor
+// profiles, content opportunities, sources...), or an ad-hoc object
+// literal grouping several fields together, without needing its own
+// per-shape counting logic. Used for the collapsed-summary indicator
+// (MarkerCountBadge via CollapsibleSection's titleSuffix) and for
+// always-visible card headers (Opportunity/Source rows, which aren't
+// collapsible) alike.
+export function countMarkers(value: unknown): number {
+  if (typeof value === "string") {
+    return value.match(MARKER_PATTERN)?.length ?? 0;
+  }
+  if (Array.isArray(value)) {
+    return value.reduce((sum: number, v) => sum + countMarkers(v), 0);
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).reduce((sum: number, v) => sum + countMarkers(v), 0);
+  }
+  return 0;
+}
+
+// Aggregate "something in here needs your attention" indicator - one
+// count across all three marker types, not broken out by type the way
+// MarkerText's inline badges are, since at this zoomed-out level (a
+// whole section or card, possibly collapsed) the point is just to
+// signal "look inside," not which specific marker it is.
+export function MarkerCountBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-amber-600 ring-1 ring-inset ring-amber-500/40 dark:text-amber-400">
+      ⚠ {count} flagged
+    </span>
+  );
+}
+
 export function Field({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (

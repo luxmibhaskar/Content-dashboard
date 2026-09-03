@@ -3,7 +3,15 @@
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { StatusSelect, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
+import {
+  StatusSelect,
+  ScoreBadge,
+  Field,
+  ListField,
+  MarkerText,
+  countMarkers,
+  MarkerCountBadge,
+} from "@/components/manual-workflow-ui";
 import {
   RESEARCH_PHASE_PASTE_TEMPLATE_HINT,
   type CompetitorProfile,
@@ -34,8 +42,11 @@ function ConfidenceTag({ level }: { level: string }) {
 function OpportunityCard({ opportunity, index }: { opportunity: ContentOpportunity; index: number }) {
   return (
     <GlowCard neutral className="space-y-3 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        Opportunity {index + 1}: {opportunity.name}
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span>
+          Opportunity {index + 1}: {opportunity.name}
+        </span>
+        <MarkerCountBadge count={countMarkers(opportunity)} />
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Viewer problem" value={opportunity.viewerProblem} />
@@ -81,7 +92,12 @@ function competitorHeading(profile: CompetitorProfile): string {
 function CompetitorProfileCard({ profile }: { profile: CompetitorProfile }) {
   const title = `Competitor ${profile.competitorNumber}: ${competitorHeading(profile)}`;
   return (
-    <CollapsibleSection title={title} glow={2} neutral>
+    <CollapsibleSection
+      title={title}
+      titleSuffix={<MarkerCountBadge count={countMarkers(profile)} />}
+      glow={2}
+      neutral
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Creator or organization" value={profile.creator} />
         <Field label="Platform" value={profile.platform} />
@@ -125,7 +141,10 @@ function SourceClaimRow({ source }: { source: ResearchSourceClaim }) {
         >
           {source.sourceTitle}
         </a>
-        <ConfidenceTag level={source.confidence} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <MarkerCountBadge count={countMarkers(source)} />
+          <ConfidenceTag level={source.confidence} />
+        </div>
       </div>
       {source.publicationDate && (
         <p className="mt-0.5 text-xs text-muted-foreground">{source.publicationDate}</p>
@@ -187,7 +206,23 @@ export function ResearchPhaseContent({
 
       {data && (
         <div className="space-y-3">
-          <CollapsibleSection title="Topic & Audience Overview" glow={1}>
+          <CollapsibleSection
+            title="Topic & Audience Overview"
+            titleSuffix={
+              <MarkerCountBadge
+                count={countMarkers({
+                  topicDefinition: data.topicDefinition,
+                  primaryPillarAndSubtopic: data.primaryPillarAndSubtopic,
+                  mainAudienceProblem: data.mainAudienceProblem,
+                  audienceDesire: data.audienceDesire,
+                  audienceConfusion: data.audienceConfusion,
+                  currentDevelopments: data.currentDevelopments,
+                  importantFindings: data.importantFindings,
+                })}
+              />
+            }
+            glow={1}
+          >
             <Field label="Topic Definition" value={data.topicDefinition} />
             <Field label="Primary Pillar and Subtopic" value={data.primaryPillarAndSubtopic} />
             <Field label="Main Audience Problem" value={data.mainAudienceProblem} />
@@ -209,6 +244,18 @@ export function ResearchPhaseContent({
               (data.competitorProfiles ?? []).length > 0
                 ? `Competitor Research (${data.competitorProfiles.length} profiles)`
                 : "Competitor Research"
+            }
+            titleSuffix={
+              <MarkerCountBadge
+                count={countMarkers({
+                  competitorProfiles: data.competitorProfiles,
+                  directCompetitorContent: data.directCompetitorContent,
+                  relatedContent: data.relatedContent,
+                  competitorStrengths: data.competitorStrengths,
+                  competitorWeaknesses: data.competitorWeaknesses,
+                  whatCompetitorsMissed: data.whatCompetitorsMissed,
+                })}
+              />
             }
             glow={2}
           >
@@ -232,7 +279,23 @@ export function ResearchPhaseContent({
             <Field label="What Competitors Missed" value={data.whatCompetitorsMissed} />
           </CollapsibleSection>
 
-          <CollapsibleSection title="Audience Questions & Comments" glow={3}>
+          <CollapsibleSection
+            title="Audience Questions & Comments"
+            titleSuffix={
+              <MarkerCountBadge
+                count={countMarkers({
+                  frequentlyAskedQuestions: data.frequentlyAskedQuestions,
+                  unansweredQuestions: data.unansweredQuestions,
+                  viewerPainPoints: data.viewerPainPoints,
+                  viewerObjections: data.viewerObjections,
+                  viewerMisunderstandings: data.viewerMisunderstandings,
+                  viewerRequests: data.viewerRequests,
+                  viewerSuggestions: data.viewerSuggestions,
+                })}
+              />
+            }
+            glow={3}
+          >
             <div className="grid gap-3 sm:grid-cols-2">
               <ListField label="Frequently Asked Questions" items={data.frequentlyAskedQuestions} />
               <ListField label="Unanswered Questions" items={data.unansweredQuestions} />
@@ -249,6 +312,16 @@ export function ResearchPhaseContent({
               data.contentOpportunities.length > 0
                 ? `Content Gap & Opportunities (${data.contentOpportunities.length})`
                 : "Content Gap & Opportunities"
+            }
+            titleSuffix={
+              <MarkerCountBadge
+                count={countMarkers({
+                  contentGapAnalysis: data.contentGapAnalysis,
+                  contentOpportunities: data.contentOpportunities,
+                  recommendedOpportunity: data.recommendedOpportunity,
+                  viewerTransformationOrDesiredOutcome: data.viewerTransformationOrDesiredOutcome,
+                })}
+              />
             }
             glow={1}
           >
@@ -274,7 +347,11 @@ export function ResearchPhaseContent({
             />
           </CollapsibleSection>
 
-          <CollapsibleSection title={`Sources (${data.sources.length})`} glow={2}>
+          <CollapsibleSection
+            title={`Sources (${data.sources.length})`}
+            titleSuffix={<MarkerCountBadge count={countMarkers(data.sources)} />}
+            glow={2}
+          >
             {data.sources.length === 0 ? (
               <p className="text-sm text-muted-foreground">No sources listed.</p>
             ) : (
@@ -286,7 +363,18 @@ export function ResearchPhaseContent({
             )}
           </CollapsibleSection>
 
-          <CollapsibleSection title="Research Limitations & Status" glow={3}>
+          <CollapsibleSection
+            title="Research Limitations & Status"
+            titleSuffix={
+              <MarkerCountBadge
+                count={countMarkers({
+                  researchLimitations: data.researchLimitations,
+                  researchQualityStatusText: data.researchQualityStatusText,
+                })}
+              />
+            }
+            glow={3}
+          >
             <Field label="Research Limitations" value={data.researchLimitations} />
             <div>
               {/* The live status control is the one at the top of this
