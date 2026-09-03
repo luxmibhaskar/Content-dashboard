@@ -392,6 +392,19 @@ export type HookLibraryEntry = {
   content: string;
 };
 
+// docs/topic-page-redesign.md (Notes section): per-item freeform notes,
+// one list per content_calendar row (supabase/migrations/
+// 0026_content_notes.sql). title is optional; the collapsed card summary
+// falls back to a snippet of content, then "Untitled note". Ordered
+// newest-first by updated_at (created and edited both bump it).
+export type ContentNote = {
+  id: string;
+  title: string | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+};
+
 // Section 10.2.1: Reference Videos Tab
 export type ReferenceVideo = {
   id: string;

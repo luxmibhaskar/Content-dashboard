@@ -640,3 +640,56 @@ only fires on a second, explicit click inside that confirm step. Locked/
 structural pills never render this control at all, `TopicMapPage`
 distinguishes the two by checking each rendered pill against the brand's
 active `custom_sub_topics` rows.
+
+## 11. Notes column
+
+Added feature, not a redesign of anything: a freeform notes list per
+content item, sitting in a right-hand column alongside (not replacing)
+the Manual/AI Research -> Packaging -> Scripting phase stack.
+
+**Scope.** One list per `content_calendar` row, scoped to the item
+itself, not to any one phase. Table `content_notes`
+(`supabase/migrations/0026_content_notes.sql`): `id`, `content_id` FK
+(`on delete cascade`), `brand` (carried redundantly, same as
+`reference_videos` / `manual_workflow_phases`, so every core table stays
+brand-scoped), `title` (nullable, optional), `content` (`not null
+default ''`), `created_at`, `updated_at`. The standard
+`trg_content_notes_updated_at` -> `set_updated_at()` trigger bumps
+`updated_at` on every edit, and the page query orders by `updated_at
+desc` as the single key, so "most recently created or edited at the
+top" needs no separate sort logic. RLS: the same "Authenticated access
+only" policy as every other table.
+
+**Layout.** `calendar/[id]/page.tsx` wraps `TopicPageTabs` and the new
+`ContentNotesSection` in one grid:
+`lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start`. Phases take the
+flexible track, Notes is a fixed 20rem sidebar. `min-w-0` on the left
+cell is load-bearing (the phase content has its own `overflow-x-auto`
+containers that would otherwise widen the grid track). The `<aside>` is
+`lg:sticky lg:top-4`. Below `lg` it collapses to one column, phases
+first (the actual workflow), Notes below. The notes forms are their own
+independent `<form>` elements, same as Reference Videos and the paste
+importers, so nesting inside `DirtyFormRegion` is fine.
+
+**Components.** `CollapsibleSection` is reused as the per-note card
+shell (collapsed by default, same disclosure/glow treatment as the
+phase cards). `NoteCard` (`src/components/note-card.tsx`) is a small
+dedicated client component, not `EditableCard`: it follows the same
+view/edit `useState` toggle but adds a per-note Delete action and a
+full-height body textarea, which `EditableCard`'s structured-field
+model doesn't carry. Collapsed summary line = `title`, else the first
+non-empty line of `content` truncated to ~60 chars, else "Untitled
+note". `ContentNotesSection` holds the column header and a toggled
+composer (title + body + Save/Cancel), toggled rather than always-inline
+because the taller body textarea would otherwise sit open above the
+list permanently.
+
+**Persistence.** `content-notes-actions.ts`: `createNote` / `updateNote`
+/ `deleteNote`, each a plain `revalidatePath` of the topic route, brand
+copied off the parent row (same `getContentBrand` helper the reference
+video actions use). The create and edit form actions are client
+closures (so they can flip the composer / edit toggle off after
+saving), which means their `revalidatePath` does not re-render the
+route on its own the way a directly-bound server action would, so both
+call `router.refresh()` after awaiting. Delete stays a directly-bound
+server action and refreshes natively.
