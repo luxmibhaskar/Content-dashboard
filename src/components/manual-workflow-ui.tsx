@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ManualWorkflowStatus } from "@/lib/types";
@@ -199,6 +202,117 @@ export function MarkerCountBadge({ count }: { count: number }) {
     <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-amber-600 ring-1 ring-inset ring-amber-500/40 dark:text-amber-400">
       ⚠ {count} flagged
     </span>
+  );
+}
+
+// The write-side counterpart of Field/ListField/ScoreBadge below - one
+// spec shape per section/card's fields, mirroring whichever of those
+// three a given field is normally rendered with, so "edit" is a direct
+// swap of the same data a card already displays, not a separate model.
+export type EditableFieldSpec =
+  | { key: string; label: string; kind?: "text"; value: string }
+  | { key: string; label: string; kind: "list"; value: string[] }
+  | { key: string; label: string; kind: "number"; value: number };
+
+// Wraps a card/section's existing read-only JSX (passed as children,
+// untouched) with an "Edit" toggle. Editing replaces children with a
+// plain textarea/number-input per field instead of trying to make the
+// existing grids/layout themselves editable in place - simpler, and
+// works identically regardless of how differently each card lays its
+// fields out for display. On Save, onSave receives every field's
+// current value (not just the ones actually changed) already coerced
+// back to its real type (list fields split back to string[], number
+// fields parsed and clamped to 0-10) - the caller merges this into the
+// full phase data and persists the whole thing, same "re-save
+// everything" model importXPhase already uses for a full re-paste.
+export function EditableCard({
+  fields,
+  onSave,
+  children,
+}: {
+  fields: EditableFieldSpec[];
+  onSave: (patch: Record<string, string | string[] | number>) => Promise<void>;
+  children: React.ReactNode;
+}) {
+  const [draft, setDraft] = useState<Record<string, string> | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  function startEdit() {
+    const initial: Record<string, string> = {};
+    for (const f of fields) {
+      initial[f.key] = f.kind === "list" ? f.value.join("\n") : String(f.value);
+    }
+    setDraft(initial);
+  }
+
+  async function handleSave() {
+    if (!draft) return;
+    setSaving(true);
+    const patch: Record<string, string | string[] | number> = {};
+    for (const f of fields) {
+      const raw = draft[f.key] ?? "";
+      if (f.kind === "list") {
+        patch[f.key] = raw
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      } else if (f.kind === "number") {
+        const n = Number(raw);
+        patch[f.key] = Number.isFinite(n) ? Math.max(0, Math.min(10, Math.round(n))) : 0;
+      } else {
+        patch[f.key] = raw;
+      }
+    }
+    await onSave(patch);
+    setSaving(false);
+    setDraft(null);
+  }
+
+  if (draft) {
+    return (
+      <div className="space-y-3">
+        {fields.map((f) => (
+          <div key={f.key}>
+            <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
+            {f.kind === "number" ? (
+              <input
+                type="number"
+                min={0}
+                max={10}
+                className="mt-0.5 w-20 rounded-md border border-input bg-transparent px-2 py-1 text-sm"
+                value={draft[f.key] ?? ""}
+                onChange={(e) => setDraft((d) => (d ? { ...d, [f.key]: e.target.value } : d))}
+              />
+            ) : (
+              <textarea
+                className="mt-0.5 w-full rounded-md border border-input bg-transparent p-2 text-sm leading-relaxed"
+                rows={f.kind === "list" ? Math.max(3, f.value.length + 1) : 3}
+                value={draft[f.key] ?? ""}
+                onChange={(e) => setDraft((d) => (d ? { ...d, [f.key]: e.target.value } : d))}
+              />
+            )}
+            {f.kind === "list" && <p className="mt-0.5 text-[10px] text-muted-foreground">One item per line.</p>}
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Button type="button" size="xs" disabled={saving} onClick={handleSave}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          <Button type="button" size="xs" variant="ghost" disabled={saving} onClick={() => setDraft(null)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {children}
+      <Button type="button" size="xs" variant="outline" onClick={startEdit}>
+        Edit
+      </Button>
+    </div>
   );
 }
 

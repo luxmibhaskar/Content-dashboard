@@ -169,3 +169,30 @@ export async function updateManualWorkflowPhaseStatus(
 
   revalidatePath(`/calendar/${contentId}`);
 }
+
+// Inline per-section edit (EditableCard, manual-workflow-ui.tsx): the
+// client already holds the full current ResearchPhaseData/
+// PackagingPhaseData/ScriptingPhaseData (it's what's rendering the
+// page), so on Save it builds the complete updated object itself
+// (cloning `data`, replacing just the one edited section/array item)
+// and this just persists that whole object - same "re-save everything"
+// model importResearchPhase/importPackagingPhase/importScriptingPhase
+// already use for a full re-paste, just triggered by a smaller edit
+// instead. No surgical JSONB path-patch on the server: this app is
+// single-user (CLAUDE.md), so the simplicity of always writing the
+// whole blob outweighs any concurrent-write concern that would justify
+// the extra complexity.
+export async function updateManualWorkflowPhaseData(
+  contentId: string,
+  phase: ManualWorkflowPhase,
+  data: unknown,
+): Promise<void> {
+  const supabase = await createClient();
+  await supabase
+    .from("manual_workflow_phases")
+    .update({ parsed_data: data })
+    .eq("content_id", contentId)
+    .eq("phase", phase);
+
+  revalidatePath(`/calendar/${contentId}`);
+}
