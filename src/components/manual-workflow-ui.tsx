@@ -41,6 +41,54 @@ export function StatusBadge({ status }: { status: ManualWorkflowStatus | null })
   );
 }
 
+const NOT_YET_RATED_CLASS = "bg-muted text-muted-foreground";
+
+// One real per-phase status control (Research/Packaging/Scripting each
+// get exactly one), replacing the read-only StatusBadge at that same
+// spot. Submits on change - no separate Save button, matching how small
+// a single-field edit like this should feel. For Research/Scripting,
+// re-pasting still re-derives status from the freshly parsed text
+// (manual-workflow-actions.ts's updateManualWorkflowPhaseStatus comment
+// - an explicit, confirmed preference), so this dropdown is for
+// adjusting judgment between pastes, not a permanent override. For
+// Packaging, which has no parsed status at all, this is the only way
+// its status ever gets set.
+export function StatusSelect({
+  status,
+  action,
+}: {
+  status: ManualWorkflowStatus | null;
+  action: (formData: FormData) => void | Promise<void>;
+}) {
+  const cls = status ? STATUS_CLASSES[status] : NOT_YET_RATED_CLASS;
+  return (
+    <form action={action}>
+      {/* key={status}: this is an uncontrolled element (defaultValue,
+          not value) so its own DOM state, not React, owns what's
+          displayed after the user picks something - correct for typing
+          into a normal text input, but here the value can also change
+          server-side out from under it (Research/Scripting re-derive
+          status from a fresh paste, independent of this dropdown) and
+          defaultValue is only honored on mount, not on prop updates. The
+          key forces a full remount whenever the server-provided status
+          actually changes, so a revalidated page always shows the true
+          current value instead of whatever was last picked client-side. */}
+      <select
+        key={status ?? "unrated"}
+        name="status"
+        defaultValue={status ?? ""}
+        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        className={`rounded-full border-0 px-2 py-0.5 text-[10px] font-medium ${cls}`}
+      >
+        <option value="">Not yet rated</option>
+        <option value="approved">Approved</option>
+        <option value="needs_revision">Needs Revision</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </form>
+  );
+}
+
 // 0-10 scores, per docs/manual-workflow-redesign.md's "render as small
 // visible bars or badges, not plain numbers in a paragraph": a filled
 // bar reads at a glance, and doubles as a color cue (low scores read

@@ -101,6 +101,7 @@ export function ManualWorkflowPanel({
             contentId={contentId}
             brand={brand}
             data={(packagingRow?.parsed_data as PackagingPhaseData | null) ?? null}
+            status={packagingRow?.status ?? null}
             hasExistingImport={packagingRow != null}
           />
         ) : (

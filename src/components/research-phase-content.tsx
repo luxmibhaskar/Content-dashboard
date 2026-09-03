@@ -3,7 +3,7 @@
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { StatusBadge, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
+import { StatusSelect, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
 import {
   RESEARCH_PHASE_PASTE_TEMPLATE_HINT,
   type CompetitorProfile,
@@ -11,7 +11,10 @@ import {
   type ResearchPhaseData,
   type ResearchSourceClaim,
 } from "@/lib/manual-workflow-parsing";
-import { importResearchPhase } from "@/app/(app)/calendar/[id]/manual-workflow-actions";
+import {
+  importResearchPhase,
+  updateManualWorkflowPhaseStatus,
+} from "@/app/(app)/calendar/[id]/manual-workflow-actions";
 import type { ManualWorkflowStatus } from "@/lib/types";
 
 // Confidence tags are Research-specific (per-source-claim confidence
@@ -165,12 +168,13 @@ export function ResearchPhaseContent({
   rawPastedText: string | null;
 }) {
   const boundImportAction = importResearchPhase.bind(null, contentId);
+  const boundStatusAction = updateManualWorkflowPhaseStatus.bind(null, contentId, "research");
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">Research</p>
-        {hasExistingImport && <StatusBadge status={status} />}
+        {hasExistingImport && <StatusSelect status={status} action={boundStatusAction} />}
       </div>
 
       <PasteImportSection action={boundImportAction} templateHint={RESEARCH_PHASE_PASTE_TEMPLATE_HINT} />
@@ -285,10 +289,11 @@ export function ResearchPhaseContent({
           <CollapsibleSection title="Research Limitations & Status" glow={3}>
             <Field label="Research Limitations" value={data.researchLimitations} />
             <div>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-muted-foreground">Research Quality Status</p>
-                <StatusBadge status={status} />
-              </div>
+              {/* The live status control is the one at the top of this
+                  phase (StatusSelect above) - not duplicated here, this
+                  is just the template's own raw status text for
+                  reference. */}
+              <p className="text-xs font-medium text-muted-foreground">Research Quality Status</p>
               <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap">
                 <MarkerText text={data.researchQualityStatusText} />
               </p>

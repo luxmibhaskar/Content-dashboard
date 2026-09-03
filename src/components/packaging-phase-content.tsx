@@ -4,17 +4,20 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { ScoreBadge, Field, ListField } from "@/components/manual-workflow-ui";
+import { ScoreBadge, Field, ListField, StatusSelect } from "@/components/manual-workflow-ui";
 import {
   PACKAGING_PASTE_TEMPLATE_HINT,
   type PackagingPhaseData,
   type PackagingTitleOption,
   type ThumbnailSuggestion,
 } from "@/lib/manual-workflow-parsing";
-import { importPackagingPhase } from "@/app/(app)/calendar/[id]/manual-workflow-actions";
+import {
+  importPackagingPhase,
+  updateManualWorkflowPhaseStatus,
+} from "@/app/(app)/calendar/[id]/manual-workflow-actions";
 import { useResearchTitle } from "@/app/(app)/calendar/[id]/research-copy-actions";
 import { useHook } from "@/app/(app)/calendar/[id]/hook-actions";
-import type { HookLibraryType } from "@/lib/types";
+import type { HookLibraryType, ManualWorkflowStatus } from "@/lib/types";
 
 const PLATFORM_COPY_LABELS: Record<keyof PackagingPhaseData["platformCopy"], string> = {
   youtubeDescription: "YouTube Description",
@@ -120,27 +123,36 @@ function ThumbnailCard({ thumbnail, index }: { thumbnail: ThumbnailSuggestion; i
 // keywords/phrases, three thumbnails, three hook pairs, carousel
 // evaluation, three CTAs, and the six "strongest X" recommendations),
 // same grouping-into-the-template's-own-sections and plain-siblings-not-
-// nested-GlowCards approach as research-phase-content.tsx. No status
-// badge anywhere here: Packaging's own template has no approval field
-// (see manual-workflow-actions.ts's importPackagingPhase comment).
+// nested-GlowCards approach as research-phase-content.tsx. Packaging's
+// own template has no approval field (unlike Research/Scripting, no
+// APPROVED/NEEDS REVISION line ever gets parsed here), but the status
+// column itself is shared across all three phases, so it can still be
+// set manually via StatusSelect - see updateManualWorkflowPhaseStatus's
+// comment for why importPackagingPhase's own upsert leaves it alone.
 export function PackagingPhaseContent({
   contentId,
   brand,
   data,
+  status,
   hasExistingImport,
 }: {
   contentId: string;
   brand: string;
   data: PackagingPhaseData | null;
+  status: ManualWorkflowStatus | null;
   hasExistingImport: boolean;
 }) {
   const boundImportAction = importPackagingPhase.bind(null, contentId);
+  const boundStatusAction = updateManualWorkflowPhaseStatus.bind(null, contentId, "packaging");
   const boundUseTitle = useResearchTitle.bind(null, contentId);
   const boundUseHook = (type: HookLibraryType) => useHook.bind(null, contentId, brand, type);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium">Packaging</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Packaging</p>
+        {hasExistingImport && <StatusSelect status={status} action={boundStatusAction} />}
+      </div>
 
       <PasteImportSection action={boundImportAction} templateHint={PACKAGING_PASTE_TEMPLATE_HINT} />
       {!data && !hasExistingImport && (

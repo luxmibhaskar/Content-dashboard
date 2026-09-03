@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { StatusBadge, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
+import { StatusSelect, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
 import {
   SCRIPTING_PASTE_TEMPLATE_HINT,
   type LongFormScriptSection,
@@ -13,7 +13,10 @@ import {
   type CarouselScriptSlide,
   type ScriptingPhaseData,
 } from "@/lib/manual-workflow-parsing";
-import { importScriptingPhase } from "@/app/(app)/calendar/[id]/manual-workflow-actions";
+import {
+  importScriptingPhase,
+  updateManualWorkflowPhaseStatus,
+} from "@/app/(app)/calendar/[id]/manual-workflow-actions";
 import type { ManualWorkflowStatus } from "@/lib/types";
 
 type ScriptingSubTab = "longform" | "pointer" | "shortform" | "carousel" | "closing";
@@ -234,12 +237,13 @@ export function ScriptingPhaseContent({
 }) {
   const [subTab, setSubTab] = useState<ScriptingSubTab>("longform");
   const boundImportAction = importScriptingPhase.bind(null, contentId);
+  const boundStatusAction = updateManualWorkflowPhaseStatus.bind(null, contentId, "scripting");
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">Scripting</p>
-        {hasExistingImport && <StatusBadge status={status} />}
+        {hasExistingImport && <StatusSelect status={status} action={boundStatusAction} />}
       </div>
 
       <PasteImportSection action={boundImportAction} templateHint={SCRIPTING_PASTE_TEMPLATE_HINT} />
