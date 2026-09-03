@@ -736,19 +736,27 @@ Under Titles, each option starts its own "Title N: <title>" line, then
 "Label: value" lines for Research support, Viewer problem addressed,
 Promise made, Reason to click, Risk of misleading.
 Under Thumbnails, each suggestion starts its own "Thumbnail N: <short name>"
-line, then "Label: value" lines for Main visual, Subject action or
-expression, Thumbnail text, Color direction, Emotional trigger, Why it
-fits, What to avoid.
+line (a bare "Thumbnail N" line with nothing else is also accepted), then
+"Label: value" lines for Main visual, Subject action or expression,
+Thumbnail text, Color direction, Emotional trigger, Why it fits, What
+to avoid.
 Under Carousel Evaluation: "Label: value" lines for Carousel
 recommendation, Suitability score, Reason, Recommended slide count, Best
 carousel angle, Best platform, Design direction, Color direction,
-Final-slide CTA, Viewer takeaway, plus a "Carousel title options:" line
-followed by its own three bulleted lines.
+Final-slide CTA, Viewer takeaway, plus either a "Carousel title options:"
+line followed by its own three bulleted lines, or three separate
+"Carousel title option 1:" / "option 2:" / "option 3:" lines.
 Under CTA Options: "Label: value" lines for Engagement CTA, Save/share
 CTA, Follow/subscribe/resource/conversion CTA.
 Under Recommendations: "Label: value" lines for Strongest title,
 Strongest visual hook, Strongest textual hook, Strongest verbal hook,
-Strongest thumbnail, Strongest CTA.`;
+Strongest thumbnail, Strongest CTA.
+"Titles" also accepts "Title Options", "YouTube Description" also accepts
+"YouTube Video Description", and "Thumbnails" also accepts "Thumbnail
+Suggestions" as section headers.
+Short Keywords and Search Phrases may instead be one comma-separated
+line with no bullet/number prefix - each item still becomes its own
+entry.`;
 
 const TITLE_START_RE = /^(?:#{1,3}\s*)?(?:Title\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
 
@@ -768,13 +776,25 @@ function parsePackagingTitles(lines: string[] | undefined): PackagingTitleOption
   });
 }
 
-const THUMBNAIL_START_RE = /^(?:#{1,3}\s*)?(?:Thumbnail\s*\d*\s*[:.\-]\s*(.+)|(\d+)[.)]\s+(.+))$/i;
+// The colon-plus-title group is optional (real output sometimes uses a
+// bare "Thumbnail N" heading with nothing else on that line, the name
+// coming only from the "Thumbnail text" field inside the block) - group
+// 1 is the thumbnail's own number either way, group 2 the inline title
+// when present, groups 3/4 the plain-numbered-list form unchanged.
+const THUMBNAIL_START_RE =
+  /^(?:#{1,3}\s*)?(?:Thumbnail\s*(\d*)\s*(?:[:.\-]\s*(.+))?|(\d+)[.)]\s+(.+))$/i;
 
 function parseThumbnailSuggestions(lines: string[] | undefined): ThumbnailSuggestion[] {
   const blocks = splitBlocks(lines, THUMBNAIL_START_RE);
   return blocks.map((block) => {
     const startMatch = block[0].trim().match(THUMBNAIL_START_RE);
-    const concept = (startMatch?.[1] ?? startMatch?.[3] ?? "Untitled thumbnail").trim();
+    const number = startMatch?.[1] || startMatch?.[3];
+    const concept = (
+      startMatch?.[2] ??
+      startMatch?.[4] ??
+      (number ? `Thumbnail ${number}` : null) ??
+      "Untitled thumbnail"
+    ).trim();
     return {
       concept,
       mainVisual: labeled(block, "Main visual") ?? "",
@@ -812,6 +832,26 @@ function labeledSublist(lines: string[], label: string): string[] {
   return items.filter(Boolean);
 }
 
+// Real output sometimes writes the three carousel titles as three
+// separately-numbered labeled lines ("Carousel title option 1:",
+// "option 2:", "option 3:") instead of one "Carousel title options:"
+// line followed by its own bulleted sub-list. Tried only when the
+// sublist form isn't found - the two patterns don't collide (this one
+// requires a number right after "option", the sublist label requires
+// the plural "options" with no number), so trying both is unambiguous.
+const CAROUSEL_TITLE_OPTION_RE = /^\s*(?:[-*]\s*)?Carousel title option\s*\d+\s*:?\s*(.+)$/i;
+
+function parseCarouselTitleOptions(block: string[]): string[] {
+  const sublist = labeledSublist(block, "Carousel title options");
+  if (sublist.length > 0) return sublist;
+  const out: string[] = [];
+  for (const line of block) {
+    const match = line.trim().match(CAROUSEL_TITLE_OPTION_RE);
+    if (match) out.push(match[1].trim());
+  }
+  return out;
+}
+
 function parseCarouselEvaluation(lines: string[] | undefined): CarouselEvaluation {
   const block = lines ?? [];
   return {
@@ -821,7 +861,7 @@ function parseCarouselEvaluation(lines: string[] | undefined): CarouselEvaluatio
     recommendedSlideCount: labeled(block, "Recommended slide count") ?? "",
     bestCarouselAngle: labeled(block, "Best carousel angle") ?? "",
     bestPlatform: labeled(block, "Best platform") ?? "",
-    titleOptions: labeledSublist(block, "Carousel title options"),
+    titleOptions: parseCarouselTitleOptions(block),
     designDirection: labeled(block, "Design direction") ?? "",
     colorDirection: labeled(block, "Color direction") ?? "",
     finalSlideCta: labeled(block, "Final-slide CTA", "Final slide CTA") ?? "",
@@ -857,8 +897,60 @@ const PACKAGING_HEADERS = [
   "RECOMMENDATIONS",
 ] as const;
 
+// Real Packaging output sometimes uses different header wording than
+// the template's own section names for the same content (a skill
+// paraphrasing its own headers, not a formatting quirk). Rewritten to
+// the canonical header text, on the same line, before splitSections
+// ever runs - keeps splitSections/buildHeaderRegex themselves generic
+// (shared by all three phases) rather than teaching them an alias
+// concept just for Packaging's three cases.
+const PACKAGING_HEADER_ALIASES: [RegExp, string][] = [
+  [/^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)TITLE OPTIONS(\s*:?\s*)$/gim, "$1TITLES$2"],
+  [/^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)YOUTUBE VIDEO DESCRIPTION(\s*:?\s*)$/gim, "$1YOUTUBE DESCRIPTION$2"],
+  [/^(\s*#{0,3}\s*(?:\d+[.)]\s*)?)THUMBNAIL SUGGESTIONS(\s*:?\s*)$/gim, "$1THUMBNAILS$2"],
+];
+
+function normalizePackagingHeaderAliases(text: string): string {
+  let normalized = text;
+  for (const [re, replacement] of PACKAGING_HEADER_ALIASES) {
+    normalized = normalized.replace(re, replacement);
+  }
+  return normalized;
+}
+
+// Short Keywords and Search Phrases are meant to be one item per line,
+// but real output sometimes writes them as a single comma-joined line
+// instead. Comma-splitting isn't safe as a change to listLines() itself
+// (used by several Research-phase list fields whose items are natural
+// prose that legitimately contains commas, delimited by semicolons
+// instead - splitting those on commas too would break them), so this
+// stays local to just these two fields: split on commas only when the
+// line has no bullet/number prefix and no semicolons (a semicolon-
+// joined line still wins if the line happens to have both, matching
+// listLines()'s own precedence).
+function splitKeywordLikeList(lines: string[] | undefined): string[] {
+  const out: string[] = [];
+  for (const raw of lines ?? []) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const bulletMatch = trimmed.match(/^([-*]\s+|\d+[.)]\s+)/);
+    const withoutBullet = bulletMatch ? trimmed.slice(bulletMatch[0].length).trim() : trimmed;
+    if (!withoutBullet) continue;
+    const splitter = !bulletMatch && withoutBullet.includes(";") ? ";" : !bulletMatch && withoutBullet.includes(",") ? "," : null;
+    if (splitter) {
+      for (const part of withoutBullet.split(splitter)) {
+        const item = part.trim();
+        if (item) out.push(item);
+      }
+    } else {
+      out.push(withoutBullet);
+    }
+  }
+  return out;
+}
+
 export function parsePackagingPhasePaste(text: string): PackagingPhaseData | null {
-  const sections = splitSections(text, PACKAGING_HEADERS);
+  const sections = splitSections(normalizePackagingHeaderAliases(text), PACKAGING_HEADERS);
   if (!PACKAGING_CORE_HEADERS.every((h) => sections.has(h))) return null;
 
   const titles = parsePackagingTitles(sections.get("TITLES"));
@@ -884,8 +976,8 @@ export function parsePackagingPhasePaste(text: string): PackagingPhaseData | nul
       xCaption: joinBlock(sections.get("X CAPTION")),
       threadsCaption: joinBlock(sections.get("THREADS CAPTION")),
     },
-    shortKeywords: listLines(sections.get("SHORT KEYWORDS")),
-    searchPhrases: listLines(sections.get("SEARCH PHRASES")),
+    shortKeywords: splitKeywordLikeList(sections.get("SHORT KEYWORDS")),
+    searchPhrases: splitKeywordLikeList(sections.get("SEARCH PHRASES")),
     thumbnails,
     visualHooks: listLines(sections.get("VISUAL HOOKS")),
     textualHooks: listLines(sections.get("TEXTUAL HOOKS")),
