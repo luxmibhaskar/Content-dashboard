@@ -12,6 +12,8 @@ import {
   MarkerText,
   countMarkers,
   MarkerCountBadge,
+  EditableCard,
+  type EditableFieldSpec,
 } from "@/components/manual-workflow-ui";
 import {
   SCRIPTING_PASTE_TEMPLATE_HINT,
@@ -24,7 +26,15 @@ import {
 import {
   importScriptingPhase,
   updateManualWorkflowPhaseStatus,
+  updateManualWorkflowPhaseData,
 } from "@/app/(app)/calendar/[id]/manual-workflow-actions";
+
+// Same "clone data, replace one slice, re-save everything" model as
+// research-phase-content.tsx's saveData - see that file's comment.
+// Standalone (not a hook/closure inside the main component) so it can
+// be passed down through SubTabContent into each card without
+// threading contentId/data separately at every level.
+type SaveScriptingData = (updater: (d: ScriptingPhaseData) => ScriptingPhaseData) => Promise<void>;
 import type { ManualWorkflowStatus } from "@/lib/types";
 
 type ScriptingSubTab = "longform" | "pointer" | "shortform" | "carousel" | "closing";
@@ -71,7 +81,27 @@ function subTabMarkerCount(tab: ScriptingSubTab, data: ScriptingPhaseData): numb
   }
 }
 
-function LongFormSectionCard({ section, index }: { section: LongFormScriptSection; index: number }) {
+function LongFormSectionCard({
+  section,
+  index,
+  onSave,
+}: {
+  section: LongFormScriptSection;
+  index: number;
+  onSave: (updated: LongFormScriptSection) => Promise<void>;
+}) {
+  const fields: EditableFieldSpec[] = [
+    { key: "sectionTitle", label: "Section title", value: section.sectionTitle },
+    { key: "purpose", label: "Purpose", value: section.purpose },
+    { key: "exactNarration", label: "Exact narration", value: section.exactNarration },
+    { key: "visualDirection", label: "Visual direction", value: section.visualDirection },
+    { key: "onScreenText", label: "On-screen text", value: section.onScreenText },
+    { key: "bRollOrDemonstration", label: "B-roll or demonstration", value: section.bRollOrDemonstration },
+    { key: "transition", label: "Transition", value: section.transition },
+    { key: "approximateTiming", label: "Approximate timing", value: section.approximateTiming },
+    { key: "sourceMarkers", label: "Source markers", value: section.sourceMarkers },
+  ];
+
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
       <p className="flex items-center gap-2 text-sm font-semibold">
@@ -80,21 +110,52 @@ function LongFormSectionCard({ section, index }: { section: LongFormScriptSectio
         </span>
         <MarkerCountBadge count={countMarkers(section)} />
       </p>
-      <Field label="Purpose" value={section.purpose} />
-      <Field label="Exact narration" value={section.exactNarration} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Visual direction" value={section.visualDirection} />
-        <Field label="On-screen text" value={section.onScreenText} />
-        <Field label="B-roll or demonstration" value={section.bRollOrDemonstration} />
-        <Field label="Transition" value={section.transition} />
-        <Field label="Approximate timing" value={section.approximateTiming} />
-        <Field label="Source markers" value={section.sourceMarkers} />
-      </div>
+      <EditableCard
+        fields={fields}
+        onSave={async (patch) => onSave({ ...section, ...(patch as unknown as LongFormScriptSection) })}
+      >
+        <Field label="Purpose" value={section.purpose} />
+        <Field label="Exact narration" value={section.exactNarration} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Visual direction" value={section.visualDirection} />
+          <Field label="On-screen text" value={section.onScreenText} />
+          <Field label="B-roll or demonstration" value={section.bRollOrDemonstration} />
+          <Field label="Transition" value={section.transition} />
+          <Field label="Approximate timing" value={section.approximateTiming} />
+          <Field label="Source markers" value={section.sourceMarkers} />
+        </div>
+      </EditableCard>
     </GlowCard>
   );
 }
 
-function PointerSectionCard({ section, index }: { section: PointerScriptSection; index: number }) {
+function PointerSectionCard({
+  section,
+  index,
+  onSave,
+}: {
+  section: PointerScriptSection;
+  index: number;
+  onSave: (updated: PointerScriptSection) => Promise<void>;
+}) {
+  const fields: EditableFieldSpec[] = [
+    { key: "sectionTitle", label: "Section title", value: section.sectionTitle },
+    { key: "mainPointer", label: "Main pointer", value: section.mainPointer },
+    { key: "briefDescription", label: "Brief description", value: section.briefDescription },
+    {
+      key: "keyInformation",
+      label: "Key information that must be covered",
+      value: section.keyInformation,
+    },
+    { key: "whyItMatters", label: "Why it matters to the viewer", value: section.whyItMatters },
+    { key: "exampleToInclude", label: "Example to include", value: section.exampleToInclude },
+    { key: "questionAnswered", label: "Question this point answers", value: section.questionAnswered },
+    { key: "mistakeToAvoid", label: "Mistake to avoid", value: section.mistakeToAvoid },
+    { key: "transitionIdea", label: "Transition idea", value: section.transitionIdea },
+    { key: "approximateTiming", label: "Approximate timing", value: section.approximateTiming },
+    { key: "sourceMarker", label: "Source marker", value: section.sourceMarker },
+  ];
+
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
       <p className="flex items-center gap-2 text-sm font-semibold">
@@ -103,23 +164,52 @@ function PointerSectionCard({ section, index }: { section: PointerScriptSection;
         </span>
         <MarkerCountBadge count={countMarkers(section)} />
       </p>
-      <Field label="Main pointer" value={section.mainPointer} />
-      <Field label="Brief description" value={section.briefDescription} />
-      <Field label="Key information that must be covered" value={section.keyInformation} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Why it matters to the viewer" value={section.whyItMatters} />
-        <Field label="Example to include" value={section.exampleToInclude} />
-        <Field label="Question this point answers" value={section.questionAnswered} />
-        <Field label="Mistake to avoid" value={section.mistakeToAvoid} />
-        <Field label="Transition idea" value={section.transitionIdea} />
-        <Field label="Approximate timing" value={section.approximateTiming} />
-        <Field label="Source marker" value={section.sourceMarker} />
-      </div>
+      <EditableCard
+        fields={fields}
+        onSave={async (patch) => onSave({ ...section, ...(patch as unknown as PointerScriptSection) })}
+      >
+        <Field label="Main pointer" value={section.mainPointer} />
+        <Field label="Brief description" value={section.briefDescription} />
+        <Field label="Key information that must be covered" value={section.keyInformation} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Why it matters to the viewer" value={section.whyItMatters} />
+          <Field label="Example to include" value={section.exampleToInclude} />
+          <Field label="Question this point answers" value={section.questionAnswered} />
+          <Field label="Mistake to avoid" value={section.mistakeToAvoid} />
+          <Field label="Transition idea" value={section.transitionIdea} />
+          <Field label="Approximate timing" value={section.approximateTiming} />
+          <Field label="Source marker" value={section.sourceMarker} />
+        </div>
+      </EditableCard>
     </GlowCard>
   );
 }
 
-function ShortFormScriptCard({ script, label }: { script: ShortFormScript; label: string }) {
+function ShortFormScriptCard({
+  script,
+  label,
+  onSave,
+}: {
+  script: ShortFormScript;
+  label: string;
+  onSave: (updated: ShortFormScript) => Promise<void>;
+}) {
+  const fields: EditableFieldSpec[] = [
+    { key: "title", label: "Title", value: script.title },
+    { key: "hook", label: "Hook", value: script.hook },
+    { key: "viewerProblem", label: "Viewer problem", value: script.viewerProblem },
+    { key: "oneClearInsight", label: "One clear insight", value: script.oneClearInsight },
+    { key: "example", label: "Example", value: script.example },
+    { key: "practicalTakeaway", label: "Practical takeaway", value: script.practicalTakeaway },
+    { key: "spokenScript", label: "Spoken script", value: script.spokenScript },
+    { key: "visualPlan", label: "Visual plan", value: script.visualPlan },
+    { key: "onScreenText", label: "On-screen text", value: script.onScreenText },
+    { key: "bRoll", label: "B-roll", value: script.bRoll },
+    { key: "briefDescription", label: "Brief description", value: script.briefDescription },
+    { key: "ctaOptions", label: "CTA options", kind: "list", value: script.ctaOptions },
+    { key: "sourceMarkers", label: "Source markers", value: script.sourceMarkers },
+  ];
+
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
       <p className="flex items-center gap-2 text-sm font-semibold">
@@ -128,25 +218,44 @@ function ShortFormScriptCard({ script, label }: { script: ShortFormScript; label
         </span>
         <MarkerCountBadge count={countMarkers(script)} />
       </p>
-      <Field label="Hook" value={script.hook} />
-      <Field label="Spoken script" value={script.spokenScript} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Viewer problem" value={script.viewerProblem} />
-        <Field label="One clear insight" value={script.oneClearInsight} />
-        <Field label="Example" value={script.example} />
-        <Field label="Practical takeaway" value={script.practicalTakeaway} />
-        <Field label="Visual plan" value={script.visualPlan} />
-        <Field label="On-screen text" value={script.onScreenText} />
-        <Field label="B-roll" value={script.bRoll} />
-        <Field label="Source markers" value={script.sourceMarkers} />
-      </div>
-      <Field label="Brief description" value={script.briefDescription} />
-      <ListField label="CTA options" items={script.ctaOptions} />
+      <EditableCard
+        fields={fields}
+        onSave={async (patch) => onSave({ ...script, ...(patch as unknown as ShortFormScript) })}
+      >
+        <Field label="Hook" value={script.hook} />
+        <Field label="Spoken script" value={script.spokenScript} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Viewer problem" value={script.viewerProblem} />
+          <Field label="One clear insight" value={script.oneClearInsight} />
+          <Field label="Example" value={script.example} />
+          <Field label="Practical takeaway" value={script.practicalTakeaway} />
+          <Field label="Visual plan" value={script.visualPlan} />
+          <Field label="On-screen text" value={script.onScreenText} />
+          <Field label="B-roll" value={script.bRoll} />
+          <Field label="Source markers" value={script.sourceMarkers} />
+        </div>
+        <Field label="Brief description" value={script.briefDescription} />
+        <ListField label="CTA options" items={script.ctaOptions} />
+      </EditableCard>
     </GlowCard>
   );
 }
 
-function CarouselSlideCard({ slide }: { slide: CarouselScriptSlide }) {
+function CarouselSlideCard({
+  slide,
+  onSave,
+}: {
+  slide: CarouselScriptSlide;
+  onSave: (updated: CarouselScriptSlide) => Promise<void>;
+}) {
+  const fields: EditableFieldSpec[] = [
+    { key: "headline", label: "Headline", value: slide.headline },
+    { key: "body", label: "Body", value: slide.body },
+    { key: "visualDirection", label: "Visual direction", value: slide.visualDirection },
+    { key: "designNote", label: "Design note", value: slide.designNote },
+    { key: "sourceMarker", label: "Source marker", value: slide.sourceMarker },
+  ];
+
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
       <p className="flex items-center gap-2 text-sm font-semibold">
@@ -155,22 +264,42 @@ function CarouselSlideCard({ slide }: { slide: CarouselScriptSlide }) {
         </span>
         <MarkerCountBadge count={countMarkers(slide)} />
       </p>
-      <Field label="Body" value={slide.body} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Visual direction" value={slide.visualDirection} />
-        <Field label="Design note" value={slide.designNote} />
-        <Field label="Source marker" value={slide.sourceMarker} />
-      </div>
+      <EditableCard
+        fields={fields}
+        onSave={async (patch) => onSave({ ...slide, ...(patch as unknown as CarouselScriptSlide) })}
+      >
+        <Field label="Body" value={slide.body} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Visual direction" value={slide.visualDirection} />
+          <Field label="Design note" value={slide.designNote} />
+          <Field label="Source marker" value={slide.sourceMarker} />
+        </div>
+      </EditableCard>
     </GlowCard>
   );
 }
 
-function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: ScriptingPhaseData }) {
+function SubTabContent({
+  subTab,
+  data,
+  saveData,
+}: {
+  subTab: ScriptingSubTab;
+  data: ScriptingPhaseData;
+  saveData: SaveScriptingData;
+}) {
   if (subTab === "longform") {
     return (
       <div className="space-y-2">
         {data.longFormScript.map((s, i) => (
-          <LongFormSectionCard key={i} section={s} index={i} />
+          <LongFormSectionCard
+            key={i}
+            section={s}
+            index={i}
+            onSave={async (updated) =>
+              saveData((d) => ({ ...d, longFormScript: d.longFormScript.map((sec, idx) => (idx === i ? updated : sec)) }))
+            }
+          />
         ))}
       </div>
     );
@@ -180,7 +309,14 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
     return (
       <div className="space-y-2">
         {data.pointerScript.map((s, i) => (
-          <PointerSectionCard key={i} section={s} index={i} />
+          <PointerSectionCard
+            key={i}
+            section={s}
+            index={i}
+            onSave={async (updated) =>
+              saveData((d) => ({ ...d, pointerScript: d.pointerScript.map((sec, idx) => (idx === i ? updated : sec)) }))
+            }
+          />
         ))}
       </div>
     );
@@ -188,6 +324,23 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
 
   if (subTab === "shortform") {
     const suit = data.shortFormSuitability;
+    const suitabilityFields: EditableFieldSpec[] = [
+      { key: "suitable", label: "Suitable", value: suit.suitable },
+      { key: "bestStandaloneInsight", label: "Best standalone insight", value: suit.bestStandaloneInsight },
+      { key: "bestSectionToConvert", label: "Best section to convert", value: suit.bestSectionToConvert },
+      { key: "bestPlatform", label: "Best platform", value: suit.bestPlatform },
+      { key: "recommendedDuration", label: "Recommended duration", value: suit.recommendedDuration },
+      {
+        key: "recommendedConversionMethod",
+        label: "Recommended conversion method",
+        value: suit.recommendedConversionMethod,
+      },
+      { key: "contextRisk", label: "Context risk", value: suit.contextRisk },
+      { key: "accuracyProtection", label: "Accuracy protection", value: suit.accuracyProtection },
+      { key: "reason", label: "Reason", value: suit.reason },
+      { key: "score", label: "Suitability score", kind: "number", value: suit.score },
+    ];
+
     return (
       <div className="space-y-3">
         <GlowCard glow={2} className="space-y-3 p-3.5" textHeavy>
@@ -195,20 +348,30 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
             <span>Short-Form Suitability</span>
             <MarkerCountBadge count={countMarkers(suit)} />
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Suitable" value={suit.suitable} />
-            <Field label="Best standalone insight" value={suit.bestStandaloneInsight} />
-            <Field label="Best section to convert" value={suit.bestSectionToConvert} />
-            <Field label="Best platform" value={suit.bestPlatform} />
-            <Field label="Recommended duration" value={suit.recommendedDuration} />
-            <Field label="Recommended conversion method" value={suit.recommendedConversionMethod} />
-            <Field label="Context risk" value={suit.contextRisk} />
-            <Field label="Accuracy protection" value={suit.accuracyProtection} />
-          </div>
-          <Field label="Reason" value={suit.reason} />
-          <div className="border-t border-border pt-3">
-            <ScoreBadge label="Suitability" value={suit.score} />
-          </div>
+          <EditableCard
+            fields={suitabilityFields}
+            onSave={async (patch) =>
+              saveData((d) => ({
+                ...d,
+                shortFormSuitability: { ...d.shortFormSuitability, ...(patch as unknown as typeof suit) },
+              }))
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Suitable" value={suit.suitable} />
+              <Field label="Best standalone insight" value={suit.bestStandaloneInsight} />
+              <Field label="Best section to convert" value={suit.bestSectionToConvert} />
+              <Field label="Best platform" value={suit.bestPlatform} />
+              <Field label="Recommended duration" value={suit.recommendedDuration} />
+              <Field label="Recommended conversion method" value={suit.recommendedConversionMethod} />
+              <Field label="Context risk" value={suit.contextRisk} />
+              <Field label="Accuracy protection" value={suit.accuracyProtection} />
+            </div>
+            <Field label="Reason" value={suit.reason} />
+            <div className="border-t border-border pt-3">
+              <ScoreBadge label="Suitability" value={suit.score} />
+            </div>
+          </EditableCard>
         </GlowCard>
 
         {!data.thirtySecondScript && !data.sixtySecondScript && data.additionalShortFormConcepts.length === 0 && (
@@ -219,13 +382,33 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
         )}
 
         {data.thirtySecondScript && (
-          <ShortFormScriptCard script={data.thirtySecondScript} label="30-Second Script" />
+          <ShortFormScriptCard
+            script={data.thirtySecondScript}
+            label="30-Second Script"
+            onSave={async (updated) => saveData((d) => ({ ...d, thirtySecondScript: updated }))}
+          />
         )}
         {data.sixtySecondScript && (
-          <ShortFormScriptCard script={data.sixtySecondScript} label="60-Second Script" />
+          <ShortFormScriptCard
+            script={data.sixtySecondScript}
+            label="60-Second Script"
+            onSave={async (updated) => saveData((d) => ({ ...d, sixtySecondScript: updated }))}
+          />
         )}
         {data.additionalShortFormConcepts.map((s, i) => (
-          <ShortFormScriptCard key={i} script={s} label={`Concept ${i + 1}`} />
+          <ShortFormScriptCard
+            key={i}
+            script={s}
+            label={`Concept ${i + 1}`}
+            onSave={async (updated) =>
+              saveData((d) => ({
+                ...d,
+                additionalShortFormConcepts: d.additionalShortFormConcepts.map((c, idx) =>
+                  idx === i ? updated : c,
+                ),
+              }))
+            }
+          />
         ))}
       </div>
     );
@@ -243,7 +426,13 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
     return (
       <div className="space-y-2">
         {data.carouselScript.map((slide, i) => (
-          <CarouselSlideCard key={i} slide={slide} />
+          <CarouselSlideCard
+            key={i}
+            slide={slide}
+            onSave={async (updated) =>
+              saveData((d) => ({ ...d, carouselScript: d.carouselScript.map((s, idx) => (idx === i ? updated : s)) }))
+            }
+          />
         ))}
       </div>
     );
@@ -262,19 +451,46 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
           scriptStatusText: data.scriptStatusText,
         })}
       />
-      <Field label="Script strengths" value={data.scriptStrengths} />
-      <Field label="Claims requiring verification" value={data.claimsRequiringVerification} />
-      <Field label="Missing examples" value={data.missingExamples} />
-      <Field label="Personal information needed" value={data.personalInformationNeeded} />
-      <Field label="Recommended production step" value={data.recommendedProductionStep} />
-      <div>
-        <div className="flex items-center justify-between">
+      <EditableCard
+        fields={[
+          { key: "scriptStrengths", label: "Script strengths", value: data.scriptStrengths },
+          {
+            key: "claimsRequiringVerification",
+            label: "Claims requiring verification",
+            value: data.claimsRequiringVerification,
+          },
+          { key: "missingExamples", label: "Missing examples", value: data.missingExamples },
+          {
+            key: "personalInformationNeeded",
+            label: "Personal information needed",
+            value: data.personalInformationNeeded,
+          },
+          {
+            key: "recommendedProductionStep",
+            label: "Recommended production step",
+            value: data.recommendedProductionStep,
+          },
+          { key: "scriptStatusText", label: "Script Status", value: data.scriptStatusText },
+        ]}
+        onSave={async (patch) => saveData((d) => ({ ...d, ...(patch as Partial<ScriptingPhaseData>) }))}
+      >
+        <Field label="Script strengths" value={data.scriptStrengths} />
+        <Field label="Claims requiring verification" value={data.claimsRequiringVerification} />
+        <Field label="Missing examples" value={data.missingExamples} />
+        <Field label="Personal information needed" value={data.personalInformationNeeded} />
+        <Field label="Recommended production step" value={data.recommendedProductionStep} />
+        <div>
+          {/* The live status control is the one at the top of this
+              phase (StatusSelect) - not duplicated here, this is just
+              the template's own raw status text for reference. Editing
+              it here only changes this raw text, it does not re-derive
+              or touch the separate status column. */}
           <p className="text-xs font-medium text-muted-foreground">Script Status</p>
+          <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap">
+            <MarkerText text={data.scriptStatusText} />
+          </p>
         </div>
-        <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap">
-          <MarkerText text={data.scriptStatusText} />
-        </p>
-      </div>
+      </EditableCard>
     </GlowCard>
   );
 }
@@ -303,6 +519,13 @@ export function ScriptingPhaseContent({
   const [subTab, setSubTab] = useState<ScriptingSubTab>("longform");
   const boundImportAction = importScriptingPhase.bind(null, contentId);
   const boundStatusAction = updateManualWorkflowPhaseStatus.bind(null, contentId, "scripting");
+
+  // Same "clone data, replace one slice, re-save everything" model as
+  // research-phase-content.tsx's saveData - see that file's comment.
+  const saveData: SaveScriptingData = async (updater) => {
+    if (!data) return;
+    await updateManualWorkflowPhaseData(contentId, "scripting", updater(data));
+  };
 
   return (
     <div className="space-y-4">
@@ -339,7 +562,7 @@ export function ScriptingPhaseContent({
           </div>
 
           <div className="mt-3">
-            <SubTabContent subTab={subTab} data={data} />
+            <SubTabContent subTab={subTab} data={data} saveData={saveData} />
           </div>
         </div>
       )}
