@@ -157,9 +157,19 @@ export function MarkerText({ text }: { text: string }) {
         const cls = markerClassFor(part);
         if (!cls) return part ? <span key={i}>{part}</span> : null;
         return (
+          // whitespace-normal break-words, not whitespace-nowrap: fine
+          // for the original bare "[VERIFY]"/"[PERSONAL INPUT NEEDED]"
+          // this was written for, but MARKER_PATTERN above now captures
+          // the full bracket content, which real output usually fills
+          // with a specific ask - sometimes a full sentence 200+
+          // characters long (Scripting's Demonstration/Case Study
+          // section, for one). nowrap forced that whole sentence onto
+          // one unbreakable line, overflowing past the card instead of
+          // wrapping. Same fix as the Hook Library cards
+          // (hook-library-entry.tsx / hook-library/page.tsx).
           <span
             key={i}
-            className={`mx-0.5 inline-flex items-center rounded px-1.5 py-0.5 align-middle text-[10px] font-semibold tracking-wide whitespace-nowrap ${cls}`}
+            className={`mx-0.5 inline-flex items-center rounded px-1.5 py-0.5 align-middle text-[10px] font-semibold tracking-wide whitespace-normal break-words ${cls}`}
           >
             {part.slice(1, -1)}
           </span>
