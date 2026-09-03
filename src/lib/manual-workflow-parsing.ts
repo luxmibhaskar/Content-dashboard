@@ -57,6 +57,41 @@ export type ResearchSourceClaim = {
   confidence: "high" | "medium" | "low" | string;
 };
 
+// Full per-competitor detail from the narrative preamble's COMPETITOR
+// RESEARCH section (docs/research-packaging-scripting-template.txt
+// Phase 1's "For each important competitor, explain:" list) - distinct
+// from ResearchPhaseData's directCompetitorContent/competitorStrengths/
+// etc. below, which are the RESEARCH OUTPUT's own compressed
+// one-sentence-per-field aggregate across ALL competitors, not a
+// per-competitor breakdown. Optional: a paste without a COMPETITOR
+// RESEARCH preamble section just yields an empty array here, the 26-item
+// RESEARCH OUTPUT fields are unaffected either way.
+export type CompetitorProfile = {
+  // From the block's own "Competitor N" heading, not a parsed field -
+  // used as the last-resort fallback identifier when neither Title nor
+  // Creator was labeled (real example: a "general pattern, multiple
+  // creators" entry with no Creator label and no Title, only Platform
+  // and an unlabeled description).
+  competitorNumber: string;
+  creator: string;
+  platform: string;
+  // "Format" is accepted as an alias for this field - the real template
+  // output uses it for a "general pattern across many pieces of
+  // content" competitor entry where "Title" doesn't really apply.
+  title: string;
+  url: string;
+  publicationDate: string;
+  mainPromise: string;
+  mainArgument: string;
+  keyPointsCovered: string;
+  strengths: string;
+  weaknesses: string;
+  whatTheyMissed: string;
+  whatWasOversimplified: string;
+  whatEvidenceWasMissing: string;
+  whatViewersMayNotUnderstand: string;
+};
+
 export type ResearchPhaseData = {
   topicDefinition: string;
   primaryPillarAndSubtopic: string;
@@ -70,6 +105,7 @@ export type ResearchPhaseData = {
   competitorStrengths: string;
   competitorWeaknesses: string;
   whatCompetitorsMissed: string;
+  competitorProfiles: CompetitorProfile[];
   frequentlyAskedQuestions: string[];
   unansweredQuestions: string[];
   viewerPainPoints: string[];
@@ -115,7 +151,16 @@ date, Claim supported, Confidence level. A one-line "<Title>" - url -
 date - claim - confidence per source (date optional) is also accepted
 when no "Source title:" labels are present.
 Any list field may instead be one semicolon-separated line with no
-bullet/number prefix - each clause still becomes its own entry.`;
+bullet/number prefix - each clause still becomes its own entry.
+A "COMPETITOR RESEARCH" section, if present anywhere before RESEARCH
+OUTPUT, is also read: each "Competitor N" block's "Label: value" pairs
+(Creator or organization, Platform, Title, URL, Publication date, Main
+promise, Main argument, Key points covered, Strengths, Weaknesses, What
+they missed, What was oversimplified, What evidence was missing, What
+viewers may still not understand) become one competitor profile,
+whether packed onto one dense paragraph or one per line. This is
+entirely optional and separate from the compressed Direct Competitor
+Content / Competitor Strengths / etc. fields above.`;
 
 function buildHeaderRegex(headers: readonly string[]): RegExp {
   const alternation = headers.map((h) => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -224,7 +269,12 @@ function extractSequentialLabels(
   const positions: { key: string; start: number; valueStart: number }[] = [];
   for (const field of fields) {
     for (const label of field.labels) {
-      const match = text.match(new RegExp(`${label}\\s*:?\\s*`, "i"));
+      // \b on both ends: without it a short single-word label (e.g.
+      // "Creator" when only the longer "Creator or organization" spelling
+      // wasn't used) can partial-match inside an unrelated longer word
+      // (e.g. the "Creator" in "creators" leaking a stray "s" into the
+      // captured value) or inside another label entirely.
+      const match = text.match(new RegExp(`\\b${label}\\b\\s*:?\\s*`, "i"));
       if (match && match.index != null) {
         positions.push({ key: field.key, start: match.index, valueStart: match.index + match[0].length });
         break;
@@ -327,6 +377,64 @@ function parseContentOpportunities(lines: string[] | undefined): ContentOpportun
       whyItProvidesValue: fields.whyItProvidesValue ?? "",
       riskOfBecomingGeneric: fields.riskOfBecomingGeneric ?? "",
       scores,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------
+// Competitor Research preamble (optional, docs/research-packaging-
+// scripting-template.txt Phase 1's "For each important competitor,
+// explain:" list, NOT one of the 26 RESEARCH OUTPUT items)
+// ---------------------------------------------------------------------
+
+// Bare "Competitor N" line, no colon or name expected (unlike Opportunity
+// blocks) - the block's own Title/Creator field, extracted below,
+// supplies the display name instead.
+const COMPETITOR_START_RE = /^(?:#{1,3}\s*)?Competitor\s*(\d+)\s*:?\s*(.*)$/i;
+
+const COMPETITOR_FIELD_LABELS = [
+  { key: "creator", labels: ["Creator or organization", "Creator/organization", "Creator"] },
+  { key: "platform", labels: ["Platform"] },
+  { key: "title", labels: ["Title", "Format"] },
+  { key: "url", labels: ["Direct URL", "URL"] },
+  { key: "publicationDate", labels: ["Publication date"] },
+  { key: "mainPromise", labels: ["Main promise"] },
+  { key: "mainArgument", labels: ["Main argument"] },
+  { key: "keyPointsCovered", labels: ["Key points covered"] },
+  { key: "strengths", labels: ["Strengths"] },
+  { key: "weaknesses", labels: ["Weaknesses"] },
+  { key: "whatTheyMissed", labels: ["What they missed"] },
+  { key: "whatWasOversimplified", labels: ["What was oversimplified"] },
+  { key: "whatEvidenceWasMissing", labels: ["What evidence was missing"] },
+  {
+    key: "whatViewersMayNotUnderstand",
+    labels: ["What viewers may still not understand", "What viewers may not understand"],
+  },
+] as const;
+
+function parseCompetitorProfiles(lines: string[] | undefined): CompetitorProfile[] {
+  const blocks = splitBlocks(lines, COMPETITOR_START_RE);
+  return blocks.map((block, i) => {
+    const startMatch = block[0].trim().match(COMPETITOR_START_RE);
+    const competitorNumber = startMatch?.[1] ?? String(i + 1);
+    const text = block.join("\n");
+    const fields = extractSequentialLabels(text, COMPETITOR_FIELD_LABELS);
+    return {
+      competitorNumber,
+      creator: fields.creator ?? "",
+      platform: fields.platform ?? "",
+      title: fields.title ?? "",
+      url: fields.url ?? "",
+      publicationDate: fields.publicationDate ?? "",
+      mainPromise: fields.mainPromise ?? "",
+      mainArgument: fields.mainArgument ?? "",
+      keyPointsCovered: fields.keyPointsCovered ?? "",
+      strengths: fields.strengths ?? "",
+      weaknesses: fields.weaknesses ?? "",
+      whatTheyMissed: fields.whatTheyMissed ?? "",
+      whatWasOversimplified: fields.whatWasOversimplified ?? "",
+      whatEvidenceWasMissing: fields.whatEvidenceWasMissing ?? "",
+      whatViewersMayNotUnderstand: fields.whatViewersMayNotUnderstand ?? "",
     };
   });
 }
@@ -451,6 +559,17 @@ const RESEARCH_PHASE_HEADERS = [
   "COMPETITOR STRENGTHS",
   "COMPETITOR WEAKNESSES",
   "WHAT COMPETITORS MISSED",
+  // Optional preamble section, not one of the 26 RESEARCH OUTPUT items -
+  // not in RESEARCH_PHASE_CORE_HEADERS below, so its absence never
+  // affects whether a paste parses.
+  "COMPETITOR RESEARCH",
+  // Recognized ONLY so it closes off COMPETITOR RESEARCH above (the next
+  // real RESEARCH OUTPUT header, CONTENT GAP ANALYSIS, is far below it,
+  // with the entire raw audience-comments preamble in between) - its own
+  // captured lines are deliberately never read by anything below. That
+  // preamble content stays exactly as scoped: visible only in the raw-
+  // text viewer, not parsed into any field.
+  "AUDIENCE QUESTIONS AND COMMENTS",
   "FREQUENTLY ASKED QUESTIONS",
   "UNANSWERED QUESTIONS",
   "VIEWER PAIN POINTS",
@@ -499,6 +618,7 @@ export function parseResearchPhasePaste(text: string): ResearchPhaseData | null 
     competitorStrengths: joinBlock(sections.get("COMPETITOR STRENGTHS")),
     competitorWeaknesses: joinBlock(sections.get("COMPETITOR WEAKNESSES")),
     whatCompetitorsMissed: joinBlock(sections.get("WHAT COMPETITORS MISSED")),
+    competitorProfiles: parseCompetitorProfiles(sections.get("COMPETITOR RESEARCH")),
     frequentlyAskedQuestions: listLines(sections.get("FREQUENTLY ASKED QUESTIONS")),
     unansweredQuestions: listLines(sections.get("UNANSWERED QUESTIONS")),
     viewerPainPoints: listLines(sections.get("VIEWER PAIN POINTS")),

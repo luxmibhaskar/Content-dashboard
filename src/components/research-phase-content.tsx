@@ -6,6 +6,7 @@ import { PasteImportSection } from "@/components/paste-import-section";
 import { StatusBadge, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
 import {
   RESEARCH_PHASE_PASTE_TEMPLATE_HINT,
+  type CompetitorProfile,
   type ContentOpportunity,
   type ResearchPhaseData,
   type ResearchSourceClaim,
@@ -52,6 +53,60 @@ function OpportunityCard({ opportunity, index }: { opportunity: ContentOpportuni
         <ScoreBadge label="Visual potential" value={opportunity.scores.visualPotential} />
       </div>
     </GlowCard>
+  );
+}
+
+// Full per-competitor detail from the narrative preamble's COMPETITOR
+// RESEARCH section (manual-workflow-parsing.ts's competitorProfiles) -
+// distinct from, and additional to, this file's existing compact
+// Direct Competitor Content / Competitor Strengths / etc. fields below,
+// which stay exactly as they were. Collapsed by default via the same
+// CollapsibleSection used for Sources and the Original-pasted-text
+// viewer elsewhere on this page, since several of these stacked open
+// would be as much text as the raw paste itself.
+function competitorHeading(profile: CompetitorProfile): string {
+  const heading = (profile.title || profile.creator || `Competitor ${profile.competitorNumber}`).trim();
+  // A real Title is normally short, but the template also allows
+  // "Format" as a stand-in when a competitor entry is a general content
+  // pattern rather than one piece of content (e.g. "process reveals
+  // like 'it starts with a single eRank search,' often tied to selling
+  // a paid guide..."), which reads as a full sentence, not a title. This
+  // keeps the collapsed row one line regardless of which case it is.
+  return heading.length > 90 ? `${heading.slice(0, 87).trimEnd()}…` : heading;
+}
+
+function CompetitorProfileCard({ profile }: { profile: CompetitorProfile }) {
+  const title = `Competitor ${profile.competitorNumber}: ${competitorHeading(profile)}`;
+  return (
+    <CollapsibleSection title={title} glow={2} neutral>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Creator or organization" value={profile.creator} />
+        <Field label="Platform" value={profile.platform} />
+        <Field label="Title" value={profile.title} />
+        <Field label="Publication date" value={profile.publicationDate} />
+      </div>
+      {profile.url && (
+        <a
+          href={profile.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-sm text-primary hover:underline"
+        >
+          {profile.url}
+        </a>
+      )}
+      <Field label="Main promise" value={profile.mainPromise} />
+      <Field label="Main argument" value={profile.mainArgument} />
+      <Field label="Key points covered" value={profile.keyPointsCovered} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Strengths" value={profile.strengths} />
+        <Field label="Weaknesses" value={profile.weaknesses} />
+      </div>
+      <Field label="What they missed" value={profile.whatTheyMissed} />
+      <Field label="What was oversimplified" value={profile.whatWasOversimplified} />
+      <Field label="What evidence was missing" value={profile.whatEvidenceWasMissing} />
+      <Field label="What viewers may still not understand" value={profile.whatViewersMayNotUnderstand} />
+    </CollapsibleSection>
   );
 }
 
@@ -140,6 +195,20 @@ export function ResearchPhaseContent({
 
           <GlowCard glow={2} className="space-y-3 p-3.5" textHeavy>
             <p className="text-xs font-medium text-muted-foreground">Competitor Research</p>
+
+            {data.competitorProfiles.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Full Competitor Profiles ({data.competitorProfiles.length})
+                </p>
+                <div className="space-y-2">
+                  {data.competitorProfiles.map((profile) => (
+                    <CompetitorProfileCard key={profile.competitorNumber} profile={profile} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Field label="Direct Competitor Content" value={data.directCompetitorContent} />
             <Field label="Related Content" value={data.relatedContent} />
             <Field label="Competitor Strengths" value={data.competitorStrengths} />
