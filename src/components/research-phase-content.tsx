@@ -94,11 +94,20 @@ export function ResearchPhaseContent({
   data,
   status,
   hasExistingImport,
+  rawPastedText,
 }: {
   contentId: string;
   data: ResearchPhaseData | null;
   status: ManualWorkflowStatus | null;
   hasExistingImport: boolean;
+  // The exact text last pasted into this phase, saved regardless of
+  // parse success (manual-workflow-actions.ts). RESEARCH_PHASE_HEADERS
+  // only recognizes the template's final 26-item RESEARCH OUTPUT list,
+  // so a research skill's narrative write-up ahead of that list (e.g.
+  // "What is happening around this topic," full competitor profiles,
+  // raw audience comments) never reaches `data` - this is the only
+  // place that content is still visible, not silently discarded.
+  rawPastedText: string | null;
 }) {
   const boundImportAction = importResearchPhase.bind(null, contentId);
 
@@ -198,6 +207,14 @@ export function ResearchPhaseContent({
               </p>
             </div>
           </GlowCard>
+
+          {rawPastedText && (
+            <CollapsibleSection title="Original pasted text" glow={3} neutral>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <MarkerText text={rawPastedText} />
+              </p>
+            </CollapsibleSection>
+          )}
         </div>
       )}
     </div>

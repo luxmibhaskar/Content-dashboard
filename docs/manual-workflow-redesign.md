@@ -53,6 +53,22 @@ Special handling:
 - The final APPROVED/NEEDS REVISION/REJECTED line becomes this phase's
   status badge.
 
+A research skill's actual response is typically much longer than these
+26 items: a narrative write-up ahead of RESEARCH OUTPUT (what's
+happening around the topic, why it matters, full competitor profiles,
+raw audience comments, a fuller Content Gap Analysis and Five Content
+Opportunities than the compact recap under items 20-21 restates) that
+this phase deliberately does not parse into its own fields, that's
+scratch work the template's own "RESEARCH OUTPUT: Return only [26
+items]" instruction says to compress, not a second deliverable. The
+full original paste is always saved regardless (manual_workflow_phases
+.raw_pasted_text), and is shown as a collapsed "Original pasted text"
+section below the parsed fields so none of it is actually lost, just
+not broken out into structured fields. If the preamble's own content
+(the template's Phase 1 "Find:" 1-10 list) turns out to be worth
+parsing into its own fields and section, that's a separate, later
+change, not implied by this one.
+
 ## Phase 2: Packaging
 
 Gated on Research existing. Parsed fields: three titles (each with

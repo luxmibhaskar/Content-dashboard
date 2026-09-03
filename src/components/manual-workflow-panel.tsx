@@ -94,6 +94,7 @@ export function ManualWorkflowPanel({
             data={(researchRow?.parsed_data as ResearchPhaseData | null) ?? null}
             status={researchRow?.status ?? null}
             hasExistingImport={researchRow != null}
+            rawPastedText={researchRow?.raw_pasted_text ?? null}
           />
         ) : activePhase === "packaging" ? (
           <PackagingPhaseContent
