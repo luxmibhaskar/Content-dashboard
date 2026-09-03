@@ -43,7 +43,7 @@ export function TopicPageTabs({
   scriptsVersions: ScriptsVersion[];
   manualWorkflowPhases: ManualWorkflowPhaseRow[];
 }) {
-  const [area, setArea] = useState<Area>("ai");
+  const [area, setArea] = useState<Area>("manual");
 
   return (
     <div>

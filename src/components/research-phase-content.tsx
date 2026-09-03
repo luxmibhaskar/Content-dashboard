@@ -183,7 +183,7 @@ export function ResearchPhaseContent({
 
       {data && (
         <div className="space-y-3">
-          <GlowCard glow={1} className="space-y-3 p-3.5" textHeavy>
+          <CollapsibleSection title="Topic & Audience Overview" glow={1}>
             <Field label="Topic Definition" value={data.topicDefinition} />
             <Field label="Primary Pillar and Subtopic" value={data.primaryPillarAndSubtopic} />
             <Field label="Main Audience Problem" value={data.mainAudienceProblem} />
@@ -191,18 +191,23 @@ export function ResearchPhaseContent({
             <Field label="Audience Confusion" value={data.audienceConfusion} />
             <Field label="Current Developments" value={data.currentDevelopments} />
             <Field label="Important Findings" value={data.importantFindings} />
-          </GlowCard>
+          </CollapsibleSection>
 
-          <GlowCard glow={2} className="space-y-3 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Competitor Research</p>
-
-            {/* competitorProfiles was added to ResearchPhaseData after this
-                app already had live rows in manual_workflow_phases -
-                parsed_data is untyped JSONB, so a row saved before this
-                field existed genuinely has no such key at runtime despite
-                the `as ResearchPhaseData` cast upstream, ?? [] rather than
-                data.competitorProfiles.length crashing the whole page on
-                that older data. */}
+          <CollapsibleSection
+            title={
+              // competitorProfiles was added to ResearchPhaseData after this
+              // app already had live rows in manual_workflow_phases -
+              // parsed_data is untyped JSONB, so a row saved before this
+              // field existed genuinely has no such key at runtime despite
+              // the `as ResearchPhaseData` cast upstream, ?? [] rather than
+              // data.competitorProfiles.length crashing the whole page on
+              // that older data.
+              (data.competitorProfiles ?? []).length > 0
+                ? `Competitor Research (${data.competitorProfiles.length} profiles)`
+                : "Competitor Research"
+            }
+            glow={2}
+          >
             {(data.competitorProfiles ?? []).length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">
@@ -221,10 +226,9 @@ export function ResearchPhaseContent({
             <Field label="Competitor Strengths" value={data.competitorStrengths} />
             <Field label="Competitor Weaknesses" value={data.competitorWeaknesses} />
             <Field label="What Competitors Missed" value={data.whatCompetitorsMissed} />
-          </GlowCard>
+          </CollapsibleSection>
 
-          <GlowCard glow={3} className="space-y-3 p-3.5" textHeavy>
-            <p className="text-xs font-medium text-muted-foreground">Audience Questions &amp; Comments</p>
+          <CollapsibleSection title="Audience Questions & Comments" glow={3}>
             <div className="grid gap-3 sm:grid-cols-2">
               <ListField label="Frequently Asked Questions" items={data.frequentlyAskedQuestions} />
               <ListField label="Unanswered Questions" items={data.unansweredQuestions} />
@@ -234,9 +238,16 @@ export function ResearchPhaseContent({
               <ListField label="Viewer Requests" items={data.viewerRequests} />
               <ListField label="Viewer Suggestions" items={data.viewerSuggestions} />
             </div>
-          </GlowCard>
+          </CollapsibleSection>
 
-          <GlowCard glow={1} className="space-y-3 p-3.5" textHeavy>
+          <CollapsibleSection
+            title={
+              data.contentOpportunities.length > 0
+                ? `Content Gap & Opportunities (${data.contentOpportunities.length})`
+                : "Content Gap & Opportunities"
+            }
+            glow={1}
+          >
             <Field label="Content Gap Analysis" value={data.contentGapAnalysis} />
 
             {data.contentOpportunities.length > 0 && (
@@ -257,7 +268,7 @@ export function ResearchPhaseContent({
               label="Viewer Transformation or Desired Outcome"
               value={data.viewerTransformationOrDesiredOutcome}
             />
-          </GlowCard>
+          </CollapsibleSection>
 
           <CollapsibleSection title={`Sources (${data.sources.length})`} glow={2}>
             {data.sources.length === 0 ? (
@@ -271,7 +282,7 @@ export function ResearchPhaseContent({
             )}
           </CollapsibleSection>
 
-          <GlowCard glow={3} className="space-y-3 p-3.5" textHeavy>
+          <CollapsibleSection title="Research Limitations & Status" glow={3}>
             <Field label="Research Limitations" value={data.researchLimitations} />
             <div>
               <div className="flex items-center justify-between">
@@ -282,7 +293,7 @@ export function ResearchPhaseContent({
                 <MarkerText text={data.researchQualityStatusText} />
               </p>
             </div>
-          </GlowCard>
+          </CollapsibleSection>
 
           {rawPastedText && (
             <CollapsibleSection title="Original pasted text" glow={3} neutral>
