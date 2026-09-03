@@ -4,7 +4,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/glow-card";
 import { PasteImportSection } from "@/components/paste-import-section";
-import { StatusSelect, ScoreBadge, Field, ListField, MarkerText } from "@/components/manual-workflow-ui";
+import {
+  StatusSelect,
+  ScoreBadge,
+  Field,
+  ListField,
+  MarkerText,
+  countMarkers,
+  MarkerCountBadge,
+} from "@/components/manual-workflow-ui";
 import {
   SCRIPTING_PASTE_TEMPLATE_HINT,
   type LongFormScriptSection,
@@ -31,11 +39,46 @@ const SUB_TAB_LABELS: Record<ScriptingSubTab, string> = {
 
 const SUB_TABS: ScriptingSubTab[] = ["longform", "pointer", "shortform", "carousel", "closing"];
 
+// Scripting is the one phase that doesn't lay its sections out as a
+// flat, individually-collapsible stack (research/packaging-phase-
+// content.tsx) - it's sub-tabbed instead, so a sub-tab you haven't
+// switched to is effectively "collapsed" the same way, and needs the
+// same at-a-glance signal without switching into it first.
+function subTabMarkerCount(tab: ScriptingSubTab, data: ScriptingPhaseData): number {
+  switch (tab) {
+    case "longform":
+      return countMarkers(data.longFormScript);
+    case "pointer":
+      return countMarkers(data.pointerScript);
+    case "shortform":
+      return countMarkers({
+        shortFormSuitability: data.shortFormSuitability,
+        thirtySecondScript: data.thirtySecondScript,
+        sixtySecondScript: data.sixtySecondScript,
+        additionalShortFormConcepts: data.additionalShortFormConcepts,
+      });
+    case "carousel":
+      return countMarkers(data.carouselScript);
+    case "closing":
+      return countMarkers({
+        scriptStrengths: data.scriptStrengths,
+        claimsRequiringVerification: data.claimsRequiringVerification,
+        missingExamples: data.missingExamples,
+        personalInformationNeeded: data.personalInformationNeeded,
+        recommendedProductionStep: data.recommendedProductionStep,
+        scriptStatusText: data.scriptStatusText,
+      });
+  }
+}
+
 function LongFormSectionCard({ section, index }: { section: LongFormScriptSection; index: number }) {
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        {index + 1}. {section.sectionTitle}
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span>
+          {index + 1}. {section.sectionTitle}
+        </span>
+        <MarkerCountBadge count={countMarkers(section)} />
       </p>
       <Field label="Purpose" value={section.purpose} />
       <Field label="Exact narration" value={section.exactNarration} />
@@ -54,8 +97,11 @@ function LongFormSectionCard({ section, index }: { section: LongFormScriptSectio
 function PointerSectionCard({ section, index }: { section: PointerScriptSection; index: number }) {
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        {index + 1}. {section.sectionTitle}
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span>
+          {index + 1}. {section.sectionTitle}
+        </span>
+        <MarkerCountBadge count={countMarkers(section)} />
       </p>
       <Field label="Main pointer" value={section.mainPointer} />
       <Field label="Brief description" value={section.briefDescription} />
@@ -76,8 +122,11 @@ function PointerSectionCard({ section, index }: { section: PointerScriptSection;
 function ShortFormScriptCard({ script, label }: { script: ShortFormScript; label: string }) {
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        {label}: {script.title}
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span>
+          {label}: {script.title}
+        </span>
+        <MarkerCountBadge count={countMarkers(script)} />
       </p>
       <Field label="Hook" value={script.hook} />
       <Field label="Spoken script" value={script.spokenScript} />
@@ -100,8 +149,11 @@ function ShortFormScriptCard({ script, label }: { script: ShortFormScript; label
 function CarouselSlideCard({ slide }: { slide: CarouselScriptSlide }) {
   return (
     <GlowCard neutral className="space-y-2 p-3.5" textHeavy>
-      <p className="text-sm font-semibold">
-        Slide {slide.slideNumber}: {slide.headline}
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <span>
+          Slide {slide.slideNumber}: {slide.headline}
+        </span>
+        <MarkerCountBadge count={countMarkers(slide)} />
       </p>
       <Field label="Body" value={slide.body} />
       <div className="grid gap-3 sm:grid-cols-2">
@@ -139,7 +191,10 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
     return (
       <div className="space-y-3">
         <GlowCard glow={2} className="space-y-3 p-3.5" textHeavy>
-          <p className="text-xs font-medium text-muted-foreground">Short-Form Suitability</p>
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <span>Short-Form Suitability</span>
+            <MarkerCountBadge count={countMarkers(suit)} />
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Suitable" value={suit.suitable} />
             <Field label="Best standalone insight" value={suit.bestStandaloneInsight} />
@@ -197,6 +252,16 @@ function SubTabContent({ subTab, data }: { subTab: ScriptingSubTab; data: Script
   // closing
   return (
     <GlowCard glow={3} className="space-y-3 p-3.5" textHeavy>
+      <MarkerCountBadge
+        count={countMarkers({
+          scriptStrengths: data.scriptStrengths,
+          claimsRequiringVerification: data.claimsRequiringVerification,
+          missingExamples: data.missingExamples,
+          personalInformationNeeded: data.personalInformationNeeded,
+          recommendedProductionStep: data.recommendedProductionStep,
+          scriptStatusText: data.scriptStatusText,
+        })}
+      />
       <Field label="Script strengths" value={data.scriptStrengths} />
       <Field label="Claims requiring verification" value={data.claimsRequiringVerification} />
       <Field label="Missing examples" value={data.missingExamples} />
@@ -267,6 +332,7 @@ export function ScriptingPhaseContent({
                   onClick={() => setSubTab(tab)}
                 >
                   {SUB_TAB_LABELS[tab]}
+                  <MarkerCountBadge count={subTabMarkerCount(tab, data)} />
                 </Button>
               ))}
             </div>
