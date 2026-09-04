@@ -86,6 +86,7 @@ export function ManualWorkflowPanel({
         active={activePhase}
         locked={locked}
         onSelect={setActivePhase}
+        detachedTail="notes"
       />
 
       {/* max-h + overflow-y-auto, not just growing with content: the

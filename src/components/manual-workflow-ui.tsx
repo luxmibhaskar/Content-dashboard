@@ -369,12 +369,20 @@ export function PhaseNav<P extends string>({
   active,
   locked,
   onSelect,
+  detachedTail,
 }: {
   phases: readonly P[];
   labels: Record<P, string>;
   active: P;
   locked: Record<P, boolean>;
   onSelect: (phase: P) => void;
+  // When set, that phase's pill is pushed to the far right of the row,
+  // separated from the rest by the free space (topic page's Notes tab:
+  // it's a 4th tab but not part of the Research -> Packaging -> Scripting
+  // progression, so it reads better detached). Forces the container to
+  // full width so there's space to push into; without it the row stays
+  // shrink-to-fit as before.
+  detachedTail?: P;
 }) {
   return (
     // Made more prominent (topic page restructuring, 2026-08-27): a
@@ -382,7 +390,11 @@ export function PhaseNav<P extends string>({
     // not a subtle 1px pill. One notch lighter than the Manual/AI
     // toggle above it (topic-page-tabs.tsx) on purpose, to preserve the
     // hierarchy: that picks the side, this picks the phase within it.
-    <div className="inline-flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5 shadow-sm">
+    <div
+      className={`${
+        detachedTail ? "flex w-full" : "inline-flex"
+      } items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5 shadow-sm`}
+    >
       {phases.map((phase) => (
         <Button
           key={phase}
@@ -390,6 +402,7 @@ export function PhaseNav<P extends string>({
           size="sm"
           variant={active === phase ? "default" : "ghost"}
           onClick={() => onSelect(phase)}
+          className={phase === detachedTail ? "ml-auto" : undefined}
         >
           {locked[phase] && <Lock className="size-3" aria-hidden="true" />}
           {labels[phase]}

@@ -646,7 +646,12 @@ active `custom_sub_topics` rows.
 Added feature, not a redesign of anything: a freeform notes list per
 content item, shown as a 4th tab in the phase row
 (Research / Packaging / Scripting / **Notes**), full width, one tab at a
-time, exactly like switching between the three phases.
+time, exactly like switching between the three phases. The Notes pill is
+pushed to the far right end of the row, separated from the other three
+by the free space: it's a 4th tab but not a 4th step in the
+Research -> Packaging -> Scripting progression, so it reads better
+detached (`PhaseNav`'s `detachedTail` prop, which also widens the pill
+row to full width so there's space to push into).
 
 **⚠ Was briefly a right-side sidebar.** The first cut put Notes in a
 fixed 20rem `lg:grid` column next to the phase stack; that narrowed the

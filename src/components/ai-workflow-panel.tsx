@@ -87,6 +87,7 @@ export function AiWorkflowPanel({
         active={activePhase}
         locked={locked}
         onSelect={setActivePhase}
+        detachedTail="notes"
       />
 
       {/* Same bounded-scroll container as Manual's own phase box
