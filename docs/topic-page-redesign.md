@@ -94,6 +94,27 @@ Format/Publish date for Long Video, or between Short Description and
 Idea Derived From for Short. This top level is back to a plain Manual/AI
 toggle, see the corrected Tab 3 note below.
 
+**⚠ Reference Videos, Idea Derived From, and Posted On grouped into a
+collapsible "More", follow-up reorganization.** Not the top nav's own
+"More" overflow menu (Section 3 below) - a different, unrelated
+`CollapsibleSection` in the topic page's main form area, same component/
+`neutral` styling as Analytics and Conversion, collapsed by default. All
+three fields sit inside it now, in both Short and Long Video, at the
+same anchor point Reference Videos alone used to occupy (after Format/
+Publish date for Long, after Short Description for Short); Idea Derived
+From stays Short-only inside it, matching its existing scoping. Since
+Idea Derived From's `<select>` and Posted On's hidden platform `<input>`
+elements used to be physical descendants of the real `<form
+id={formId}>` and the whole "More" section has to sit outside that form
+(Reference Videos' own nested Add/Remove forms can't nest inside
+another), both now carry an explicit `form={formId}` attribute instead -
+same pattern Format/Publish date/Short Description already used for the
+same reason. `dirty-form-tracker.tsx` needed no change: it already
+tracks by the changed element's owning form (`.form` property), not DOM
+containment, so it correctly marks the page dirty for an edit made
+inside the collapsed section, collapsed `<details>` content isn't
+excluded from form submission or change events either.
+
 - **AI** (selected by default): the same phase-gated Research/
   Packaging/Scripting pill switcher Manual uses (see below), applied to
   the AI side's own content in a later reorganization pass. Tab 1
@@ -191,7 +212,9 @@ containers in Tab 1.
 
 Full spec lives in builder-brief.md Section 10.2.1. It's inline in the
 main form area now (`format-platform-fields.tsx`), not a tab alongside
-Tab 1 and Tab 2, and not a separate route.
+Tab 1 and Tab 2, and not a separate route - specifically, inside the
+collapsible "More" section alongside Idea Derived From and Posted On,
+see the follow-up reorganization note above.
 
 ## 3. Navigation cleanup
 

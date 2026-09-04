@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ReferenceVideosSection } from "@/components/reference-videos-section";
 import { ProductionStatusTracker } from "@/components/production-status-tracker";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import type { PillarStructure } from "@/lib/pillars";
 import { CONTENT_FORMAT_OPTIONS, type ProductionStatus, type ReferenceVideo } from "@/lib/types";
 
@@ -43,18 +44,29 @@ const SELECT_CLASSNAME = "h-8 w-full rounded-md border border-input bg-backgroun
 // there), or between Short Description and Idea Derived From for Short.
 // Reference Videos has its own Add/Remove/Save-notes forms, which can't
 // nest inside another <form> (invalid HTML, and a nested form's submit
-// button would silently target the wrong one) - so the real <form id=
-// {formId}> now only wraps the tail end this component already owns the
-// state for (Idea Derived From, the platform picker, and, since it also
-// needs to stay inside a real <form> for its useFormStatus-driven
-// loading spinner, the Save button + ProductionStatusTracker). Format,
-// Publish date, and Short Description render earlier, detached via the
-// native form={formId} attribute rather than DOM nesting, same pattern
+// button would silently target the wrong one).
+//
+// "More" collapsible (follow-up reorganization): Reference Videos, Idea
+// Derived From, and Posted On now group into one collapsed-by-default
+// CollapsibleSection (same component/neutral styling as Analytics and
+// Conversion), sitting where Reference Videos used to sit alone. Idea
+// Derived From and Posted On used to live inside the real <form
+// id={formId}> below; since the whole "More" section has to stay
+// outside it (for Reference Videos' own nested forms, same reason as
+// before), both now carry an explicit form={formId} attribute instead
+// of relying on DOM nesting to submit with Save - same pattern Format,
+// Publish date, and Short Description already use one section up, and
 // Title/Production status/Pillar/Sub-topic use one level up
-// (calendar/[id]/page.tsx) and Analytics and Conversion's Conversions
-// field uses one section down (platform-analytics-section.tsx). See
-// dirty-form-tracker.tsx for how unsaved-changes tracking still
-// reaches all of these despite the split.
+// (calendar/[id]/page.tsx), and Analytics and Conversion's own
+// Conversions field uses one section down (platform-analytics-
+// section.tsx), collapsed by default there too. So <form id={formId}>
+// itself now only wraps the Save button + ProductionStatusTracker,
+// which still needs to be a real descendant for its useFormStatus-
+// driven loading spinner. See dirty-form-tracker.tsx for how unsaved-
+// changes tracking reaches all of these despite the split - it filters
+// by the changed element's owning form (the native .form property,
+// resolved regardless of DOM position or collapsed <details> state),
+// not DOM containment.
 export function FormatPlatformFields({
   initialFormat,
   initialPlatforms,
@@ -148,13 +160,6 @@ export function FormatPlatformFields({
         </div>
       </div>
 
-      {/* Long Video has no Short Description/Idea Derived From to sit
-          between, so it goes right after Format/Publish date instead
-          (topic page restructuring, 2026-08-27). */}
-      {format === "Long Video" && (
-        <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
-      )}
-
       {/* docs/platform-performance-tracking.md Section 3: Short Form's
           title container gets a short description field Long Form's
           never had, first real UI final_description gets (previously
@@ -174,30 +179,29 @@ export function FormatPlatformFields({
         </div>
       )}
 
-      {format === "Short" && (
-        <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
-      )}
+      {/* "More": Reference Videos, Idea Derived From, and Posted On,
+          collapsed by default (see the header comment for why these sit
+          outside the real <form> and how Save still reaches them). */}
+      {(format === "Short" || format === "Long Video") && (
+        <CollapsibleSection title="More" neutral>
+          <ReferenceVideosSection contentId={contentId} videos={referenceVideos} />
 
-      {/* The real <form>: only from here down does this component still
-          own literal DOM descendants of it (see the header comment for
-          why the split happens here). */}
-      <form id={formId} action={formAction} className="space-y-5">
-        {/* docs/platform-performance-tracking.md Section 6: a proper
-            picker on top of the already-working derived_from_content_id
-            field (previously read-only, no UI setter since
-            topic-page-redesign.md Section 9 removed System &
-            Production). Short-only, matching the doc's own scoping: a
-            Long Form item doesn't derive from anything. */}
-        {format === "Short" && (
-          <DerivedFromPicker
-            structure={structure}
-            longFormTopics={longFormTopics}
-            initialPillar={initialPillar}
-            initialValue={initialDerivedFromContentId}
-          />
-        )}
+          {/* docs/platform-performance-tracking.md Section 6: a proper
+              picker on top of the already-working derived_from_content_id
+              field (previously read-only, no UI setter since
+              topic-page-redesign.md Section 9 removed System &
+              Production). Short-only, matching the doc's own scoping: a
+              Long Form item doesn't derive from anything. */}
+          {format === "Short" && (
+            <DerivedFromPicker
+              structure={structure}
+              longFormTopics={longFormTopics}
+              initialPillar={initialPillar}
+              initialValue={initialDerivedFromContentId}
+              formId={formId}
+            />
+          )}
 
-        {(format === "Short" || format === "Long Video") && (
           <div className="space-y-1.5">
             <Label>Posted on (select all that apply)</Label>
             <p className="text-xs text-muted-foreground">
@@ -229,11 +233,16 @@ export function FormatPlatformFields({
               </p>
             )}
             {platforms.map((p) => (
-              <input key={p} type="hidden" name="platform" value={p} />
+              <input key={p} type="hidden" name="platform" value={p} form={formId} />
             ))}
           </div>
-        )}
+        </CollapsibleSection>
+      )}
 
+      {/* The real <form>: only from here down does this component still
+          own literal DOM descendants of it (see the header comment for
+          why the split happens here). */}
+      <form id={formId} action={formAction} className="space-y-5">
         <div className="flex items-center justify-between pt-2">
           <ProductionStatusTracker status={productionStatus} />
           <Button type="submit">Save</Button>
@@ -256,11 +265,17 @@ function DerivedFromPicker({
   longFormTopics,
   initialPillar,
   initialValue,
+  formId,
 }: {
   structure: PillarStructure;
   longFormTopics: LongFormTopicOption[];
   initialPillar: string;
   initialValue: string;
+  // Now rendered inside the "More" CollapsibleSection, outside the real
+  // <form id={formId}> (see this file's header comment) - this select
+  // still needs to submit with Save, so it's wired to the form by id
+  // rather than by DOM nesting.
+  formId: string;
 }) {
   const pillars = Object.keys(structure);
   const alreadyLinked = longFormTopics.find((t) => t.id === initialValue);
@@ -305,6 +320,7 @@ function DerivedFromPicker({
           name="derived_from_content_id"
           defaultValue={onOriginalFilter ? initialValue : ""}
           className={SELECT_CLASSNAME}
+          form={formId}
         >
           <option value="">None</option>
           {options.map((t) => (
