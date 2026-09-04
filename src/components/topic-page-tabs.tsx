@@ -4,7 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ManualWorkflowPanel } from "@/components/manual-workflow-panel";
 import { AiWorkflowPanel } from "@/components/ai-workflow-panel";
-import type { ManualWorkflowPhaseRow, ResearchCopyVersion, ScriptsVersion } from "@/lib/types";
+import type {
+  ContentNote,
+  ManualWorkflowPhaseRow,
+  ResearchCopyVersion,
+  ScriptsVersion,
+} from "@/lib/types";
 
 type Area = "ai" | "manual";
 
@@ -34,6 +39,7 @@ export function TopicPageTabs({
   researchCopyVersions,
   scriptsVersions,
   manualWorkflowPhases,
+  notes,
 }: {
   contentId: string;
   brand: string;
@@ -42,6 +48,7 @@ export function TopicPageTabs({
   researchCopyVersions: ResearchCopyVersion[];
   scriptsVersions: ScriptsVersion[];
   manualWorkflowPhases: ManualWorkflowPhaseRow[];
+  notes: ContentNote[];
 }) {
   const [area, setArea] = useState<Area>("manual");
 
@@ -82,13 +89,19 @@ export function TopicPageTabs({
             keywords={keywords}
             researchCopyVersions={researchCopyVersions}
             scriptsVersions={scriptsVersions}
+            notes={notes}
           />
         </div>
       )}
 
       {area === "manual" && (
         <div className="mt-4">
-          <ManualWorkflowPanel contentId={contentId} brand={brand} phases={manualWorkflowPhases} />
+          <ManualWorkflowPanel
+            contentId={contentId}
+            brand={brand}
+            phases={manualWorkflowPhases}
+            notes={notes}
+          />
         </div>
       )}
     </div>

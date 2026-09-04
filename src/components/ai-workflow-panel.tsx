@@ -4,17 +4,23 @@ import { useState } from "react";
 import { AiResearchPhaseContent } from "@/components/ai-research-phase-content";
 import { AiPackagingPhaseContent } from "@/components/ai-packaging-phase-content";
 import { ScriptsTab } from "@/components/scripts-tab";
+import { ContentNotesSection } from "@/components/content-notes-section";
 import { PhaseNav } from "@/components/manual-workflow-ui";
-import type { ResearchCopyVersion, ScriptsVersion } from "@/lib/types";
+import type { ContentNote, ResearchCopyVersion, ScriptsVersion } from "@/lib/types";
 
 type AiWorkflowPhase = "research" | "packaging" | "scripting";
 
-const AI_WORKFLOW_PHASES: readonly AiWorkflowPhase[] = ["research", "packaging", "scripting"];
+// docs/topic-page-redesign.md Section 11: same item-scoped Notes tab the
+// Manual panel carries (manual-workflow-panel.tsx), appended to this
+// panel's own phase row.
+const PANEL_TABS = ["research", "packaging", "scripting", "notes"] as const;
+type PanelTab = (typeof PANEL_TABS)[number];
 
-const PHASE_LABELS: Record<AiWorkflowPhase, string> = {
+const PHASE_LABELS: Record<PanelTab, string> = {
   research: "Research",
   packaging: "Packaging",
   scripting: "Scripting",
+  notes: "Notes",
 };
 
 const LOCK_MESSAGE: Record<AiWorkflowPhase, string> = {
@@ -51,6 +57,7 @@ export function AiWorkflowPanel({
   keywords,
   researchCopyVersions,
   scriptsVersions,
+  notes,
 }: {
   contentId: string;
   brand: string;
@@ -58,22 +65,24 @@ export function AiWorkflowPanel({
   keywords: string | null;
   researchCopyVersions: ResearchCopyVersion[];
   scriptsVersions: ScriptsVersion[];
+  notes: ContentNote[];
 }) {
-  const [activePhase, setActivePhase] = useState<AiWorkflowPhase>("research");
+  const [activePhase, setActivePhase] = useState<PanelTab>("research");
 
   const hasResearch = researchCopyVersions.length > 0;
   const activeResearchCopy = researchCopyVersions.find((v) => v.is_live)?.data ?? null;
 
-  const locked: Record<AiWorkflowPhase, boolean> = {
+  const locked: Record<PanelTab, boolean> = {
     research: false,
     packaging: !hasResearch,
     scripting: !activeResearchCopy,
+    notes: false,
   };
 
   return (
     <div>
       <PhaseNav
-        phases={AI_WORKFLOW_PHASES}
+        phases={PANEL_TABS}
         labels={PHASE_LABELS}
         active={activePhase}
         locked={locked}
@@ -84,7 +93,9 @@ export function AiWorkflowPanel({
           (manual-workflow-panel.tsx): outer page chrome stays fixed,
           only the active phase's content scrolls internally. */}
       <div className="relative mt-4 max-h-[70vh] overflow-y-auto rounded-lg border border-border p-4">
-        {locked[activePhase] ? (
+        {activePhase === "notes" ? (
+          <ContentNotesSection contentId={contentId} notes={notes} />
+        ) : locked[activePhase] ? (
           <p className="text-sm text-muted-foreground">{LOCK_MESSAGE[activePhase]}</p>
         ) : activePhase === "research" ? (
           <AiResearchPhaseContent

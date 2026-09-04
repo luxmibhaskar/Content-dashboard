@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -9,11 +8,11 @@ import { NoteCard } from "@/components/note-card";
 import type { ContentNote } from "@/lib/types";
 import { createNote } from "@/app/(app)/calendar/[id]/content-notes-actions";
 
-// docs/topic-page-redesign.md (Notes section): the topic page's
-// right-hand Notes column, sibling to the Manual/AI phase stack on the
-// left. One list per content_calendar row, newest first (the page query
-// orders by updated_at desc; a fresh save lands at the top). Same
-// add/list/empty-state shape as reference-videos-section.tsx.
+// docs/topic-page-redesign.md Section 11: the topic page's Notes tab,
+// a 4th tab in each panel's phase row. One list per content_calendar
+// row, newest first (the page query orders by updated_at desc; a fresh
+// save lands at the top). Same add/list/empty-state shape as
+// reference-videos-section.tsx.
 export function ContentNotesSection({
   contentId,
   notes,
@@ -25,11 +24,21 @@ export function ContentNotesSection({
   // taller body textarea would otherwise sit open above the list at all
   // times.
   const [composing, setComposing] = useState(false);
-  // The form action is a client closure (so it can also flip `composing`
-  // after the save), which means the server action's revalidatePath
-  // doesn't re-render the route on its own the way a directly-passed
-  // server action would - refresh() pulls the new list in.
-  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  // Call the server action directly from the submit handler and await it,
+  // the same path EditableCard uses (onClick -> onSave -> await). A
+  // `<form action={closure}>` that awaits a server action does not
+  // re-render the route off the action's revalidatePath when this sits
+  // several client components deep (topic-page-tabs -> panel -> here), so
+  // the new note never appeared without a manual reload.
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    await createNote(contentId, new FormData(e.currentTarget));
+    setBusy(false);
+    setComposing(false);
+  }
 
   return (
     <div>
@@ -43,24 +52,18 @@ export function ContentNotesSection({
       </div>
 
       {composing && (
-        <form
-          action={async (formData) => {
-            await createNote(contentId, formData);
-            setComposing(false);
-            router.refresh();
-          }}
-          className="mt-3 space-y-2 rounded-lg border border-border p-3"
-        >
+        <form onSubmit={handleSubmit} className="mt-3 space-y-2 rounded-lg border border-border p-3">
           <Input name="title" placeholder="Title (optional)" />
           <Textarea name="content" rows={6} placeholder="Write or paste your note..." />
           <div className="flex gap-2">
-            <Button type="submit" size="xs">
-              Save
+            <Button type="submit" size="xs" disabled={busy}>
+              {busy ? "Saving…" : "Save"}
             </Button>
             <Button
               type="button"
               size="xs"
               variant="ghost"
+              disabled={busy}
               onClick={() => setComposing(false)}
             >
               Cancel

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ResearchPhaseContent } from "@/components/research-phase-content";
 import { PackagingPhaseContent } from "@/components/packaging-phase-content";
 import { ScriptingPhaseContent } from "@/components/scripting-phase-content";
+import { ContentNotesSection } from "@/components/content-notes-section";
 import { PhaseNav } from "@/components/manual-workflow-ui";
 import type {
   ResearchPhaseData,
@@ -12,14 +13,24 @@ import type {
 } from "@/lib/manual-workflow-parsing";
 import {
   MANUAL_WORKFLOW_PHASES,
+  type ContentNote,
   type ManualWorkflowPhase,
   type ManualWorkflowPhaseRow,
 } from "@/lib/types";
 
-const PHASE_LABELS: Record<ManualWorkflowPhase, string> = {
+// docs/topic-page-redesign.md Section 11: Notes rides along as a 4th tab
+// in this same pill row, not a manual_workflow_phases row - it's
+// item-scoped, so it appears identically on the AI panel too
+// (ai-workflow-panel.tsx). MANUAL_WORKFLOW_PHASES itself is left alone
+// (it backs the manual_workflow_phase_type DB enum).
+const PANEL_TABS = [...MANUAL_WORKFLOW_PHASES, "notes"] as const;
+type PanelTab = (typeof PANEL_TABS)[number];
+
+const PHASE_LABELS: Record<PanelTab, string> = {
   research: "Research",
   packaging: "Packaging",
   scripting: "Scripting",
+  notes: "Notes",
 };
 
 const LOCK_MESSAGE: Record<ManualWorkflowPhase, string> = {
@@ -44,20 +55,23 @@ export function ManualWorkflowPanel({
   contentId,
   brand,
   phases,
+  notes,
 }: {
   contentId: string;
   brand: string;
   phases: ManualWorkflowPhaseRow[];
+  notes: ContentNote[];
 }) {
-  const [activePhase, setActivePhase] = useState<ManualWorkflowPhase>("research");
+  const [activePhase, setActivePhase] = useState<PanelTab>("research");
 
   const rowFor = (phase: ManualWorkflowPhase) => phases.find((p) => p.phase === phase);
   const isDone = (phase: ManualWorkflowPhase) => rowFor(phase)?.parsed_data != null;
 
-  const locked: Record<ManualWorkflowPhase, boolean> = {
+  const locked: Record<PanelTab, boolean> = {
     research: false,
     packaging: !isDone("research"),
     scripting: !isDone("packaging"),
+    notes: false,
   };
 
   const researchRow = rowFor("research");
@@ -67,7 +81,7 @@ export function ManualWorkflowPanel({
   return (
     <div>
       <PhaseNav
-        phases={MANUAL_WORKFLOW_PHASES}
+        phases={PANEL_TABS}
         labels={PHASE_LABELS}
         active={activePhase}
         locked={locked}
@@ -86,7 +100,9 @@ export function ManualWorkflowPanel({
           GlowCards, nesting those inside another GlowCard here would be
           glow-in-glow. */}
       <div className="relative mt-4 max-h-[70vh] overflow-y-auto rounded-lg border border-border p-4">
-        {locked[activePhase] ? (
+        {activePhase === "notes" ? (
+          <ContentNotesSection contentId={contentId} notes={notes} />
+        ) : locked[activePhase] ? (
           <p className="text-sm text-muted-foreground">{LOCK_MESSAGE[activePhase]}</p>
         ) : activePhase === "research" ? (
           <ResearchPhaseContent

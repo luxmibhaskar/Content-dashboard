@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -9,12 +8,21 @@ import { CollapsibleSection } from "@/components/collapsible-section";
 import type { ContentNote } from "@/lib/types";
 import { updateNote, deleteNote } from "@/app/(app)/calendar/[id]/content-notes-actions";
 
-// One note in the topic page's Notes column. Collapsed by default via
+// One note in the topic page's Notes tab. Collapsed by default via
 // CollapsibleSection (same disclosure shell the phase cards use), with an
 // inline view/edit toggle modelled on EditableCard (manual-workflow-ui.tsx)
 // - same useState swap, same button sizes - but with its own Delete
 // action and a full-height body textarea, which EditableCard's
 // structured-field model doesn't carry.
+//
+// Save and Delete call the server action directly from an event handler
+// and `await` it, exactly like EditableCard's onClick->onSave->await
+// path, rather than through a `<form action={...}>`. A form-action
+// closure that awaits a server action does NOT re-render the route off
+// the action's revalidatePath when this card sits several client
+// components deep (topic-page-tabs -> manual/ai panel -> here), so the
+// updated list never showed without a manual reload; the direct-await
+// path revalidates the same way EditableCard's edits already do.
 
 // Collapsed summary line: the title, else the first non-empty line of the
 // body (truncated), else a fixed fallback.
@@ -31,13 +39,21 @@ function summaryLabel(note: ContentNote): string {
 
 export function NoteCard({ contentId, note }: { contentId: string; note: ContentNote }) {
   const [editing, setEditing] = useState(false);
-  // See content-notes-section.tsx: the edit form's action is a client
-  // closure (so it can flip `editing` off after saving), which doesn't
-  // re-render the route off the server action's revalidatePath on its
-  // own - refresh() re-pulls the list. Delete stays a directly-bound
-  // server action, which does refresh natively (same as Reference
-  // Videos' Remove).
-  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function handleEditSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    await updateNote(contentId, note.id, new FormData(e.currentTarget));
+    setBusy(false);
+    setEditing(false);
+  }
+
+  async function handleDelete() {
+    setBusy(true);
+    await deleteNote(contentId, note.id);
+    // No setBusy(false): the card is gone from the revalidated list.
+  }
 
   return (
     <CollapsibleSection
@@ -51,14 +67,7 @@ export function NoteCard({ contentId, note }: { contentId: string; note: Content
       neutral
     >
       {editing ? (
-        <form
-          action={async (formData) => {
-            await updateNote(contentId, note.id, formData);
-            setEditing(false);
-            router.refresh();
-          }}
-          className="space-y-2"
-        >
+        <form onSubmit={handleEditSubmit} className="space-y-2">
           <Input name="title" defaultValue={note.title ?? ""} placeholder="Title (optional)" />
           <Textarea
             name="content"
@@ -67,10 +76,16 @@ export function NoteCard({ contentId, note }: { contentId: string; note: Content
             placeholder="Write or paste your note..."
           />
           <div className="flex gap-2">
-            <Button type="submit" size="xs">
-              Save
+            <Button type="submit" size="xs" disabled={busy}>
+              {busy ? "Saving…" : "Save"}
             </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={() => setEditing(false)}>
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setEditing(false)}
+            >
               Cancel
             </Button>
           </div>
@@ -83,14 +98,24 @@ export function NoteCard({ contentId, note }: { contentId: string; note: Content
             <p className="text-sm text-muted-foreground italic">No content.</p>
           )}
           <div className="flex gap-2">
-            <Button type="button" size="xs" variant="outline" onClick={() => setEditing(true)}>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              disabled={busy}
+              onClick={() => setEditing(true)}
+            >
               Edit
             </Button>
-            <form action={deleteNote.bind(null, contentId, note.id)}>
-              <Button type="submit" size="xs" variant="outline">
-                Delete
-              </Button>
-            </form>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              disabled={busy}
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
           </div>
         </div>
       )}

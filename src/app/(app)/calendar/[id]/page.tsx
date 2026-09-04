@@ -8,7 +8,6 @@ import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { FormatPlatformFields, type LongFormTopicOption } from "@/components/format-platform-fields";
 import { PlatformAnalyticsSection } from "@/components/platform-analytics-section";
-import { ContentNotesSection } from "@/components/content-notes-section";
 import { DirtyFormRegion } from "@/components/dirty-form-tracker";
 import { getMergedPillarStructure } from "@/lib/custom-sub-topics";
 import { isViewsGoal } from "@/lib/goals";
@@ -326,30 +325,22 @@ export default async function TopicPage({
             are each their own tiny form and HTML doesn't allow nesting
             forms.
 
-            docs/topic-page-redesign.md (Notes section): the phase stack
-            and the Notes column sit side by side from lg up - a fixed
-            20rem sidebar on the right, the phases taking the rest.
-            minmax(0,1fr) + min-w-0 on the left cell is load-bearing: the
-            phase content has its own overflow-x-auto containers that
-            would otherwise force the grid track wider than the page.
-            Below lg it stacks, phases first (the actual workflow),
-            Notes below. The Notes column is sticky so it stays in view
-            while scrolling the long phase content. */}
-        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-          <div className="min-w-0">
-            <TopicPageTabs
-              contentId={item.id}
-              brand={item.brand}
-              briefIntent={item.brief_intent}
-              keywords={item.raw_keywords_topics}
-              researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
-              scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
-              manualWorkflowPhases={(manualWorkflowPhases ?? []) as ManualWorkflowPhaseRow[]}
-            />
-          </div>
-          <aside className="min-w-0 lg:sticky lg:top-4">
-            <ContentNotesSection contentId={item.id} notes={(notes ?? []) as ContentNote[]} />
-          </aside>
+            docs/topic-page-redesign.md Section 11: Notes is a 4th tab in
+            each panel's phase row (Research/Packaging/Scripting/Notes),
+            not a side column - so this is back to one full-width block,
+            one tab at a time. `notes` feeds through TopicPageTabs into
+            both the Manual and AI panels. */}
+        <div className="mt-5">
+          <TopicPageTabs
+            contentId={item.id}
+            brand={item.brand}
+            briefIntent={item.brief_intent}
+            keywords={item.raw_keywords_topics}
+            researchCopyVersions={(researchCopyVersions ?? []) as ResearchCopyVersion[]}
+            scriptsVersions={(scriptsVersions ?? []) as ScriptsVersion[]}
+            manualWorkflowPhases={(manualWorkflowPhases ?? []) as ManualWorkflowPhaseRow[]}
+            notes={(notes ?? []) as ContentNote[]}
+          />
         </div>
       </DirtyFormRegion>
     </div>

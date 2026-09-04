@@ -641,11 +641,17 @@ structural pills never render this control at all, `TopicMapPage`
 distinguishes the two by checking each rendered pill against the brand's
 active `custom_sub_topics` rows.
 
-## 11. Notes column
+## 11. Notes tab
 
 Added feature, not a redesign of anything: a freeform notes list per
-content item, sitting in a right-hand column alongside (not replacing)
-the Manual/AI Research -> Packaging -> Scripting phase stack.
+content item, shown as a 4th tab in the phase row
+(Research / Packaging / Scripting / **Notes**), full width, one tab at a
+time, exactly like switching between the three phases.
+
+**⚠ Was briefly a right-side sidebar.** The first cut put Notes in a
+fixed 20rem `lg:grid` column next to the phase stack; that narrowed the
+phase content, so it was pulled back into the tab row instead. No grid
+split remains.
 
 **Scope.** One list per `content_calendar` row, scoped to the item
 itself, not to any one phase. Table `content_notes`
@@ -660,14 +666,16 @@ desc` as the single key, so "most recently created or edited at the
 top" needs no separate sort logic. RLS: the same "Authenticated access
 only" policy as every other table.
 
-**Layout.** `calendar/[id]/page.tsx` wraps `TopicPageTabs` and the new
-`ContentNotesSection` in one grid:
-`lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start`. Phases take the
-flexible track, Notes is a fixed 20rem sidebar. `min-w-0` on the left
-cell is load-bearing (the phase content has its own `overflow-x-auto`
-containers that would otherwise widen the grid track). The `<aside>` is
-`lg:sticky lg:top-4`. Below `lg` it collapses to one column, phases
-first (the actual workflow), Notes below. The notes forms are their own
+**Layout.** `page.tsx` passes `notes` through `TopicPageTabs` into both
+`ManualWorkflowPanel` and `AiWorkflowPanel`. Each panel appends
+`"notes"` to its own local tab list (`PANEL_TABS`, a superset of the
+phase list - `MANUAL_WORKFLOW_PHASES` itself is untouched since it backs
+the `manual_workflow_phase_type` DB enum), labels it "Notes", marks it
+never-locked, and renders `<ContentNotesSection>` in the same bounded
+`max-h-[70vh]` box the phases use when that tab is active. So the Notes
+tab shows on both the Manual and AI phase rows (like the three phases
+do), with independent selection per side. Tab selection is local
+component state, not persisted. The notes forms are their own
 independent `<form>` elements, same as Reference Videos and the paste
 importers, so nesting inside `DirtyFormRegion` is fine.
 
@@ -679,7 +687,7 @@ view/edit `useState` toggle but adds a per-note Delete action and a
 full-height body textarea, which `EditableCard`'s structured-field
 model doesn't carry. Collapsed summary line = `title`, else the first
 non-empty line of `content` truncated to ~60 chars, else "Untitled
-note". `ContentNotesSection` holds the column header and a toggled
+note". `ContentNotesSection` holds the section header and a toggled
 composer (title + body + Save/Cancel), toggled rather than always-inline
 because the taller body textarea would otherwise sit open above the
 list permanently.
@@ -687,9 +695,12 @@ list permanently.
 **Persistence.** `content-notes-actions.ts`: `createNote` / `updateNote`
 / `deleteNote`, each a plain `revalidatePath` of the topic route, brand
 copied off the parent row (same `getContentBrand` helper the reference
-video actions use). The create and edit form actions are client
-closures (so they can flip the composer / edit toggle off after
-saving), which means their `revalidatePath` does not re-render the
-route on its own the way a directly-bound server action would, so both
-call `router.refresh()` after awaiting. Delete stays a directly-bound
-server action and refreshes natively.
+video actions use). All three are called **directly from an event
+handler and awaited** (`onSubmit` for create/edit, `onClick` for
+delete), the same path `EditableCard` uses. A `<form action={closure}>`
+that awaits a server action does not re-render the route off the
+action's `revalidatePath` when the notes UI sits several client
+components deep (`topic-page-tabs` -> Manual/AI panel -> section ->
+card), and neither did a `router.refresh()` bolted onto that closure;
+the direct-await path revalidates the same way the phase cards' inline
+edits already do. A `busy` flag disables the buttons mid-save.
