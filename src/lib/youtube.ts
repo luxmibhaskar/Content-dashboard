@@ -73,6 +73,24 @@ export function parseYouTubeVideoId(url: string): string | null {
   }
 }
 
+// docs/platform-performance-tracking.md Section 9.1: format inference for
+// "backfill an already-published Short" - the /shorts/ URL path is
+// exactly the signal parseYouTubeVideoId above already recognizes, so
+// this just asks the same question the other way around. Deliberately
+// URL-shape only, not duration-based: a Short opened via a plain
+// watch?v= link would misdetect as Long Video, but that's the
+// unsupported edge case here (the real use case pastes youtube.com/shorts/
+// links, since that's the URL Shorts actually get shared/opened as), not
+// worth a second API call to check contentDetails.duration for.
+export function isYouTubeShortsUrl(url: string): boolean {
+  try {
+    const u = new URL(url.trim());
+    return /(^|\.)youtube\.com$/.test(u.hostname) && /^\/shorts\//.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export type YouTubeVideoStats = {
   viewCount: number;
   likeCount: number | null;
@@ -115,6 +133,64 @@ export async function fetchYouTubeVideoStats(videoId: string): Promise<YouTubeVi
     viewCount: Number(stats.viewCount ?? 0),
     likeCount: stats.likeCount != null ? Number(stats.likeCount) : null,
     commentCount: stats.commentCount != null ? Number(stats.commentCount) : null,
+  };
+}
+
+export type YouTubeVideoDetails = {
+  title: string;
+  description: string;
+  publishedAt: string;
+  viewCount: number;
+  likeCount: number | null;
+  commentCount: number | null;
+};
+
+type YouTubeVideoDetailsResponse = {
+  items?: {
+    snippet?: { title?: string; description?: string; publishedAt?: string };
+    statistics?: { viewCount?: string; likeCount?: string; commentCount?: string };
+  }[];
+};
+
+// docs/platform-performance-tracking.md Section 9.1: "backfill an
+// already-published Short" needs the video's title/description/publish
+// time, not just its counts, since the whole point is creating the
+// content_calendar row from the video rather than the other way round.
+// Same videos.list call fetchYouTubeVideoStats makes, part=snippet
+// added alongside statistics, one request either way. Kept as its own
+// function rather than adding an option onto fetchYouTubeVideoStats:
+// that one's only existing caller (the per-item "Refresh from YouTube"
+// button) has no use for the snippet and already has its own narrower
+// return type other code depends on.
+export async function fetchYouTubeVideoDetails(videoId: string): Promise<YouTubeVideoDetails> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    throw new Error("YOUTUBE_API_KEY is not configured.");
+  }
+
+  const url = new URL(`${YOUTUBE_API_BASE}/videos`);
+  url.searchParams.set("part", "snippet,statistics");
+  url.searchParams.set("id", videoId);
+  url.searchParams.set("key", apiKey);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`YouTube video lookup failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as YouTubeVideoDetailsResponse;
+  const item = data.items?.[0];
+  if (!item?.snippet) {
+    throw new Error(`No YouTube video found for id "${videoId}".`);
+  }
+
+  const stats = item.statistics;
+  return {
+    title: item.snippet.title ?? "",
+    description: item.snippet.description ?? "",
+    publishedAt: item.snippet.publishedAt ?? new Date().toISOString(),
+    viewCount: Number(stats?.viewCount ?? 0),
+    likeCount: stats?.likeCount != null ? Number(stats.likeCount) : null,
+    commentCount: stats?.commentCount != null ? Number(stats.commentCount) : null,
   };
 }
 

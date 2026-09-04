@@ -6,6 +6,7 @@ import { CalendarList } from "@/components/calendar-list";
 import { SegmentedToggle } from "@/components/segmented-toggle";
 import { FilterMenu } from "@/components/filter-menu";
 import { Button } from "@/components/ui/button";
+import { AddFromYoutubeForm } from "@/components/add-from-youtube-form";
 import { createBlankContentItem } from "./actions";
 import type { ContentCalendarItem } from "@/lib/types";
 
@@ -94,15 +95,25 @@ export default async function CalendarPage({
     <div className="w-full max-w-6xl mx-auto px-4 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">Content Calendar</h1>
-        {/* docs/topic-page-redesign.md Section 1: one button, no
-            pre-form. Creates a blank item and redirects straight to its
-            topic page, Title/Brief Description/Keywords now live there
-            instead. */}
-        <form action={boundCreate}>
-          <Button type="submit" size="sm">
-            + New
-          </Button>
-        </form>
+        <div className="flex flex-wrap items-start gap-3">
+          {/* docs/topic-page-redesign.md Section 1: one button, no
+              pre-form. Creates a blank item and redirects straight to its
+              topic page, Title/Brief Description/Keywords now live there
+              instead. */}
+          <form action={boundCreate}>
+            <Button type="submit" size="sm">
+              + New
+            </Button>
+          </form>
+          {/* docs/platform-performance-tracking.md Section 9.1: backfill
+              an already-published Short straight from its YouTube URL,
+              the reverse of "+ New" (that starts blank; this starts from
+              a real video and pulls its title/description/publish time/
+              counts). Always shown regardless of the Long/Short toggle
+              above, same as "+ New" ignoring it, since format here comes
+              from the pasted URL's own shape, not the current view. */}
+          <AddFromYoutubeForm />
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">

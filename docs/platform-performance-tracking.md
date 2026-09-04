@@ -158,6 +158,70 @@ on failure).
 subscriber refresh which does run nightly. A published video's counts
 update only when the button is pressed.
 
+## 9.1. Backfilling an already-published Short
+
+Section 9 above assumes the normal direction: a content_calendar item
+exists first (planned through Research/Packaging/Scripting), gets
+published, and its YouTube URL is pasted in afterward. Long Form videos
+always go through that pipeline before publishing, so they'll almost
+always already exist as an item by the time a video goes live. Shorts
+are made and published without that same planning, so the real need is
+the reverse for Shorts specifically: pull an already-published Short
+into the Calendar after the fact, creating its item from the video
+instead of the other way round. Long Form technically works through
+this same path if pasted here too, it's just not the case this was
+built for, so it gets no extra handling (see "Deliberately not handled"
+below).
+
+**Entry point.** `AddFromYoutubeForm` (`src/components/add-from-
+youtube-form.tsx`), a small form next to "+ New" on the Calendar list
+(`calendar/page.tsx`): paste a URL, get taken to the new item's topic
+page, or see an inline error and stay on the list. A client component,
+unlike "+ New"'s plain `<form action={...}>`, because this call can
+fail (bad URL, video not found, YouTube API error) and needs to surface
+that without navigating away - it calls the server action directly and
+awaits it (same pattern as the Notes tab's cards), then `router.push`es
+to the new item itself on success rather than having the action
+`redirect()`, mirroring the ok/error split `refreshYouTubeVideoStats`
+(Section 9) already uses for the same reason.
+
+**Library** (`src/lib/youtube.ts`):
+- **`fetchYouTubeVideoDetails(videoId)`**: sibling to
+  `fetchYouTubeVideoStats`, one `videos.list` call with
+  `part=snippet,statistics` instead of `statistics` alone, returning
+  title/description/publishedAt alongside the same counts.
+- **`isYouTubeShortsUrl(url)`**: format inference, the `/shorts/` URL
+  path `parseYouTubeVideoId` already recognizes, asked the other way
+  round.
+
+**Action** (`createContentItemFromYouTube`,
+`src/app/(app)/calendar/actions.ts`): parses the video id, fetches its
+details, then three inserts - `content_calendar` (title/description
+from YouTube, `format` from `isYouTubeShortsUrl`, `production_status`
+set straight to "Published / Scheduled" since it's already live,
+`platform: ["YouTube"]`, `publish_date` from the video's real publish
+time), `content_platform_posts` (the YouTube row with its real
+`published_at` and `post_url`, rather than the `now()` default that
+applies when a platform is added the normal way), and one
+`content_platform_stats_snapshots` row seeded from the pulled counts.
+Not wrapped in a transaction, same non-transactional shape
+`updateContentItem` already has for its own calendar-row-then-posts-row
+writes - acceptable here for the same reason.
+
+**Fields left for the topic page, same as every other creation path.**
+Pillar and sub-topic aren't set (YouTube has no concept of either), left
+exactly as unset as a blank "+ New" item's are, editable afterward like
+normal. The Research/Packaging/Scripting tabs still exist on a backfilled
+item's topic page even though nothing produced it that way; they're just
+never used for one, no code branches on how an item was created.
+
+**Deliberately not handled**, since Shorts (not general backfill) is the
+actual use case: format detection is URL-shape only (a Short opened via
+a plain `watch?v=` link instead of `/shorts/` misdetects as Long Video,
+not worth a second API call against `contentDetails.duration` to catch);
+no handling for playlists, live streams, or region/membership-locked
+videos beyond whatever error the API itself returns.
+
 ## Migration: what breaks and needs fixing first
 
 The fields being removed (content_calendar.views/likes/comments/shares/
