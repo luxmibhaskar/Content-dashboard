@@ -119,3 +119,52 @@ export async function updateContentItem(id: string, brand: string, formData: For
   // genuine fresh navigation instead of a soft revalidation.
   redirect(`/calendar/${id}`);
 }
+
+// Permanently deletes the content_calendar row and, via the ten
+// `on delete cascade` FKs already on their tables (title_variants,
+// hook_variants, thumbnail_variants, competitor_benchmarks,
+// reference_videos, research_snapshots, research_copy_versions,
+// scripts_versions, manual_workflow_phases, content_notes, plus
+// content_platform_stats_snapshots transitively through
+// content_platform_posts), everything attached to it. Confirmation (the
+// typed-title match, danger-zone placement) lives entirely in
+// delete-content-item-dialog.tsx; this action assumes the click it
+// receives is real.
+//
+// Two FKs to content_calendar are declared `references` with no `on
+// delete` clause (default `no action`), so left alone they'd either
+// block this delete outright or leave a dangling id behind:
+// - ideas.migrated_to_content_id: nulled first so the source idea
+//   reverts to "not yet migrated" (transferToCalendar re-creatable)
+//   instead of keeping a dead "Open in Content Calendar" link.
+// - content_calendar.derived_from_content_id (self-referencing, e.g. a
+//   Short backfilled from a Long Form parent): nulled first on any
+//   derivative rows so they survive deletion of their source item
+//   rather than the delete failing with an FK violation.
+export async function deleteContentItem(id: string) {
+  const supabase = await createClient();
+
+  const { error: ideasError } = await supabase
+    .from("ideas")
+    .update({ migrated_to_content_id: null })
+    .eq("migrated_to_content_id", id);
+  if (ideasError) {
+    throw new Error(ideasError.message);
+  }
+
+  const { error: derivativesError } = await supabase
+    .from("content_calendar")
+    .update({ derived_from_content_id: null })
+    .eq("derived_from_content_id", id);
+  if (derivativesError) {
+    throw new Error(derivativesError.message);
+  }
+
+  const { error } = await supabase.from("content_calendar").delete().eq("id", id);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/calendar");
+  redirect("/calendar");
+}

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton } from "@/components/copy-button";
+import { CollapsibleSection } from "@/components/collapsible-section";
+import { DeleteContentItemDialog } from "@/components/delete-content-item-dialog";
 import { TopicPageTabs } from "@/components/topic-page-tabs";
 import { PillarSubTopicSelects } from "@/components/pillar-sub-topic-selects";
 import { FormatPlatformFields, type LongFormTopicOption } from "@/components/format-platform-fields";
@@ -21,7 +23,7 @@ import {
   type ResearchCopyVersion,
   type ScriptsVersion,
 } from "@/lib/types";
-import { updateContentItem } from "./actions";
+import { updateContentItem, deleteContentItem } from "./actions";
 import { retrieveContentDetail } from "@/lib/archive-lifecycle";
 
 // Research & Copy's Run now runs 3 sequential Claude calls in one server
@@ -192,6 +194,7 @@ export default async function TopicPage({
   ]);
 
   const boundUpdate = updateContentItem.bind(null, item.id, item.brand);
+  const boundDelete = deleteContentItem.bind(null, item.id);
   const publishDateValue = item.publish_date
     ? new Date(item.publish_date).toISOString().slice(0, 16)
     : "";
@@ -343,6 +346,20 @@ export default async function TopicPage({
           />
         </div>
       </DirtyFormRegion>
+
+      {/* Danger Zone: collapsed by default, same out-of-default-view
+          principle as Idea Panel's Delete idea button (only shown behind
+          ?edit=1). Outside DirtyFormRegion on purpose, the confirm input
+          here has no form="topic-form" and this action is unrelated to
+          the Save flow it tracks. */}
+      <div className="mt-5">
+        <CollapsibleSection title="Danger Zone" neutral>
+          <p className="text-sm text-muted-foreground">
+            Permanently deletes this item and everything attached to it. This cannot be undone.
+          </p>
+          <DeleteContentItemDialog title={item.final_title ?? ""} deleteAction={boundDelete} />
+        </CollapsibleSection>
+      </div>
     </div>
   );
 }
