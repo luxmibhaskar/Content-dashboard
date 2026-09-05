@@ -250,12 +250,44 @@ function YouTubeVideoLink({
   const [savePending, startSave] = useTransition();
   const [refreshPending, startRefresh] = useTransition();
   const [refreshMsg, setRefreshMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
-  const boundSaveUrl = updatePlatformPostUrl.bind(null, post.id, contentId);
+  // Investigation (2026-09-05): content_platform_posts.post_url has no
+  // uniqueness, so the same video could otherwise get linked from two
+  // different Calendar items (src/lib/duplicate-video.ts has the full
+  // reasoning). Blocked by default with an explicit override per
+  // instruction, rather than a hard block: pendingDuplicate holds the
+  // warning plus the URL that triggered it, so "Save anyway" can
+  // resubmit that same value with confirm_duplicate set, without asking
+  // the user to retype it.
+  const [pendingDuplicate, setPendingDuplicate] = useState<{ url: string; message: string } | null>(null);
+  const boundSaveUrl = updatePlatformPostUrl.bind(null, post.id, contentId, brand);
+
+  function submitUrl(url: string, confirmDuplicate: boolean) {
+    startSave(async () => {
+      const formData = new FormData();
+      formData.set("post_url", url);
+      if (confirmDuplicate) formData.set("confirm_duplicate", "true");
+      const result = await boundSaveUrl(formData);
+      if (result.ok) {
+        setPendingDuplicate(null);
+        return;
+      }
+      if (result.kind === "duplicate") {
+        setPendingDuplicate({ url, message: result.error });
+        return;
+      }
+      setPendingDuplicate(null);
+      setRefreshMsg({ kind: "error", text: result.error });
+    });
+  }
 
   return (
     <div className="mt-3 border-t border-border pt-3">
       <form
-        action={(formData) => startSave(() => boundSaveUrl(formData))}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const url = String(new FormData(e.currentTarget).get("post_url") ?? "").trim();
+          submitUrl(url, false);
+        }}
         className="flex flex-wrap items-end gap-2"
       >
         <div className="flex flex-1 min-w-48 flex-col gap-1">
@@ -293,7 +325,21 @@ function YouTubeVideoLink({
           Refresh from YouTube
         </Button>
       </form>
-      {refreshMsg && (
+      {pendingDuplicate && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-destructive">{pendingDuplicate.message}</span>
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            loading={savePending}
+            onClick={() => submitUrl(pendingDuplicate.url, true)}
+          >
+            Save anyway
+          </Button>
+        </div>
+      )}
+      {!pendingDuplicate && refreshMsg && (
         <span className={refreshMsg.kind === "ok" ? "text-xs text-emerald-600" : "text-xs text-destructive"}>
           {refreshMsg.text}
         </span>

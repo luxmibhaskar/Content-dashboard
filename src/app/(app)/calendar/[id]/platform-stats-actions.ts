@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { localDateKey } from "@/lib/date";
 import { fetchYouTubeVideoStats, parseYouTubeVideoId } from "@/lib/youtube";
+import { findDuplicateVideoPost } from "@/lib/duplicate-video";
 
 function num(formData: FormData, key: string): number | null {
   const raw = String(formData.get(key) ?? "");
@@ -73,20 +74,55 @@ export async function logPlatformStatsSnapshot(
 // (refreshYouTubeVideoStats below); saving an unrecognized URL just
 // means that button will error until it's corrected, rather than
 // blocking the save itself.
-export async function updatePlatformPostUrl(contentPlatformPostId: string, contentId: string, formData: FormData) {
+//
+// Duplicate check (per explicit instruction): unlike "+ From YouTube",
+// which always creates a brand-new item and blocks a duplicate outright,
+// this edits a single field on an item that already exists, so a
+// collision here gets a warn-and-confirm instead of a hard block -
+// findDuplicateVideoPost's own comment (src/lib/duplicate-video.ts) has
+// the full "why this can happen at all" context. confirmDuplicate lets
+// the same form resubmit past that warning once the user has seen it,
+// via a "Save anyway" button (platform-analytics-section.tsx).
+export async function updatePlatformPostUrl(
+  contentPlatformPostId: string,
+  contentId: string,
+  brand: string,
+  formData: FormData,
+): Promise<
+  | { ok: true }
+  | { ok: false; kind: "duplicate"; error: string }
+  | { ok: false; kind: "error"; error: string }
+> {
   const postUrl = String(formData.get("post_url") ?? "").trim() || null;
+  const confirmDuplicate = formData.get("confirm_duplicate") === "true";
 
   const supabase = await createClient();
+
+  if (postUrl && !confirmDuplicate) {
+    const videoId = parseYouTubeVideoId(postUrl);
+    if (videoId) {
+      const duplicate = await findDuplicateVideoPost(supabase, brand, videoId, contentId);
+      if (duplicate) {
+        return {
+          ok: false,
+          kind: "duplicate",
+          error: `This video is already linked to "${duplicate.title || "Untitled"}".`,
+        };
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("content_platform_posts")
     .update({ post_url: postUrl })
     .eq("id", contentPlatformPostId);
 
   if (error) {
-    throw new Error(error.message);
+    return { ok: false, kind: "error", error: error.message };
   }
 
   revalidatePath(`/calendar/${contentId}`);
+  return { ok: true };
 }
 
 // GROUP I: on-demand per-video stats pull, sibling to Group J's

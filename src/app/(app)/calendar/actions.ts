@@ -8,6 +8,7 @@ import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
 import { localDateKey } from "@/lib/date";
 import { isYouTubeGoal } from "@/lib/goals";
 import { fetchYouTubeVideoDetails, isYouTubeShortsUrl, parseYouTubeVideoId } from "@/lib/youtube";
+import { findDuplicateVideoPost } from "@/lib/duplicate-video";
 
 // docs/topic-page-redesign.md Section 1: a single "+ New" button, no
 // pre-form, no pre-paste-popup. Title/Brief Description/Keywords used
@@ -103,6 +104,18 @@ export async function createContentItemFromYouTube(
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
 
   const supabase = await createClient();
+
+  // This path always creates a brand-new Calendar row, so a duplicate
+  // here is never intentional (unlike the manual "Save link" field on an
+  // existing item, which gets a warn-and-confirm instead) - block
+  // outright rather than offering an override.
+  const duplicate = await findDuplicateVideoPost(supabase, brand, videoId);
+  if (duplicate) {
+    return {
+      ok: false,
+      error: `This video is already in the Calendar as "${duplicate.title || "Untitled"}".`,
+    };
+  }
 
   // The "Posted on" multiselect (format-platform-fields.tsx) matches
   // content_calendar.platform against this brand's own Streak & Goals
