@@ -22,16 +22,15 @@ const SELECT_COLUMNS =
   "id, brand, final_title, production_status, pillar, sub_topic, format, publish_date, is_archived";
 
 // docs/platform-performance-tracking.md Section 1: "one table, filtered
-// view", not a separate Short Form table. Long Form is the default,
-// matching the order Format's own select already offers them in
-// (format-platform-fields.tsx). Items with no format yet, or a legacy
-// value from before Format narrowed to Short/Long Video (Reel/Post/
-// Thread/Story/Other), don't match either filter and won't appear in
-// this list until given a real one on their own topic page. Real
-// impact confirmed low before shipping this: only 2 such items exist
-// across brands right now, both pre-existing test data.
-type ContentType = "long" | "short";
-const CONTENT_TYPE_FORMAT: Record<ContentType, "Long Video" | "Short"> = {
+// view", not a separate Short Form table. All is the default: no format
+// filter at all, so unlike the Long Form / Short Form views it also
+// surfaces items with no format yet, or a legacy value from before
+// Format narrowed to Short/Long Video (Reel/Post/Thread/Story/Other) -
+// those still don't match either specific filter and stay invisible
+// there until given a real format on their own topic page, same as
+// before.
+type ContentType = "all" | "long" | "short";
+const CONTENT_TYPE_FORMAT: Record<Exclude<ContentType, "all">, "Long Video" | "Short"> = {
   long: "Long Video",
   short: "Short",
 };
@@ -80,8 +79,9 @@ export default async function CalendarPage({
   const customTo =
     params.to ?? (range === "custom" ? cookieStore.get(CALENDAR_RANGE_TO_COOKIE)?.value : undefined);
   const { from, to } = computeRange(range, customFrom, customTo);
-  const contentType: ContentType = params.type === "short" ? "short" : "long";
-  const contentFormat = CONTENT_TYPE_FORMAT[contentType];
+  const contentType: ContentType =
+    params.type === "short" ? "short" : params.type === "long" ? "long" : "all";
+  const contentFormat = contentType === "all" ? undefined : CONTENT_TYPE_FORMAT[contentType];
 
   const supabase = await createClient();
   const boundCreate = createBlankContentItem.bind(null, contentFormat);
@@ -109,20 +109,20 @@ export default async function CalendarPage({
   // Items with no production_status yet (still being scoped in the Idea
   // Panel/Scout flow, before Transfer to Calendar assigns a first real
   // status) intentionally don't render as cards here at all.
+  let unscheduledQuery = supabase.from("content_calendar").select(SELECT_COLUMNS).eq("brand", brand);
+  let scheduledQuery = supabase.from("content_calendar").select(SELECT_COLUMNS).eq("brand", brand);
+  // All: no format filter at all, so it also picks up the formatless/
+  // legacy-format items Long Form and Short Form each still can't see.
+  if (contentFormat) {
+    unscheduledQuery = unscheduledQuery.eq("format", contentFormat);
+    scheduledQuery = scheduledQuery.eq("format", contentFormat);
+  }
   const [{ data: unscheduled }, { data: scheduled }] = await Promise.all([
-    supabase
-      .from("content_calendar")
-      .select(SELECT_COLUMNS)
-      .eq("brand", brand)
-      .eq("format", contentFormat)
+    unscheduledQuery
       .is("publish_date", null)
       .not("production_status", "is", null)
       .order("created_at", { ascending: false }),
-    supabase
-      .from("content_calendar")
-      .select(SELECT_COLUMNS)
-      .eq("brand", brand)
-      .eq("format", contentFormat)
+    scheduledQuery
       .gte("publish_date", from)
       .lte("publish_date", `${to}T23:59:59`)
       .not("production_status", "is", null)
@@ -159,6 +159,7 @@ export default async function CalendarPage({
           ariaLabel="Content format"
           value={contentType}
           options={[
+            { value: "all", label: "All", href: buildHref({ type: "all" }) },
             { value: "long", label: "Long Form", href: buildHref({ type: "long" }) },
             { value: "short", label: "Short Form", href: buildHref({ type: "short" }) },
           ]}
