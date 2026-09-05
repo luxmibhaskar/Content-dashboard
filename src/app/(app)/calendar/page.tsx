@@ -31,7 +31,21 @@ const CONTENT_TYPE_FORMAT: Record<ContentType, "Long Video" | "Short"> = {
 const RANGE_LABEL: Record<CalendarRange, string> = {
   week: "Week",
   month: "Month",
+  "3month": "3 Month",
+  "6month": "6 Month",
+  year: "Year",
   custom: "Custom",
+};
+
+const VALID_RANGES: CalendarRange[] = ["week", "month", "3month", "6month", "year", "custom"];
+
+const SECTION_LABEL: Record<CalendarRange, string> = {
+  week: "This week",
+  month: "This month",
+  "3month": "Last 3 months",
+  "6month": "Last 6 months",
+  year: "Last year",
+  custom: "Selected range",
 };
 
 export default async function CalendarPage({
@@ -40,8 +54,9 @@ export default async function CalendarPage({
   searchParams: Promise<{ range?: string; from?: string; to?: string; type?: string }>;
 }) {
   const params = await searchParams;
-  const range: CalendarRange =
-    params.range === "week" || params.range === "custom" ? params.range : "month";
+  const range: CalendarRange = VALID_RANGES.includes(params.range as CalendarRange)
+    ? (params.range as CalendarRange)
+    : "month";
   const { from, to } = computeRange(range, params.from, params.to);
   const contentType: ContentType = params.type === "short" ? "short" : "long";
   const contentFormat = CONTENT_TYPE_FORMAT[contentType];
@@ -131,6 +146,9 @@ export default async function CalendarPage({
           options={[
             { value: "week", label: "Week", href: buildHref({ range: "week" }), active: range === "week" },
             { value: "month", label: "Month", href: buildHref({ range: "month" }), active: range === "month" },
+            { value: "3month", label: "3 Month", href: buildHref({ range: "3month" }), active: range === "3month" },
+            { value: "6month", label: "6 Month", href: buildHref({ range: "6month" }), active: range === "6month" },
+            { value: "year", label: "Year", href: buildHref({ range: "year" }), active: range === "year" },
             { value: "custom", label: "Custom", href: buildHref({ range: "custom" }), active: range === "custom" },
           ]}
         />
@@ -151,7 +169,7 @@ export default async function CalendarPage({
 
       <section className="mt-6">
         <h2 className="text-sm font-medium text-muted-foreground">
-          {range === "week" ? "This week" : range === "month" ? "This month" : "Selected range"}
+          {SECTION_LABEL[range]}
         </h2>
         {(scheduled?.length ?? 0) === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
