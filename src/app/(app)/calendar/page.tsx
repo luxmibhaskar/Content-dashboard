@@ -126,7 +126,7 @@ export default async function CalendarPage({
       .gte("publish_date", from)
       .lte("publish_date", `${to}T23:59:59`)
       .not("production_status", "is", null)
-      .order("publish_date", { ascending: true }),
+      .order("publish_date", { ascending: false }),
   ]);
 
   return (
