@@ -1,7 +1,15 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { BRAND_COOKIE, DEFAULT_BRAND, isBrand } from "@/lib/brand";
-import { computeRange, type CalendarRange } from "@/lib/date-range";
+import {
+  CALENDAR_RANGE_COOKIE,
+  CALENDAR_RANGE_FROM_COOKIE,
+  CALENDAR_RANGE_TO_COOKIE,
+  DEFAULT_CALENDAR_RANGE,
+  computeRange,
+  isCalendarRange,
+  type CalendarRange,
+} from "@/lib/date-range";
 import { CalendarList } from "@/components/calendar-list";
 import { SegmentedToggle } from "@/components/segmented-toggle";
 import { FilterMenu } from "@/components/filter-menu";
@@ -37,8 +45,6 @@ const RANGE_LABEL: Record<CalendarRange, string> = {
   custom: "Custom",
 };
 
-const VALID_RANGES: CalendarRange[] = ["week", "month", "3month", "6month", "year", "custom"];
-
 const SECTION_LABEL: Record<CalendarRange, string> = {
   week: "This week",
   month: "This month",
@@ -54,16 +60,28 @@ export default async function CalendarPage({
   searchParams: Promise<{ range?: string; from?: string; to?: string; type?: string }>;
 }) {
   const params = await searchParams;
-  const range: CalendarRange = VALID_RANGES.includes(params.range as CalendarRange)
-    ? (params.range as CalendarRange)
-    : "month";
-  const { from, to } = computeRange(range, params.from, params.to);
-  const contentType: ContentType = params.type === "short" ? "short" : "long";
-  const contentFormat = CONTENT_TYPE_FORMAT[contentType];
 
   const cookieStore = await cookies();
   const brandCookie = cookieStore.get(BRAND_COOKIE)?.value;
   const brand = isBrand(brandCookie) ? brandCookie : DEFAULT_BRAND;
+
+  // The URL's own ?range= always wins (a bookmarked or shared link with
+  // an explicit range shouldn't be overridden by whatever was last
+  // persisted); the cookie only fills in when the URL has none at all,
+  // i.e. a plain /calendar link from the top nav, a quick-access card, or
+  // "Back to Calendar" on a topic page. See date-range.ts and
+  // /api/calendar-range for the rest of the persistence story.
+  const rangeCookie = cookieStore.get(CALENDAR_RANGE_COOKIE)?.value;
+  const rawRange = params.range ?? rangeCookie;
+  const range: CalendarRange = isCalendarRange(rawRange) ? rawRange : DEFAULT_CALENDAR_RANGE;
+
+  const customFrom =
+    params.from ?? (range === "custom" ? cookieStore.get(CALENDAR_RANGE_FROM_COOKIE)?.value : undefined);
+  const customTo =
+    params.to ?? (range === "custom" ? cookieStore.get(CALENDAR_RANGE_TO_COOKIE)?.value : undefined);
+  const { from, to } = computeRange(range, customFrom, customTo);
+  const contentType: ContentType = params.type === "short" ? "short" : "long";
+  const contentFormat = CONTENT_TYPE_FORMAT[contentType];
 
   const supabase = await createClient();
   const boundCreate = createBlankContentItem.bind(null, contentFormat);
@@ -71,16 +89,21 @@ export default async function CalendarPage({
   // Both the format toggle and the range menu link back here with the
   // other axis preserved. For a custom range, from/to ride along too, so
   // switching Long <-> Short no longer silently drops a picked range
-  // (the old hardcoded `?type=X&range=Y` hrefs did).
-  function buildHref(next: { type?: ContentType; range?: CalendarRange }) {
+  // (the old hardcoded `?type=X&range=Y` hrefs did). Range-changing links
+  // (the Range dropdown, Clear filter) pass persist: true to route
+  // through /api/calendar-range instead of straight to /calendar, so the
+  // new choice gets written to the cookie; the format toggle doesn't
+  // change the range, so it never needs to.
+  function buildHref(next: { type?: ContentType; range?: CalendarRange }, opts?: { persist?: boolean }) {
     const nextType = next.type ?? contentType;
     const nextRange = next.range ?? range;
     const search = new URLSearchParams({ type: nextType, range: nextRange });
     if (nextRange === "custom") {
-      if (params.from) search.set("from", params.from);
-      if (params.to) search.set("to", params.to);
+      if (customFrom) search.set("from", customFrom);
+      if (customTo) search.set("to", customTo);
     }
-    return `/calendar?${search.toString()}`;
+    const base = opts?.persist ? "/api/calendar-range" : "/calendar";
+    return `${base}?${search.toString()}`;
   }
 
   // Items with no production_status yet (still being scoped in the Idea
@@ -140,25 +163,41 @@ export default async function CalendarPage({
             { value: "short", label: "Short Form", href: buildHref({ type: "short" }) },
           ]}
         />
-        <FilterMenu
-          label="Range"
-          triggerLabel={RANGE_LABEL[range]}
-          options={[
-            { value: "week", label: "Week", href: buildHref({ range: "week" }), active: range === "week" },
-            { value: "month", label: "Month", href: buildHref({ range: "month" }), active: range === "month" },
-            { value: "3month", label: "3 Month", href: buildHref({ range: "3month" }), active: range === "3month" },
-            { value: "6month", label: "6 Month", href: buildHref({ range: "6month" }), active: range === "6month" },
-            { value: "year", label: "Year", href: buildHref({ range: "year" }), active: range === "year" },
-            { value: "custom", label: "Custom", href: buildHref({ range: "custom" }), active: range === "custom" },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <FilterMenu
+            label="Range"
+            triggerLabel={RANGE_LABEL[range]}
+            active={range !== DEFAULT_CALENDAR_RANGE}
+            options={[
+              { value: "week", label: "Week", href: buildHref({ range: "week" }, { persist: true }), active: range === "week" },
+              { value: "month", label: "Month", href: buildHref({ range: "month" }, { persist: true }), active: range === "month" },
+              { value: "3month", label: "3 Month", href: buildHref({ range: "3month" }, { persist: true }), active: range === "3month" },
+              { value: "6month", label: "6 Month", href: buildHref({ range: "6month" }, { persist: true }), active: range === "6month" },
+              { value: "year", label: "Year", href: buildHref({ range: "year" }, { persist: true }), active: range === "year" },
+              { value: "custom", label: "Custom", href: buildHref({ range: "custom" }, { persist: true }), active: range === "custom" },
+            ]}
+          />
+          {/* Persisted range filter: visible only once it's actually
+              overriding the default, so it doesn't clutter the bar on
+              every ordinary visit. Resetting to the default range and
+              clearing it are the same action here - DEFAULT_CALENDAR_RANGE
+              persisted is indistinguishable from nothing persisted at all. */}
+          {range !== DEFAULT_CALENDAR_RANGE && (
+            <a
+              href={buildHref({ range: DEFAULT_CALENDAR_RANGE }, { persist: true })}
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Clear filter
+            </a>
+          )}
+        </div>
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
         {from} to {to}
       </p>
 
-      {range === "custom" && <CustomRangeForm from={params.from} to={params.to} type={contentType} />}
+      {range === "custom" && <CustomRangeForm from={customFrom} to={customTo} type={contentType} />}
 
       {(unscheduled?.length ?? 0) > 0 && (
         <section className="mt-6">
@@ -185,7 +224,7 @@ export default async function CalendarPage({
 
 function CustomRangeForm({ from, to, type }: { from?: string; to?: string; type: ContentType }) {
   return (
-    <form method="get" action="/calendar" className="mt-3 flex items-end gap-2">
+    <form method="get" action="/api/calendar-range" className="mt-3 flex items-end gap-2">
       <input type="hidden" name="range" value="custom" />
       <input type="hidden" name="type" value={type} />
       <div className="flex flex-col gap-1">

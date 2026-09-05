@@ -52,6 +52,14 @@ export function CalendarList({ items }: { items: ContentCalendarItem[] }) {
               {item.production_status && (
                 <div className="mt-auto pt-2">
                   <ProductionStatusBar status={item.production_status} />
+                  {item.publish_date && (
+                    <div className="mt-1 text-right text-[10px] text-muted-foreground">
+                      {new Date(item.publish_date).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </GlowCard>
